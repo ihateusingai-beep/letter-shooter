@@ -21,6 +21,12 @@
       return { ...DEFAULTS };
     }
   }
+  function saveSettings(patch) {
+    const current = loadSettings();
+    const next = { ...current, ...patch };
+    localStorage.setItem("ls-settings", JSON.stringify(next));
+    return next;
+  }
   function getSetting(key) {
     return loadSettings()[key];
   }
@@ -128,6 +134,11 @@
     return all.slice(0, 6);
   }
 
+  // js/i18n.js
+  function setLang(lang) {
+    localStorage.setItem("ls-lang", lang);
+  }
+
   // js/game.js
   window.LetterShooter = {
     startGame,
@@ -143,13 +154,17 @@
     showLetter,
     updateScore,
     drawRobot,
-    loadSettings
+    loadSettings,
+    fallDuration,
+    setLang
   };
   var score = 0;
   var currentLetter = null;
   var touchKeys = [];
   var gameRunning = false;
   var animFrame = null;
+  var toastTimer = null;
+  var toastQueue = [];
   function getEls() {
     return {
       letter: document.getElementById("js-letter"),
@@ -196,35 +211,28 @@
     const c = colors[robotIdx % colors.length];
     robotWrap.innerHTML = `
     <svg viewBox="0 0 80 90" width="80" height="90" aria-hidden="true">
-      <!-- antenna -->
       <line x1="40" y1="8" x2="40" y2="22" stroke="${c.accent}" stroke-width="3" stroke-linecap="round"/>
       <circle cx="40" cy="6" r="5" fill="${c.accent}"/>
-      <!-- head -->
       <rect x="18" y="22" width="44" height="36" rx="10" fill="${c.body}" stroke="${c.accent}" stroke-width="2"/>
-      <!-- eyes -->
       <circle cx="30" cy="36" r="7" fill="${c.eye}"/>
       <circle cx="50" cy="36" r="7" fill="${c.eye}"/>
       <circle cx="32" cy="34" r="2.5" fill="white"/>
       <circle cx="52" cy="34" r="2.5" fill="white"/>
-      <!-- mouth smile -->
       <path d="M 30 48 Q 40 55 50 48" stroke="${c.eye}" stroke-width="2" fill="none" stroke-linecap="round"/>
-      <!-- body -->
       <rect x="22" y="60" width="36" height="22" rx="6" fill="${c.body}" stroke="${c.accent}" stroke-width="2"/>
-      <!-- arms -->
       <rect x="6"  y="62" width="14" height="8" rx="4" fill="${c.body}" stroke="${c.accent}" stroke-width="2"/>
       <rect x="60" y="62" width="14" height="8" rx="4" fill="${c.body}" stroke="${c.accent}" stroke-width="2"/>
-      <!-- legs -->
       <rect x="26" y="82" width="10" height="8" rx="3" fill="${c.body}" stroke="${c.accent}" stroke-width="2"/>
       <rect x="44" y="82" width="10" height="8" rx="3" fill="${c.body}" stroke="${c.accent}" stroke-width="2"/>
     </svg>`;
   }
   function shoot() {
-    const { letter, robot, bullet } = getEls();
-    if (!letter || !robot || !bullet) return;
+    const { letter, bullet } = getEls();
+    if (!letter || !bullet) return;
     const lv = letter.getBoundingClientRect();
-    const rv = robot.getBoundingClientRect();
-    const bx = lv.left + lv.width / 2 - bullet.getBoundingClientRect().left;
-    const by = lv.top + lv.height / 2 - bullet.getBoundingClientRect().top;
+    const bv = bullet.getBoundingClientRect();
+    const bx = lv.left + lv.width / 2 - bv.left;
+    const by = lv.top + lv.height / 2 - bv.top;
     bullet.style.transition = "none";
     bullet.style.opacity = "1";
     bullet.style.transform = "translate(0, 0)";
@@ -267,19 +275,23 @@
     currentLetter = letter;
   }
   var fallPaused = false;
+  var letterArrived = false;
   function startFall(onArrive) {
     const settings = loadSettings();
     if (settings.level !== "L1") return;
-    const { letter } = getEls();
-    if (!letter) return;
+    const { letter: letterEl } = getEls();
+    if (!letterEl) return;
+    const { robotWrap } = getEls();
+    if (!robotWrap) return;
     const duration = fallDuration() * 1e3;
-    const robotY = getEls().robot.getBoundingClientRect().top;
-    const letterEl = letter;
+    const robotY = robotWrap.getBoundingClientRect().top;
     const startY = letterEl.getBoundingClientRect().top;
+    const maxFall = robotY - startY - letterEl.offsetHeight;
+    letterArrived = false;
+    fallPaused = false;
     letterEl.style.transition = "none";
     letterEl.style.transform = "translateY(0)";
     const startMs = performance.now();
-    fallPaused = false;
     function step(now) {
       if (!gameRunning) return;
       if (fallPaused) {
@@ -288,12 +300,13 @@
       }
       const elapsed = now - startMs;
       const progress = Math.min(elapsed / duration, 1);
-      const maxFall = robotY - startY - letterEl.offsetHeight;
       const dy = maxFall * progress;
       letterEl.style.transform = `translateY(${dy}px)`;
       if (progress < 1) {
         animFrame = requestAnimationFrame(step);
       } else {
+        letterArrived = true;
+        letterEl.style.filter = "drop-shadow(0 0 8px #FFD54F)";
         onArrive();
       }
     }
@@ -303,7 +316,6 @@
     gameRunning = true;
     score = 0;
     touchKeys = activeLetters(unitKey);
-    const settings = loadSettings();
     const prog = loadProgress();
     const robotIdx = currentRobotIndex(masteredCount(prog));
     updateUnit(unitKey);
@@ -321,11 +333,12 @@
   }
   function nextTurn(level, keys) {
     if (!gameRunning) return;
+    const { letter: letterEl } = getEls();
+    if (letterEl) letterEl.style.filter = "";
     const letter = pickLetter(keys);
     showLetter(letter);
     speakLetter(letter);
-    if (level === "L0") {
-    } else if (level === "L1") {
+    if (level === "L1") {
       startFall(() => {
       });
     }
@@ -338,11 +351,14 @@
       flashSuccess();
       score++;
       updateScore();
+      letterArrived = false;
+      const { letter: letterEl } = getEls();
+      if (letterEl) letterEl.style.filter = "";
       const prog = recordAttempt(currentLetter.toUpperCase(), true);
-      const before = masteredCount(loadProgress()) - (prog[currentLetter]?.recent?.at(-1) ? 1 : 0);
-      const after = masteredCount(prog);
-      if (after > before) {
-        showRobotUnlock(after);
+      const prevMastered = masteredCount(loadProgress()) - 1;
+      const afterMastered = masteredCount(prog);
+      if (afterMastered > prevMastered) {
+        showRobotUnlock(afterMastered);
       }
       setTimeout(() => {
         if (gameRunning) nextTurn(loadSettings().level, touchKeys);
@@ -369,25 +385,33 @@
       container.appendChild(btn);
     });
   }
-  function showRobotUnlock(masteredCount2) {
+  function showRobotUnlock(count) {
     const settings = loadSettings();
-    if (settings.lang === "zh") {
-      showToast("\u{1F916} \u65B0\u6A5F\u68B0\u4EBA\u89E3\u9396\u4E86\uFF01", `\u5DF2\u638C\u63E1 ${masteredCount2} \u500B\u5B57\u6BCD`);
-    } else {
-      showToast("\u{1F916} New robot unlocked!", `${masteredCount2} letters mastered`);
+    const title = settings.lang === "zh" ? "\u{1F916} \u65B0\u6A5F\u68B0\u4EBA\u89E3\u9396\u4E86\uFF01" : "\u{1F916} New robot unlocked!";
+    const body = settings.lang === "zh" ? `\u5DF2\u638C\u63E1 ${count} \u500B\u5B57\u6BCD` : `${count} letters mastered`;
+    toastQueue.push({ title, body });
+    if (!toastTimer) drainToast();
+  }
+  function drainToast() {
+    if (toastQueue.length === 0) {
+      toastTimer = null;
+      return;
     }
+    const { title, body } = toastQueue.shift();
+    showToast(title, body);
+    toastTimer = setTimeout(drainToast, 3500);
   }
   function showToast(title, body) {
     const toast = document.getElementById("js-toast");
     const toastTitle = document.getElementById("js-toast-title");
     const toastBody = document.getElementById("js-toast-body");
     if (!toast || !toastTitle || !toastBody) return;
+    toast.classList.remove("visible");
+    void toast.offsetWidth;
     toastTitle.textContent = title;
     toastBody.textContent = body;
     toast.classList.add("visible");
-    setTimeout(() => {
-      toast.classList.remove("visible");
-    }, 3e3);
+    setTimeout(() => toast.classList.remove("visible"), 3e3);
   }
   function openSettings() {
     const panel = document.getElementById("js-settings-panel");
@@ -419,8 +443,5 @@
     });
     saveSettings(next);
     closeSettings();
-  }
-  function saveSettings(patch) {
-    saveSettingsFn(patch);
   }
 })();

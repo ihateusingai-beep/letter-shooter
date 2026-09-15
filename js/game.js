@@ -1,15 +1,15 @@
 // js/game.js — core game loop: L0 / L1, shooting, scoring
-import { loadSettings, fallDuration } from './settings.js';
+import { loadSettings, saveSettings, fallDuration } from './settings.js';
 import { loadProgress, recordAttempt, masteredCount } from './progress.js';
 import { activeLetters, currentRobotIndex } from './curriculum.js';
-import { t } from './i18n.js';
+import { t, setLang } from './i18n.js';
 
 // Attach public API to window for non-module HTML
 window.LetterShooter = {
   startGame, handleKey, openSettings, closeSettings, applySettings,
   renderTouchKeys, speakLetter, shoot, flashSuccess, shakeLetter,
   showLetter, updateScore, drawRobot,
-  loadSettings,
+  loadSettings, fallDuration, setLang,
 };
 
 // ── State ──────────────────────────────────────────────────────────────────
@@ -18,7 +18,10 @@ let currentLetter = null;
 let touchKeys = [];       // visible touch key letters
 let gameRunning = false;
 let animFrame = null;
-let startTime = null;
+
+// Toast queue — prevents overwrite on rapid unlocks
+let toastTimer = null;
+const toastQueue = [];
 
 // ── DOM refs ────────────────────────────────────────────────────────────────
 export function getEls() {
@@ -75,24 +78,17 @@ export function drawRobot(robotIdx = 0) {
 
   robotWrap.innerHTML = `
     <svg viewBox="0 0 80 90" width="80" height="90" aria-hidden="true">
-      <!-- antenna -->
       <line x1="40" y1="8" x2="40" y2="22" stroke="${c.accent}" stroke-width="3" stroke-linecap="round"/>
       <circle cx="40" cy="6" r="5" fill="${c.accent}"/>
-      <!-- head -->
       <rect x="18" y="22" width="44" height="36" rx="10" fill="${c.body}" stroke="${c.accent}" stroke-width="2"/>
-      <!-- eyes -->
       <circle cx="30" cy="36" r="7" fill="${c.eye}"/>
       <circle cx="50" cy="36" r="7" fill="${c.eye}"/>
       <circle cx="32" cy="34" r="2.5" fill="white"/>
       <circle cx="52" cy="34" r="2.5" fill="white"/>
-      <!-- mouth smile -->
       <path d="M 30 48 Q 40 55 50 48" stroke="${c.eye}" stroke-width="2" fill="none" stroke-linecap="round"/>
-      <!-- body -->
       <rect x="22" y="60" width="36" height="22" rx="6" fill="${c.body}" stroke="${c.accent}" stroke-width="2"/>
-      <!-- arms -->
       <rect x="6"  y="62" width="14" height="8" rx="4" fill="${c.body}" stroke="${c.accent}" stroke-width="2"/>
       <rect x="60" y="62" width="14" height="8" rx="4" fill="${c.body}" stroke="${c.accent}" stroke-width="2"/>
-      <!-- legs -->
       <rect x="26" y="82" width="10" height="8" rx="3" fill="${c.body}" stroke="${c.accent}" stroke-width="2"/>
       <rect x="44" y="82" width="10" height="8" rx="3" fill="${c.body}" stroke="${c.accent}" stroke-width="2"/>
     </svg>`;
@@ -100,20 +96,18 @@ export function drawRobot(robotIdx = 0) {
 
 // ── Shoot animation ──────────────────────────────────────────────────────────
 export function shoot() {
-  const { letter, robot, bullet } = getEls();
-  if (!letter || !robot || !bullet) return;
+  const { letter, bullet } = getEls();
+  if (!letter || !bullet) return;
 
   const lv = letter.getBoundingClientRect();
-  const rv = robot.getBoundingClientRect();
+  const bv = bullet.getBoundingClientRect();
 
-  const bx = (lv.left + lv.width / 2) - (bullet.getBoundingClientRect().left);
-  const by = (lv.top + lv.height / 2) - (bullet.getBoundingClientRect().top);
+  const bx = (lv.left + lv.width / 2) - bv.left;
+  const by = (lv.top  + lv.height / 2) - bv.top;
 
   bullet.style.transition = 'none';
   bullet.style.opacity = '1';
   bullet.style.transform = 'translate(0, 0)';
-
-  // trigger reflow
   void bullet.offsetWidth;
 
   bullet.style.transition = 'transform 0.25s ease-in, opacity 0.25s ease-in';
@@ -161,24 +155,28 @@ export function showLetter(letter) {
 
 // ── L1: fall animation ──────────────────────────────────────────────────────
 let fallPaused = false;
+let letterArrived = false;  // true when letter reached robot top
 
 function startFall(onArrive) {
   const settings = loadSettings();
   if (settings.level !== 'L1') return;
 
-  const { letter } = getEls();
-  if (!letter) return;
+  const { letter: letterEl } = getEls();
+  if (!letterEl) return;
+  const { robotWrap } = getEls();
+  if (!robotWrap) return;
 
-  const duration = fallDuration() * 1000; // ms
-  const robotY = getEls().robot.getBoundingClientRect().top;
-  const letterEl = letter;
+  const duration = fallDuration() * 1000;
+  const robotY = robotWrap.getBoundingClientRect().top;
   const startY = letterEl.getBoundingClientRect().top;
+  const maxFall = robotY - startY - letterEl.offsetHeight;
 
+  letterArrived = false;
+  fallPaused = false;
   letterEl.style.transition = 'none';
   letterEl.style.transform = 'translateY(0)';
 
   const startMs = performance.now();
-  fallPaused = false;
 
   function step(now) {
     if (!gameRunning) return;
@@ -189,7 +187,6 @@ function startFall(onArrive) {
 
     const elapsed = now - startMs;
     const progress = Math.min(elapsed / duration, 1);
-    const maxFall = robotY - startY - letterEl.offsetHeight;
     const dy = maxFall * progress;
 
     letterEl.style.transform = `translateY(${dy}px)`;
@@ -197,20 +194,15 @@ function startFall(onArrive) {
     if (progress < 1) {
       animFrame = requestAnimationFrame(step);
     } else {
-      // arrived at robot
+      // Arrived — stop here; student can still press the key
+      letterArrived = true;
+      // Brief visual pulse to signal "waiting"
+      letterEl.style.filter = 'drop-shadow(0 0 8px #FFD54F)';
       onArrive();
     }
   }
 
   animFrame = requestAnimationFrame(step);
-}
-
-function pauseFall() {
-  fallPaused = true;
-}
-
-function resumeFall() {
-  fallPaused = false;
 }
 
 // ── Game loop ───────────────────────────────────────────────────────────────
@@ -219,16 +211,13 @@ export function startGame(unitKey = 'U1', level = 'L0') {
   score = 0;
   touchKeys = activeLetters(unitKey);
 
-  const settings = loadSettings();
   const prog = loadProgress();
   const robotIdx = currentRobotIndex(masteredCount(prog));
 
   updateUnit(unitKey);
   updateScore();
   drawRobot(robotIdx);
-
   renderTouchKeys(touchKeys);
-
   nextTurn(level, touchKeys);
 }
 
@@ -240,16 +229,16 @@ export function stopGame() {
 function nextTurn(level, keys) {
   if (!gameRunning) return;
 
+  const { letter: letterEl } = getEls();
+  if (letterEl) letterEl.style.filter = '';
+
   const letter = pickLetter(keys);
   showLetter(letter);
   speakLetter(letter);
 
-  if (level === 'L0') {
-    // L0: letter stays until correct key pressed
-  } else if (level === 'L1') {
+  if (level === 'L1') {
     startFall(() => {
-      // arrived at robot — wait for correct input
-      // (student still has time to press the right key)
+      // Arrived — visual cue only; student still has time to press correct key
     });
   }
 }
@@ -260,27 +249,27 @@ export function handleKey(pressed) {
   const expected = currentLetter.toUpperCase();
 
   if (pressed === expected) {
-    // CORRECT
     shoot();
     flashSuccess();
     score++;
     updateScore();
 
-    const prog = recordAttempt(currentLetter.toUpperCase(), true);
+    // Reset arrived state
+    letterArrived = false;
+    const { letter: letterEl } = getEls();
+    if (letterEl) letterEl.style.filter = '';
 
-    // Check robot unlock
-    const before = masteredCount(loadProgress()) - (prog[currentLetter]?.recent?.at(-1) ? 1 : 0);
-    const after = masteredCount(prog);
-    if (after > before) {
-      showRobotUnlock(after);
+    const prog = recordAttempt(currentLetter.toUpperCase(), true);
+    const prevMastered = masteredCount(loadProgress()) - 1;
+    const afterMastered = masteredCount(prog);
+    if (afterMastered > prevMastered) {
+      showRobotUnlock(afterMastered);
     }
 
-    // pause then next
     setTimeout(() => {
       if (gameRunning) nextTurn(loadSettings().level, touchKeys);
     }, 600);
   } else {
-    // WRONG — record as non-firstTry
     recordAttempt(currentLetter.toUpperCase(), false);
     shakeLetter();
   }
@@ -307,30 +296,41 @@ export function renderTouchKeys(keys) {
   });
 }
 
-// ── Robot unlock notification ─────────────────────────────────────────────────
-export function showRobotUnlock(masteredCount) {
+// ── Toast queue ──────────────────────────────────────────────────────────────
+export function showRobotUnlock(count) {
   const settings = loadSettings();
-  if (settings.lang === 'zh') {
-    showToast('🤖 新機械人解鎖了！', `已掌握 ${masteredCount} 個字母`);
-  } else {
-    showToast('🤖 New robot unlocked!', `${masteredCount} letters mastered`);
-  }
+  const title   = settings.lang === 'zh'
+    ? '🤖 新機械人解鎖了！'
+    : '🤖 New robot unlocked!';
+  const body = settings.lang === 'zh'
+    ? `已掌握 ${count} 個字母`
+    : `${count} letters mastered`;
+
+  toastQueue.push({ title, body });
+  if (!toastTimer) drainToast();
+}
+
+function drainToast() {
+  if (toastQueue.length === 0) { toastTimer = null; return; }
+  const { title, body } = toastQueue.shift();
+  showToast(title, body);
+  toastTimer = setTimeout(drainToast, 3500);
 }
 
 function showToast(title, body) {
-  // Simple notification using the toast element
-  const toast = document.getElementById('js-toast');
+  const toast      = document.getElementById('js-toast');
   const toastTitle = document.getElementById('js-toast-title');
-  const toastBody = document.getElementById('js-toast-body');
+  const toastBody  = document.getElementById('js-toast-body');
   if (!toast || !toastTitle || !toastBody) return;
 
+  // Hide first to retrigger animation
+  toast.classList.remove('visible');
+  void toast.offsetWidth;
   toastTitle.textContent = title;
-  toastBody.textContent = body;
+  toastBody.textContent  = body;
   toast.classList.add('visible');
 
-  setTimeout(() => {
-    toast.classList.remove('visible');
-  }, 3000);
+  setTimeout(() => toast.classList.remove('visible'), 3000);
 }
 
 // ── Settings panel ──────────────────────────────────────────────────────────
@@ -357,26 +357,20 @@ export function applySettings() {
   const panel = document.getElementById('js-settings-panel');
   if (!panel) return;
 
-  const voice = panel.querySelector('#js-voice-toggle')?.checked ?? true;
-  const speed = panel.querySelector('#js-speed-select')?.value ?? 'slow';
-  const hc = panel.querySelector('#js-hc-toggle')?.checked ?? false;
+  const voice  = panel.querySelector('#js-voice-toggle')?.checked ?? true;
+  const speed  = panel.querySelector('#js-speed-select')?.value ?? 'slow';
+  const hc     = panel.querySelector('#js-hc-toggle')?.checked ?? false;
   const motion = panel.querySelector('#js-motion-toggle')?.checked ?? false;
-  const lang = panel.querySelector('#js-lang-select')?.value ?? 'zh';
+  const lang   = panel.querySelector('#js-lang-select')?.value ?? 'zh';
 
   const next = { voice, speed, highContrast: hc, reduceMotion: motion, lang };
 
-  // Apply high contrast
   document.body.classList.toggle('high-contrast', hc);
 
-  // Apply reduce motion
   document.querySelectorAll('.touch-key').forEach(btn => {
     btn.classList.toggle('no-motion', motion);
   });
 
-  saveSettings(next);
+  saveSettings(next);   // ← was missing; now persists to localStorage
   closeSettings();
-}
-
-function saveSettings(patch) {
-  saveSettingsFn(patch);
 }
