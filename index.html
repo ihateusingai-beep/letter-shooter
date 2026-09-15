@@ -1,0 +1,529 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>字母射擊 — Letter Shooter</title>
+<style>
+  /* ── Reset & base ─────────────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:        #F0F4FF;
+    --primary:   #4FC3F7;
+    --accent:    #FF8A80;
+    --text:      #1A1A2E;
+    --robot-body: #E8F4FD;
+    --key-bg:    #FFFFFF;
+    --key-border:#4FC3F7;
+    --key-active:#B3E5FC;
+    --success:   #69F0AE;
+    --danger:    #FF8A80;
+    --panel-bg:  rgba(255,255,255,0.95);
+    --shadow:    0 4px 24px rgba(0,0,0,0.12);
+    --radius:    16px;
+    --top-h:     56px;
+    --bot-h:     120px;
+    --robot-h:   90px;
+  }
+
+  body {
+    font-family: system-ui, -apple-system, 'Helvetica Neue', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100dvh;
+    overflow: hidden;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+
+  /* ── High contrast ─────────────────────────────────────────── */
+  body.high-contrast {
+    --bg: #000;
+    --text: #FFD54F;
+    --primary: #FFD54F;
+    --accent: #FF8A80;
+    --robot-body: #1A1A2E;
+    --key-bg: #1A1A2E;
+    --key-border: #FFD54F;
+    --key-active: #FFD54F;
+  }
+
+  /* ── Top bar ───────────────────────────────────────────────── */
+  .top-bar {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: var(--top-h);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+    background: white;
+    border-bottom: 2px solid #E0E8F8;
+    z-index: 10;
+  }
+  body.high-contrast .top-bar {
+    background: #1A1A2E;
+    border-bottom-color: #FFD54F;
+  }
+
+  .score-block { display: flex; flex-direction: column; align-items: flex-start; }
+  .score-label {
+    font-size: 10px; color: #888; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.05em;
+  }
+  .score-num {
+    font-size: 28px; font-weight: 800; color: var(--primary); line-height: 1;
+  }
+
+  .unit-badge {
+    background: var(--primary);
+    color: white;
+    font-size: 13px; font-weight: 700;
+    padding: 4px 12px; border-radius: 20px;
+  }
+
+  .icon-btn {
+    width: 44px; height: 44px;
+    background: none; border: none; border-radius: 10px;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+    transition: background 0.15s;
+  }
+  .icon-btn:hover, .icon-btn:focus-visible { background: #E8F4F8; outline: none; }
+
+  /* ── Game area ─────────────────────────────────────────────── */
+  .game-area {
+    position: fixed;
+    top: var(--top-h); bottom: var(--bot-h);
+    left: 0; right: 0;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  /* Letter target */
+  #js-letter {
+    font-size: clamp(120px, 30vw, 200px);
+    font-weight: 900;
+    color: var(--text);
+    line-height: 1;
+    pointer-events: none;
+    will-change: transform, opacity;
+    position: relative;
+    z-index: 2;
+  }
+  #js-letter.shake {
+    animation: shake 0.4s ease-in-out;
+  }
+  @keyframes shake {
+    0%,100% { transform: translateX(0) scale(1); }
+    20%      { transform: translateX(-12px) scale(1); }
+    40%      { transform: translateX(12px) scale(1); }
+    60%      { transform: translateX(-8px) scale(1); }
+    80%      { transform: translateX(8px) scale(1); }
+  }
+  .no-motion #js-letter, .no-motion #js-letter.shake {
+    animation: none !important;
+  }
+
+  /* ── Bullet (hidden absolute) ──────────────────────────────── */
+  #js-bullet {
+    position: fixed;
+    left: 50%; bottom: calc(var(--bot-h) + 20px);
+    width: 16px; height: 16px;
+    background: var(--success);
+    border-radius: 50%;
+    opacity: 0;
+    transform: translate(0, 0);
+    z-index: 3;
+    pointer-events: none;
+    box-shadow: 0 0 8px var(--success);
+  }
+
+  /* ── Robot ─────────────────────────────────────────────────── */
+  .robot-zone {
+    position: fixed;
+    bottom: var(--bot-h);
+    left: 50%; transform: translateX(-50%);
+    height: var(--robot-h);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 3;
+    pointer-events: none;
+  }
+  #js-robot-wrap svg { display: block; }
+
+  /* ── Flash overlay ─────────────────────────────────────────── */
+  #js-flash {
+    position: fixed;
+    inset: 0;
+    background: var(--success);
+    opacity: 0;
+    pointer-events: none;
+    z-index: 100;
+    transition: opacity 0.15s;
+  }
+
+  /* ── Bottom — touch keys ───────────────────────────────────── */
+  .bottom-bar {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    height: var(--bot-h);
+    background: white;
+    border-top: 2px solid #E0E8F8;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 8px;
+    padding: 8px 16px 12px;
+  }
+  body.high-contrast .bottom-bar {
+    background: #1A1A2E;
+    border-top-color: #FFD54F;
+  }
+
+  #js-touch-keys {
+    display: flex; gap: 10px;
+    flex-wrap: wrap; justify-content: center;
+    width: 100%;
+  }
+
+  .touch-key {
+    min-width: 64px; height: 64px;
+    background: var(--key-bg);
+    border: 3px solid var(--key-border);
+    border-radius: 14px;
+    font-size: 26px; font-weight: 800;
+    color: var(--text);
+    cursor: pointer;
+    transition: transform 0.1s, background 0.1s, box-shadow 0.1s;
+    box-shadow: 0 3px 0 var(--key-border);
+    -webkit-tap-highlight-color: transparent;
+  }
+  .touch-key:hover { background: var(--key-active); }
+  .touch-key:active, .touch-key.pressed {
+    transform: translateY(2px);
+    box-shadow: 0 1px 0 var(--key-border);
+    background: var(--key-active);
+  }
+  .touch-key.no-motion {
+    transition: none !important;
+  }
+
+  /* ── Settings panel ────────────────────────────────────────── */
+  #js-settings-panel {
+    position: fixed; inset: 0;
+    background: var(--panel-bg);
+    z-index: 200;
+    display: none;
+    flex-direction: column;
+    padding: 24px 20px;
+    overflow-y: auto;
+  }
+  #js-settings-panel.visible { display: flex; }
+
+  .settings-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 24px;
+  }
+  .settings-header h2 {
+    font-size: 22px; font-weight: 800;
+  }
+  .settings-close {
+    width: 44px; height: 44px;
+    background: #F0F4FF; border: none; border-radius: 10px;
+    font-size: 20px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .settings-group {
+    display: flex; flex-direction: column; gap: 20px;
+  }
+
+  .setting-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 16px;
+    background: white;
+    border-radius: 12px;
+    border: 1.5px solid #E0E8F8;
+    gap: 16px;
+  }
+  .setting-row label {
+    font-size: 15px; font-weight: 600; flex: 1;
+  }
+  .setting-row .sublabel {
+    font-size: 12px; color: #888; display: block; margin-top: 2px;
+  }
+
+  /* Toggle switch */
+  .toggle {
+    position: relative; width: 48px; height: 26px;
+    flex-shrink: 0;
+  }
+  .toggle input { opacity: 0; width: 0; height: 0; }
+  .toggle-slider {
+    position: absolute; inset: 0;
+    background: #DDD; border-radius: 26px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .toggle-slider::before {
+    content: '';
+    position: absolute;
+    width: 20px; height: 20px;
+    left: 3px; top: 3px;
+    background: white; border-radius: 50%;
+    transition: transform 0.2s;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  }
+  .toggle input:checked + .toggle-slider { background: var(--primary); }
+  .toggle input:checked + .toggle-slider::before { transform: translateX(22px); }
+
+  /* Select */
+  select {
+    padding: 8px 12px; border-radius: 8px;
+    border: 1.5px solid #E0E8F8;
+    font-size: 14px; font-weight: 600;
+    background: white; color: var(--text);
+    cursor: pointer;
+    min-width: 100px;
+  }
+
+  .settings-apply {
+    margin-top: auto; padding-top: 16px;
+  }
+  .btn-primary {
+    width: 100%; padding: 16px;
+    background: var(--primary); color: white;
+    border: none; border-radius: 14px;
+    font-size: 16px; font-weight: 700;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .btn-primary:hover { opacity: 0.85; }
+
+  /* ── Toast ─────────────────────────────────────────────────── */
+  #js-toast {
+    position: fixed;
+    top: calc(var(--top-h) + 12px);
+    left: 50%; transform: translateX(-50%) translateY(-20px);
+    background: white;
+    border: 2px solid var(--primary);
+    border-radius: 12px;
+    padding: 10px 18px;
+    box-shadow: var(--shadow);
+    z-index: 300;
+    opacity: 0;
+    transition: opacity 0.25s, transform 0.25s;
+    pointer-events: none;
+    text-align: center;
+    max-width: 90vw;
+  }
+  #js-toast.visible {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  #js-toast .toast-title { font-weight: 700; font-size: 15px; }
+  #js-toast .toast-body  { font-size: 13px; color: #666; margin-top: 2px; }
+
+  /* ── Start overlay ────────────────────────────────────────── */
+  #js-start-overlay {
+    position: fixed; inset: 0;
+    background: rgba(240,244,255,0.97);
+    z-index: 150;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 20px;
+  }
+  #js-start-overlay.hidden { display: none; }
+
+  .start-title {
+    font-size: 36px; font-weight: 900;
+    color: var(--text); text-align: center;
+  }
+  .start-desc {
+    font-size: 16px; color: #666; text-align: center;
+    max-width: 300px; line-height: 1.5;
+  }
+  .btn-start {
+    padding: 18px 48px;
+    background: var(--primary); color: white;
+    border: none; border-radius: 20px;
+    font-size: 20px; font-weight: 800;
+    cursor: pointer;
+    box-shadow: 0 4px 0 #0288D1;
+    transition: transform 0.1s, box-shadow 0.1s;
+  }
+  .btn-start:active {
+    transform: translateY(3px);
+    box-shadow: 0 1px 0 #0288D1;
+  }
+
+  /* ── Reduce motion ────────────────────────────────────────── */
+  .no-motion *, .no-motion *::before, .no-motion *::after {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+</style>
+</head>
+<body>
+
+<!-- ── Top bar ─────────────────────────────────────────────────────────────── -->
+<div class="top-bar">
+  <div class="score-block">
+    <span class="score-label" id="js-score-label">分數</span>
+    <span class="score-num" id="js-score">0</span>
+  </div>
+
+  <div style="display:flex;align-items:center;gap:8px;">
+    <span class="unit-badge" id="js-unit">U1·ABC</span>
+    <button class="icon-btn" id="js-settings-btn" aria-label="Settings">⚙️</button>
+  </div>
+</div>
+
+<!-- ── Game area ──────────────────────────────────────────────────────────── -->
+<div class="game-area" id="js-game-area">
+  <div id="js-letter" aria-live="polite" role="status" aria-label="Current letter"></div>
+</div>
+
+<!-- ── Bullet ────────────────────────────────────────────────────────────── -->
+<div id="js-bullet" aria-hidden="true"></div>
+
+<!-- ── Robot ─────────────────────────────────────────────────────────────── -->
+<div class="robot-zone" id="js-robot-wrap" aria-hidden="true"></div>
+
+<!-- ── Flash ─────────────────────────────────────────────────────────────── -->
+<div id="js-flash" aria-hidden="true"></div>
+
+<!-- ── Bottom — touch keys ──────────────────────────────────────────────── -->
+<div class="bottom-bar">
+  <div id="js-touch-keys" role="group" aria-label="Letter keys"></div>
+</div>
+
+<!-- ── Start overlay ────────────────────────────────────────────────────── -->
+<div id="js-start-overlay">
+  <div class="start-title">🔤 字母射擊</div>
+  <div class="start-desc">看到字母，按同一個鍵，機械人就會射擊！</div>
+  <button class="btn-start" id="js-start-btn">開始</button>
+</div>
+
+<!-- ── Settings panel ───────────────────────────────────────────────────── -->
+<div id="js-settings-panel" role="dialog" aria-modal="true" aria-label="Settings">
+  <div class="settings-header">
+    <h2>設定</h2>
+    <button class="settings-close" id="js-settings-close" aria-label="Close settings">✕</button>
+  </div>
+
+  <div class="settings-group">
+
+    <div class="setting-row">
+      <label>
+        語言 Language
+        <span class="sublabel">介面語言</span>
+      </label>
+      <select id="js-lang-select">
+        <option value="zh">繁體中文</option>
+        <option value="en">English</option>
+      </select>
+    </div>
+
+    <div class="setting-row">
+      <label>
+        語音朗讀 Voice
+        <span class="sublabel">按對後朗讀字母</span>
+      </label>
+      <label class="toggle">
+        <input type="checkbox" id="js-voice-toggle" checked>
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+
+    <div class="setting-row">
+      <label>
+        速度 Speed
+        <span class="sublabel">字母下落速度（L1）</span>
+      </label>
+      <select id="js-speed-select">
+        <option value="verySlow">很慢 Very Slow</option>
+        <option value="slow" selected>慢 Slow</option>
+        <option value="medium">中 Medium</option>
+      </select>
+    </div>
+
+    <div class="setting-row">
+      <label>
+        高對比 High Contrast
+        <span class="sublabel">深色背景大字</span>
+      </label>
+      <label class="toggle">
+        <input type="checkbox" id="js-hc-toggle">
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+
+    <div class="setting-row">
+      <label>
+        減動畫 Reduce Motion
+        <span class="sublabel">停用動畫過場</span>
+      </label>
+      <label class="toggle">
+        <input type="checkbox" id="js-motion-toggle">
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+
+  </div>
+
+  <div class="settings-apply">
+    <button class="btn-primary" id="js-settings-apply">儲存並返回 Save</button>
+  </div>
+</div>
+
+<!-- ── Toast ─────────────────────────────────────────────────────────────── -->
+<div id="js-toast" role="status" aria-live="polite">
+  <div class="toast-title"  id="js-toast-title"></div>
+  <div class="toast-body"   id="js-toast-body"></div>
+</div>
+
+<!-- ── Script ───────────────────────────────────────────────────────────── -->
+<script src="./js/bundle.js"></script>
+<script type="module">
+const LS = window.LetterShooter;
+
+// ── Boot ──────────────────────────────────────────────────────────────────
+const settings = LS.loadSettings ? LS.loadSettings() : {};
+if (settings.highContrast) document.body.classList.add('high-contrast');
+
+// ── Keyboard ─────────────────────────────────────────────────────────────
+document.addEventListener('keydown', (e) => {
+  const key = e.key.toUpperCase();
+  if (/^[A-Z]$/.test(key)) LS.handleKey(key);
+});
+
+// ── Touch key visual feedback ─────────────────────────────────────────────
+document.addEventListener('keydown', (e) => {
+  const key = e.key.toUpperCase();
+  if (!/^[A-Z]$/.test(key)) return;
+  document.querySelector(`.touch-key[data-letter="${key}"]`)?.classList.add('pressed');
+});
+document.addEventListener('keyup', (e) => {
+  const key = e.key.toUpperCase();
+  if (!/^[A-Z]$/.test(key)) return;
+  document.querySelector(`.touch-key[data-letter="${key}"]`)?.classList.remove('pressed');
+});
+
+// ── Settings panel buttons ───────────────────────────────────────────────
+document.getElementById('js-settings-btn')?.addEventListener('click', LS.openSettings);
+document.getElementById('js-settings-close')?.addEventListener('click', LS.closeSettings);
+document.getElementById('js-settings-apply')?.addEventListener('click', () => LS.applySettings());
+
+// ── Start button ──────────────────────────────────────────────────────────
+document.getElementById('js-start-btn')?.addEventListener('click', () => {
+  document.getElementById('js-start-overlay')?.classList.add('hidden');
+  const s = LS.loadSettings ? LS.loadSettings() : {};
+  LS.startGame(s.currentUnit || 'U1', s.level || 'L0');
+});
+</script>
+
+// ── First load: show start overlay ───────────────────────────────────────
+</script>
+</body>
+</html>

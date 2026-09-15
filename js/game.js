@@ -1,0 +1,382 @@
+// js/game.js — core game loop: L0 / L1, shooting, scoring
+import { loadSettings, fallDuration } from './settings.js';
+import { loadProgress, recordAttempt, masteredCount } from './progress.js';
+import { activeLetters, currentRobotIndex } from './curriculum.js';
+import { t } from './i18n.js';
+
+// Attach public API to window for non-module HTML
+window.LetterShooter = {
+  startGame, handleKey, openSettings, closeSettings, applySettings,
+  renderTouchKeys, speakLetter, shoot, flashSuccess, shakeLetter,
+  showLetter, updateScore, drawRobot,
+  loadSettings,
+};
+
+// ── State ──────────────────────────────────────────────────────────────────
+let score = 0;
+let currentLetter = null;
+let touchKeys = [];       // visible touch key letters
+let gameRunning = false;
+let animFrame = null;
+let startTime = null;
+
+// ── DOM refs ────────────────────────────────────────────────────────────────
+export function getEls() {
+  return {
+    letter:    document.getElementById('js-letter'),
+    robot:     document.getElementById('js-robot'),
+    bullet:    document.getElementById('js-bullet'),
+    scoreEl:   document.getElementById('js-score'),
+    unitEl:    document.getElementById('js-unit'),
+    robotWrap: document.getElementById('js-robot-wrap'),
+    flashEl:   document.getElementById('js-flash'),
+  };
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+function pickLetter(keys) {
+  return keys[Math.floor(Math.random() * keys.length)];
+}
+
+export function updateScore() {
+  const { scoreEl } = getEls();
+  if (scoreEl) scoreEl.textContent = score;
+}
+
+export function updateUnit(unitKey) {
+  const { unitEl } = getEls();
+  if (unitEl) unitEl.textContent = unitKey;
+}
+
+// ── TTS ────────────────────────────────────────────────────────────────────
+export function speakLetter(letter) {
+  const settings = loadSettings();
+  if (!settings.voice) return;
+  if (!('speechSynthesis' in window)) return;
+  window.speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(letter.toUpperCase());
+  u.lang = 'en-US';
+  u.rate = 0.9;
+  window.speechSynthesis.speak(u);
+}
+
+// ── Robot ──────────────────────────────────────────────────────────────────
+// CSS-drawn robots: base + 2 unlockable variants
+export function drawRobot(robotIdx = 0) {
+  const { robotWrap } = getEls();
+  if (!robotWrap) return;
+
+  const colors = [
+    { body: '#E8F4FD', eye: '#1A1A2E', accent: '#4FC3F7' },  // base: blue
+    { body: '#FDE8E8', eye: '#1A1A2E', accent: '#EF9A9A' },  // 1: pink
+    { body: '#E8FDE8', eye: '#1A1A2E', accent: '#A5D6A7' },  // 2: green
+  ];
+  const c = colors[robotIdx % colors.length];
+
+  robotWrap.innerHTML = `
+    <svg viewBox="0 0 80 90" width="80" height="90" aria-hidden="true">
+      <!-- antenna -->
+      <line x1="40" y1="8" x2="40" y2="22" stroke="${c.accent}" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="40" cy="6" r="5" fill="${c.accent}"/>
+      <!-- head -->
+      <rect x="18" y="22" width="44" height="36" rx="10" fill="${c.body}" stroke="${c.accent}" stroke-width="2"/>
+      <!-- eyes -->
+      <circle cx="30" cy="36" r="7" fill="${c.eye}"/>
+      <circle cx="50" cy="36" r="7" fill="${c.eye}"/>
+      <circle cx="32" cy="34" r="2.5" fill="white"/>
+      <circle cx="52" cy="34" r="2.5" fill="white"/>
+      <!-- mouth smile -->
+      <path d="M 30 48 Q 40 55 50 48" stroke="${c.eye}" stroke-width="2" fill="none" stroke-linecap="round"/>
+      <!-- body -->
+      <rect x="22" y="60" width="36" height="22" rx="6" fill="${c.body}" stroke="${c.accent}" stroke-width="2"/>
+      <!-- arms -->
+      <rect x="6"  y="62" width="14" height="8" rx="4" fill="${c.body}" stroke="${c.accent}" stroke-width="2"/>
+      <rect x="60" y="62" width="14" height="8" rx="4" fill="${c.body}" stroke="${c.accent}" stroke-width="2"/>
+      <!-- legs -->
+      <rect x="26" y="82" width="10" height="8" rx="3" fill="${c.body}" stroke="${c.accent}" stroke-width="2"/>
+      <rect x="44" y="82" width="10" height="8" rx="3" fill="${c.body}" stroke="${c.accent}" stroke-width="2"/>
+    </svg>`;
+}
+
+// ── Shoot animation ──────────────────────────────────────────────────────────
+export function shoot() {
+  const { letter, robot, bullet } = getEls();
+  if (!letter || !robot || !bullet) return;
+
+  const lv = letter.getBoundingClientRect();
+  const rv = robot.getBoundingClientRect();
+
+  const bx = (lv.left + lv.width / 2) - (bullet.getBoundingClientRect().left);
+  const by = (lv.top + lv.height / 2) - (bullet.getBoundingClientRect().top);
+
+  bullet.style.transition = 'none';
+  bullet.style.opacity = '1';
+  bullet.style.transform = 'translate(0, 0)';
+
+  // trigger reflow
+  void bullet.offsetWidth;
+
+  bullet.style.transition = 'transform 0.25s ease-in, opacity 0.25s ease-in';
+  bullet.style.transform = `translate(${bx}px, ${by}px)`;
+
+  setTimeout(() => {
+    bullet.style.opacity = '0';
+    bullet.style.transition = 'none';
+    bullet.style.transform = 'translate(0, 0)';
+  }, 300);
+}
+
+// ── Success flash ────────────────────────────────────────────────────────────
+export function flashSuccess() {
+  const { flashEl } = getEls();
+  if (!flashEl) return;
+  flashEl.style.opacity = '1';
+  setTimeout(() => { flashEl.style.opacity = '0'; }, 200);
+}
+
+// ── Wrong shake ──────────────────────────────────────────────────────────────
+export function shakeLetter() {
+  const { letter } = getEls();
+  if (!letter) return;
+  letter.classList.remove('shake');
+  void letter.offsetWidth;
+  letter.classList.add('shake');
+  setTimeout(() => letter.classList.remove('shake'), 400);
+}
+
+// ── Show next letter ─────────────────────────────────────────────────────────
+export function showLetter(letter) {
+  const { letter: el } = getEls();
+  if (!el) return;
+  el.textContent = letter.toUpperCase();
+  el.style.opacity = '0';
+  el.style.transform = 'scale(0.7)';
+  requestAnimationFrame(() => {
+    el.style.transition = 'opacity 0.3s, transform 0.3s';
+    el.style.opacity = '1';
+    el.style.transform = 'scale(1)';
+  });
+  currentLetter = letter;
+}
+
+// ── L1: fall animation ──────────────────────────────────────────────────────
+let fallPaused = false;
+
+function startFall(onArrive) {
+  const settings = loadSettings();
+  if (settings.level !== 'L1') return;
+
+  const { letter } = getEls();
+  if (!letter) return;
+
+  const duration = fallDuration() * 1000; // ms
+  const robotY = getEls().robot.getBoundingClientRect().top;
+  const letterEl = letter;
+  const startY = letterEl.getBoundingClientRect().top;
+
+  letterEl.style.transition = 'none';
+  letterEl.style.transform = 'translateY(0)';
+
+  const startMs = performance.now();
+  fallPaused = false;
+
+  function step(now) {
+    if (!gameRunning) return;
+    if (fallPaused) {
+      animFrame = requestAnimationFrame(step);
+      return;
+    }
+
+    const elapsed = now - startMs;
+    const progress = Math.min(elapsed / duration, 1);
+    const maxFall = robotY - startY - letterEl.offsetHeight;
+    const dy = maxFall * progress;
+
+    letterEl.style.transform = `translateY(${dy}px)`;
+
+    if (progress < 1) {
+      animFrame = requestAnimationFrame(step);
+    } else {
+      // arrived at robot
+      onArrive();
+    }
+  }
+
+  animFrame = requestAnimationFrame(step);
+}
+
+function pauseFall() {
+  fallPaused = true;
+}
+
+function resumeFall() {
+  fallPaused = false;
+}
+
+// ── Game loop ───────────────────────────────────────────────────────────────
+export function startGame(unitKey = 'U1', level = 'L0') {
+  gameRunning = true;
+  score = 0;
+  touchKeys = activeLetters(unitKey);
+
+  const settings = loadSettings();
+  const prog = loadProgress();
+  const robotIdx = currentRobotIndex(masteredCount(prog));
+
+  updateUnit(unitKey);
+  updateScore();
+  drawRobot(robotIdx);
+
+  renderTouchKeys(touchKeys);
+
+  nextTurn(level, touchKeys);
+}
+
+export function stopGame() {
+  gameRunning = false;
+  if (animFrame) { cancelAnimationFrame(animFrame); animFrame = null; }
+}
+
+function nextTurn(level, keys) {
+  if (!gameRunning) return;
+
+  const letter = pickLetter(keys);
+  showLetter(letter);
+  speakLetter(letter);
+
+  if (level === 'L0') {
+    // L0: letter stays until correct key pressed
+  } else if (level === 'L1') {
+    startFall(() => {
+      // arrived at robot — wait for correct input
+      // (student still has time to press the right key)
+    });
+  }
+}
+
+// ── Input handling ──────────────────────────────────────────────────────────
+export function handleKey(pressed) {
+  if (!gameRunning || !currentLetter) return;
+  const expected = currentLetter.toUpperCase();
+
+  if (pressed === expected) {
+    // CORRECT
+    shoot();
+    flashSuccess();
+    score++;
+    updateScore();
+
+    const prog = recordAttempt(currentLetter.toUpperCase(), true);
+
+    // Check robot unlock
+    const before = masteredCount(loadProgress()) - (prog[currentLetter]?.recent?.at(-1) ? 1 : 0);
+    const after = masteredCount(prog);
+    if (after > before) {
+      showRobotUnlock(after);
+    }
+
+    // pause then next
+    setTimeout(() => {
+      if (gameRunning) nextTurn(loadSettings().level, touchKeys);
+    }, 600);
+  } else {
+    // WRONG — record as non-firstTry
+    recordAttempt(currentLetter.toUpperCase(), false);
+    shakeLetter();
+  }
+}
+
+// ── Touch keys ───────────────────────────────────────────────────────────────
+export function renderTouchKeys(keys) {
+  const container = document.getElementById('js-touch-keys');
+  if (!container) return;
+  container.innerHTML = '';
+
+  const settings = loadSettings();
+  const reduceMotion = settings.reduceMotion;
+
+  keys.forEach(letter => {
+    const btn = document.createElement('button');
+    btn.className = 'touch-key';
+    btn.textContent = letter.toUpperCase();
+    btn.setAttribute('data-letter', letter.toUpperCase());
+    btn.setAttribute('aria-label', `Letter ${letter.toUpperCase()}`);
+    if (reduceMotion) btn.classList.add('no-motion');
+    btn.addEventListener('click', () => handleKey(letter.toUpperCase()));
+    container.appendChild(btn);
+  });
+}
+
+// ── Robot unlock notification ─────────────────────────────────────────────────
+export function showRobotUnlock(masteredCount) {
+  const settings = loadSettings();
+  if (settings.lang === 'zh') {
+    showToast('🤖 新機械人解鎖了！', `已掌握 ${masteredCount} 個字母`);
+  } else {
+    showToast('🤖 New robot unlocked!', `${masteredCount} letters mastered`);
+  }
+}
+
+function showToast(title, body) {
+  // Simple notification using the toast element
+  const toast = document.getElementById('js-toast');
+  const toastTitle = document.getElementById('js-toast-title');
+  const toastBody = document.getElementById('js-toast-body');
+  if (!toast || !toastTitle || !toastBody) return;
+
+  toastTitle.textContent = title;
+  toastBody.textContent = body;
+  toast.classList.add('visible');
+
+  setTimeout(() => {
+    toast.classList.remove('visible');
+  }, 3000);
+}
+
+// ── Settings panel ──────────────────────────────────────────────────────────
+export function openSettings() {
+  const panel = document.getElementById('js-settings-panel');
+  if (!panel) return;
+
+  const settings = loadSettings();
+  panel.querySelector('#js-voice-toggle').checked = settings.voice;
+  panel.querySelector('#js-speed-select').value = settings.speed;
+  panel.querySelector('#js-hc-toggle').checked = settings.highContrast;
+  panel.querySelector('#js-motion-toggle').checked = settings.reduceMotion;
+  panel.querySelector('#js-lang-select').value = settings.lang;
+
+  panel.classList.add('visible');
+}
+
+export function closeSettings() {
+  const panel = document.getElementById('js-settings-panel');
+  if (panel) panel.classList.remove('visible');
+}
+
+export function applySettings() {
+  const panel = document.getElementById('js-settings-panel');
+  if (!panel) return;
+
+  const voice = panel.querySelector('#js-voice-toggle')?.checked ?? true;
+  const speed = panel.querySelector('#js-speed-select')?.value ?? 'slow';
+  const hc = panel.querySelector('#js-hc-toggle')?.checked ?? false;
+  const motion = panel.querySelector('#js-motion-toggle')?.checked ?? false;
+  const lang = panel.querySelector('#js-lang-select')?.value ?? 'zh';
+
+  const next = { voice, speed, highContrast: hc, reduceMotion: motion, lang };
+
+  // Apply high contrast
+  document.body.classList.toggle('high-contrast', hc);
+
+  // Apply reduce motion
+  document.querySelectorAll('.touch-key').forEach(btn => {
+    btn.classList.toggle('no-motion', motion);
+  });
+
+  saveSettings(next);
+  closeSettings();
+}
+
+function saveSettings(patch) {
+  saveSettingsFn(patch);
+}
