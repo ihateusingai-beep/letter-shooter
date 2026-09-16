@@ -5,6 +5,7 @@ import { activeLetters, currentRobotIndex } from './curriculum.js';
 import { t, pickT, setLang } from './i18n.js';
 import { playCorrect, playWrong, playStreak, playUnlock, unlockAudio } from './sfx.js';
 import { confettiBurst, streakFlash, megaFireworks, startLetterTrail, stopLetterTrail, letterSparkle, floatCombo } from './fx.js';
+import { recordStar, getDailyProgress, dailyGoal, getWeeklyProgress, weeklyGoal } from './challenge.js';
 import { startBgm, stopBgm, pauseBgm, resumeBgm, unlockBgm } from './bgm.js';
 
 // Attach public API to window for non-module HTML
@@ -106,6 +107,27 @@ function updateStars(total) {
       next.classList.remove('zero');
     }
   }
+  updateDailyHint();
+}
+
+// ── Daily challenge hint (Phase 12b) ───────────────────────────────────────
+function updateDailyHint() {
+  const el = document.getElementById('js-daily-hint');
+  if (!el) return;
+  const daily = getDailyProgress();
+  const goal = dailyGoal();
+  const pct = Math.min(100, Math.round((daily.stars / goal) * 100));
+  const lang = loadSettings().lang || 'zh';
+  if (daily.stars >= goal) {
+    el.textContent = lang === 'zh' ? `✅ 今日達標 ${daily.stars}/${goal}` : `✅ Daily done ${daily.stars}/${goal}`;
+    el.classList.add('done');
+  } else {
+    el.textContent = lang === 'zh' ? `今日 ${daily.stars}/${goal} ⭐` : `Today ${daily.stars}/${goal} ⭐`;
+    el.classList.remove('done');
+  }
+  // Mini progress bar
+  const fill = document.getElementById('js-daily-bar-fill');
+  if (fill) fill.style.width = pct + '%';
 }
 
 // ── TTS ────────────────────────────────────────────────────────────────────
@@ -431,6 +453,7 @@ export function startGame(unitKey = 'U1', level = 'L0') {
   updateScore();
   updateStreak(0);
   updateStars(0);
+  updateDailyHint();
   drawRobot(robotIdx);
   drawMascot();
   populateFloor(loadSettings().theme || 'space');
@@ -509,6 +532,33 @@ export function handleKey(pressed) {
       showAchievement(stars);
     }
 
+    // Daily challenge tracking (Phase 12b)
+    const challenge = recordStar();
+    updateDailyHint();  // refresh UI after recordStar increments
+    if (challenge.dailyMilestone) {
+      const pct = Math.round(challenge.dailyMilestone * 100);
+      const lang = loadSettings().lang || 'zh';
+      const phrase = lang === 'zh'
+        ? `今日 ${pct}%！仲差少少！`
+        : `${pct}% today! Almost there!`;
+      // Quick milestone toast (reuse js-toast)
+      const toast = document.getElementById('js-toast');
+      const title = document.getElementById('js-toast-title');
+      const body = document.getElementById('js-toast-body');
+      if (toast && title && body) {
+        title.textContent = lang === 'zh' ? `🎯 今日進度 ${pct}%` : `🎯 Daily ${pct}%`;
+        body.textContent = phrase;
+        toast.classList.remove('visible');
+        void toast.offsetWidth;
+        toast.classList.add('visible');
+        setTimeout(() => toast.classList.remove('visible'), 2500);
+      }
+      if (challenge.dailyMilestone >= 1.0) {
+        // Daily goal complete: mega fireworks
+        megaFireworks({ theme: loadSettings().theme || 'space' });
+      }
+    }
+
     // ── Themed confetti burst at letter position (Phase 6a) ─────────────
     const letterBox = document.getElementById('js-letter')?.getBoundingClientRect();
     if (letterBox) {
@@ -576,6 +626,7 @@ export function handleKey(pressed) {
     updateScore(); // refresh rainbow off
     recordAttempt(currentLetter.toUpperCase(), false);
     shakeLetter();
+    flashWrongKey(pressed);  // Phase 12c — per-key shake
     mascotReact('sad');
     if (settings.soundFx) playWrong();
     if (settings.voice) speakNudge();
@@ -700,9 +751,27 @@ function makeKeyBtn(letter, reduceMotion) {
   btn.textContent = letter;
   btn.setAttribute('data-letter', letter);
   btn.setAttribute('aria-label', `Letter ${letter}`);
+  btn.style.position = 'relative';  // for ripple + halo positioning
   if (reduceMotion) btn.classList.add('no-motion');
-  btn.addEventListener('click', () => handleKey(letter));
+  btn.addEventListener('click', () => {
+    // Ripple on every tap (Phase 12c)
+    btn.classList.remove('ripple');
+    void btn.offsetWidth;
+    btn.classList.add('ripple');
+    setTimeout(() => btn.classList.remove('ripple'), 600);
+    handleKey(letter);
+  });
   return btn;
+}
+
+// Wrong-press feedback (Phase 12c) — applied to a specific key element
+function flashWrongKey(letter) {
+  const btn = document.querySelector(`.kb-key[data-letter="${letter}"]`);
+  if (!btn) return;
+  btn.classList.remove('wrong-shake');
+  void btn.offsetWidth;
+  btn.classList.add('wrong-shake');
+  setTimeout(() => btn.classList.remove('wrong-shake'), 400);
 }
 
 // Highlight the target key, dim all others

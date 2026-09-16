@@ -574,6 +574,68 @@
     }
   }
 
+  // js/challenge.js
+  var DAILY_GOAL = 20;
+  function todayKey() {
+    const d = /* @__PURE__ */ new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  }
+  function weekKey() {
+    const d = /* @__PURE__ */ new Date();
+    const target = new Date(d.valueOf());
+    const dayNr = (d.getDay() + 6) % 7;
+    target.setDate(target.getDate() - dayNr + 3);
+    const firstThursday = target.valueOf();
+    target.setMonth(0, 1);
+    if (target.getDay() !== 4) {
+      target.setMonth(0, 1 + (4 - target.getDay() + 7) % 7);
+    }
+    const weekNum = 1 + Math.ceil((firstThursday - target) / 6048e5);
+    return `${d.getFullYear()}-W${String(weekNum).padStart(2, "0")}`;
+  }
+  function readBucket(key) {
+    try {
+      const raw = localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : { stars: 0, milestonesFired: [] };
+    } catch {
+      return { stars: 0, milestonesFired: [] };
+    }
+  }
+  function writeBucket(key, bucket) {
+    try {
+      localStorage.setItem(key, JSON.stringify(bucket));
+    } catch {
+    }
+  }
+  function getDailyProgress() {
+    return readBucket("ls-daily-" + todayKey());
+  }
+  function getWeeklyProgress() {
+    return readBucket("ls-weekly-" + weekKey());
+  }
+  function recordStar() {
+    const daily = getDailyProgress();
+    daily.stars++;
+    writeBucket("ls-daily-" + todayKey(), daily);
+    const weekly = getWeeklyProgress();
+    weekly.stars++;
+    writeBucket("ls-weekly-" + weekKey(), weekly);
+    const milestones = [0.25, 0.5, 0.75, 1];
+    const prevRatio = (daily.stars - 1) / DAILY_GOAL;
+    const newRatio = daily.stars / DAILY_GOAL;
+    for (const m of milestones) {
+      if (prevRatio < m && newRatio >= m && !daily.milestonesFired.includes(m)) {
+        daily.milestonesFired.push(m);
+        writeBucket("ls-daily-" + todayKey(), daily);
+        return { dailyMilestone: m, daily: daily.stars, weekly: weekly.stars };
+      }
+    }
+    return { daily: daily.stars, weekly: weekly.stars };
+  }
+  function dailyGoal() {
+    return DAILY_GOAL;
+  }
+
   // js/bgm.js
   var bgmCtx = null;
   var bgmMaster = null;
@@ -845,6 +907,24 @@
         next.classList.remove("zero");
       }
     }
+    updateDailyHint();
+  }
+  function updateDailyHint() {
+    const el = document.getElementById("js-daily-hint");
+    if (!el) return;
+    const daily = getDailyProgress();
+    const goal = dailyGoal();
+    const pct = Math.min(100, Math.round(daily.stars / goal * 100));
+    const lang = loadSettings().lang || "zh";
+    if (daily.stars >= goal) {
+      el.textContent = lang === "zh" ? `\u2705 \u4ECA\u65E5\u9054\u6A19 ${daily.stars}/${goal}` : `\u2705 Daily done ${daily.stars}/${goal}`;
+      el.classList.add("done");
+    } else {
+      el.textContent = lang === "zh" ? `\u4ECA\u65E5 ${daily.stars}/${goal} \u2B50` : `Today ${daily.stars}/${goal} \u2B50`;
+      el.classList.remove("done");
+    }
+    const fill = document.getElementById("js-daily-bar-fill");
+    if (fill) fill.style.width = pct + "%";
   }
   function speakLetter(letter) {
     const settings = loadSettings();
@@ -1114,6 +1194,7 @@
     updateScore();
     updateStreak(0);
     updateStars(0);
+    updateDailyHint();
     drawRobot(robotIdx);
     drawMascot();
     populateFloor(loadSettings().theme || "space");
@@ -1189,6 +1270,27 @@
       if (stars === 10 || stars === 25 || stars === 50 || stars === 100) {
         showAchievement(stars);
       }
+      const challenge = recordStar();
+      updateDailyHint();
+      if (challenge.dailyMilestone) {
+        const pct = Math.round(challenge.dailyMilestone * 100);
+        const lang = loadSettings().lang || "zh";
+        const phrase = lang === "zh" ? `\u4ECA\u65E5 ${pct}%\uFF01\u4EF2\u5DEE\u5C11\u5C11\uFF01` : `${pct}% today! Almost there!`;
+        const toast = document.getElementById("js-toast");
+        const title = document.getElementById("js-toast-title");
+        const body = document.getElementById("js-toast-body");
+        if (toast && title && body) {
+          title.textContent = lang === "zh" ? `\u{1F3AF} \u4ECA\u65E5\u9032\u5EA6 ${pct}%` : `\u{1F3AF} Daily ${pct}%`;
+          body.textContent = phrase;
+          toast.classList.remove("visible");
+          void toast.offsetWidth;
+          toast.classList.add("visible");
+          setTimeout(() => toast.classList.remove("visible"), 2500);
+        }
+        if (challenge.dailyMilestone >= 1) {
+          megaFireworks({ theme: loadSettings().theme || "space" });
+        }
+      }
       const letterBox = document.getElementById("js-letter")?.getBoundingClientRect();
       if (letterBox) {
         confettiBurst(
@@ -1241,6 +1343,7 @@
       updateScore();
       recordAttempt(currentLetter.toUpperCase(), false);
       shakeLetter();
+      flashWrongKey(pressed);
       mascotReact("sad");
       if (settings.soundFx) playWrong();
       if (settings.voice) speakNudge();
@@ -1343,9 +1446,24 @@
     btn.textContent = letter;
     btn.setAttribute("data-letter", letter);
     btn.setAttribute("aria-label", `Letter ${letter}`);
+    btn.style.position = "relative";
     if (reduceMotion) btn.classList.add("no-motion");
-    btn.addEventListener("click", () => handleKey(letter));
+    btn.addEventListener("click", () => {
+      btn.classList.remove("ripple");
+      void btn.offsetWidth;
+      btn.classList.add("ripple");
+      setTimeout(() => btn.classList.remove("ripple"), 600);
+      handleKey(letter);
+    });
     return btn;
+  }
+  function flashWrongKey(letter) {
+    const btn = document.querySelector(`.kb-key[data-letter="${letter}"]`);
+    if (!btn) return;
+    btn.classList.remove("wrong-shake");
+    void btn.offsetWidth;
+    btn.classList.add("wrong-shake");
+    setTimeout(() => btn.classList.remove("wrong-shake"), 400);
   }
   function highlightKey(letter) {
     const hint = document.getElementById("js-kb-hint");

@@ -5,4 +5,5 @@ import './progress.js';
 import './sfx.js';
 import './fx.js';
 import './bgm.js';
+import './challenge.js';
 import './game.js';

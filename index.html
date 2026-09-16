@@ -394,6 +394,44 @@
   }
   .stars-next.zero { color: var(--success); }
 
+  /* Daily challenge (Phase 12b) */
+  .daily-block {
+    display: flex; flex-direction: column;
+    align-items: flex-start;
+    margin-left: 12px;
+    min-width: 90px;
+  }
+  .daily-hint {
+    font-size: 11px; font-weight: 700;
+    color: var(--success);
+    text-shadow: 0 0 6px rgba(105,240,174,0.4);
+    white-space: nowrap;
+    transition: color 0.3s;
+  }
+  .daily-hint.done {
+    color: var(--accent);
+    text-shadow: 0 0 8px rgba(255,213,79,0.6);
+    animation: dailyDonePulse 1.4s ease-in-out infinite;
+  }
+  @keyframes dailyDonePulse {
+    0%, 100% { transform: scale(1); }
+    50%      { transform: scale(1.05); }
+  }
+  .daily-bar {
+    width: 90px; height: 4px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-top: 2px;
+  }
+  .daily-bar-fill {
+    height: 100%; width: 0%;
+    background: var(--success);
+    border-radius: 2px;
+    transition: width 0.4s ease-out;
+  }
+  .daily-bar-fill[style*="100%"] { background: var(--accent); }
+
   /* ── Streak counter (fire) ──────────────────────────────────── */
   .streak-block {
     display: flex; align-items: center; gap: 4px;
@@ -932,6 +970,30 @@
   .kb-key.key-hint {
     background: rgba(79,195,247,0.3);
     border-color: white;
+    box-shadow:
+      0 0 0 3px rgba(255,255,255,0.8),
+      0 0 18px rgba(79,195,247,0.6),
+      0 0 36px rgba(79,195,247,0.3);
+    position: relative;
+    z-index: 2;
+  }
+  /* Halo ring around highlight key (Phase 12c) */
+  .kb-key.key-hint::before {
+    content: '';
+    position: absolute;
+    inset: -8px;
+    border-radius: 16px;
+    border: 2px solid rgba(79,195,247,0.5);
+    opacity: 0.7;
+    animation: haloPulse 1.6s ease-in-out infinite;
+    pointer-events: none;
+  }
+  @keyframes haloPulse {
+    0%, 100% { transform: scale(1); opacity: 0.7; }
+    50%      { transform: scale(1.08); opacity: 1; }
+  }
+  body[data-theme="candy"] .kb-key.key-hint::before { border-color: rgba(255,107,157,0.5); }
+  body[data-theme="ocean"] .kb-key.key-hint::before { border-color: rgba(0,188,212,0.5); }
     color: white;
     font-size: 18px;
     font-weight: 900;
@@ -954,9 +1016,43 @@
 
   /* Pressed state */
   .kb-key:active, .kb-key.pressed {
-    transform: scale(0.95) !important;
-    background: rgba(79,195,247,0.4) !important;
+    transform: scale(0.92) !important;
+    background: rgba(79,240,174,0.55) !important;
+    box-shadow: 0 0 24px rgba(105,240,174,0.6) !important;
   }
+  /* Ripple (Phase 12c) */
+  .kb-key::after {
+    content: '';
+    position: absolute;
+    inset: 50%;
+    width: 6px; height: 6px;
+    margin: -3px 0 0 -3px;
+    border-radius: 50%;
+    background: rgba(105,240,174,0.7);
+    opacity: 0;
+    pointer-events: none;
+  }
+  .kb-key.ripple::after {
+    animation: kbRipple 0.55s ease-out;
+  }
+  @keyframes kbRipple {
+    0%   { opacity: 0.8; transform: scale(0.2); }
+    100% { opacity: 0;   transform: scale(14); }
+  }
+  /* Wrong press shake (Phase 12c) */
+  .kb-key.wrong-shake {
+    animation: kbWrongShake 0.35s ease-in-out;
+    background: rgba(255,107,157,0.4) !important;
+  }
+  @keyframes kbWrongShake {
+    0%, 100% { transform: translateX(0); }
+    25%      { transform: translateX(-6px); }
+    75%      { transform: translateX(6px); }
+  }
+  .no-motion .kb-key::after,
+  .no-motion .kb-key.key-hint::before,
+  .no-motion .kb-key.ripple::after,
+  .no-motion .kb-key.wrong-shake { animation: none !important; }
   .kb-key.no-motion {
     transition: none !important;
     animation: none !important;
@@ -1276,6 +1372,14 @@
       <div class="stars-bar-fill" id="js-stars-bar-fill"></div>
     </div>
     <span class="stars-next" id="js-stars-next" aria-label="Next milestone"></span>
+  </div>
+
+  <!-- Daily challenge (Phase 12b) -->
+  <div class="daily-block" aria-label="Daily goal">
+    <span class="daily-hint" id="js-daily-hint">今日 0/20 ⭐</span>
+    <div class="daily-bar">
+      <div class="daily-bar-fill" id="js-daily-bar-fill"></div>
+    </div>
   </div>
 
   <div class="streak-block" id="js-streak-wrap" aria-live="polite">
