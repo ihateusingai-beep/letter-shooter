@@ -3,4 +3,5 @@ import './settings.js';
 import './curriculum.js';
 import './progress.js';
 import './sfx.js';
+import './fx.js';
 import './game.js';

@@ -7,6 +7,8 @@
     // SFX chime / streak / unlock sounds
     bgm: false,
     // Background music (default OFF — SEN overstimulation safety)
+    theme: "space",
+    // 'space' | 'candy'
     speed: "slow",
     // 'verySlow' | 'slow' | 'medium'
     highContrast: false,
@@ -164,6 +166,9 @@
       practice: "Practice",
       newLetter: "New",
       streak: "Streak",
+      theme: "Theme",
+      themeSpace: "Space",
+      themeCandy: "Candy",
       robotUnlock: "New robot unlocked!",
       // Praise phrases (random pick on correct)
       praise: ["Great!", "Yes!", "Wonderful!", "Awesome!", "Nice!"],
@@ -192,6 +197,9 @@
       practice: "\u7DF4\u7FD2\u4E2D",
       newLetter: "\u65B0\u5B78",
       streak: "\u9023\u5C0D",
+      theme: "\u4E3B\u984C",
+      themeSpace: "\u592A\u7A7A",
+      themeCandy: "\u7CD6\u679C",
       robotUnlock: "\u65B0\u6A5F\u68B0\u4EBA\u89E3\u9396\u4E86\uFF01",
       praise: ["\u505A\u5F97\u597D\uFF01", "\u5F88\u597D\uFF01", "\u592A\u68D2\u4E86\uFF01", "\u597D\u53FB\uFF01", "\u7E7C\u7E8C\uFF01"],
       nudge: ["\u518D\u8A66\u4E00\u6B21\uFF01", "\u5DEE\u5C11\u5C11\uFF01", "\u52A0\u6CB9\uFF01"]
@@ -289,6 +297,95 @@
     });
   }
 
+  // js/fx.js
+  var flashTimer = null;
+  var trailTimer = null;
+  function confettiBurst(originX, originY, opts = {}) {
+    const container = document.getElementById("js-confetti-layer");
+    if (!container) return;
+    const count = opts.count || 32;
+    const colors = opts.colors || [
+      "#4FC3F7",
+      "#FF6B9D",
+      "#FFD54F",
+      "#69F0AE",
+      "#CE93D8",
+      "#FF8A65",
+      "#80DEEA",
+      "#F48FB1"
+    ];
+    for (let i = 0; i < count; i++) {
+      const piece = document.createElement("div");
+      piece.className = "confetti-piece";
+      piece.style.left = originX + "px";
+      piece.style.top = originY + "px";
+      piece.style.background = colors[i % colors.length];
+      const shape = i % 3;
+      if (shape === 0) {
+        piece.style.borderRadius = "50%";
+        piece.style.width = "8px";
+        piece.style.height = "8px";
+      } else if (shape === 1) {
+        piece.style.width = "6px";
+        piece.style.height = "12px";
+      } else {
+        piece.style.width = "4px";
+        piece.style.height = "14px";
+        piece.style.borderRadius = "2px";
+      }
+      const angle = Math.PI * 2 * i / count + (Math.random() - 0.5) * 0.5;
+      const dist = 80 + Math.random() * 140;
+      const dx = Math.cos(angle) * dist;
+      const dy = Math.sin(angle) * dist - 60;
+      const rot = (Math.random() - 0.5) * 720;
+      piece.style.setProperty("--dx", dx + "px");
+      piece.style.setProperty("--dy", dy + "px");
+      piece.style.setProperty("--rot", rot + "deg");
+      piece.style.animationDuration = 0.9 + Math.random() * 0.5 + "s";
+      container.appendChild(piece);
+      piece.addEventListener("animationend", () => piece.remove(), { once: true });
+    }
+  }
+  function streakFlash(intensity = "normal") {
+    const flash = document.getElementById("js-streak-flash");
+    if (!flash) return;
+    flash.classList.remove("flash-go");
+    flash.classList.remove("flash-big");
+    void flash.offsetWidth;
+    flash.classList.add("flash-go");
+    if (intensity === "big") flash.classList.add("flash-big");
+    if (flashTimer) clearTimeout(flashTimer);
+    flashTimer = setTimeout(() => {
+      flash.classList.remove("flash-go");
+      flash.classList.remove("flash-big");
+    }, 600);
+  }
+  function startLetterTrail(getPosition) {
+    stopLetterTrail();
+    const layer = document.getElementById("js-trail-layer");
+    if (!layer) return;
+    trailTimer = setInterval(() => {
+      const pos = getPosition();
+      if (!pos) return;
+      const sparkle = document.createElement("div");
+      sparkle.className = "trail-sparkle";
+      sparkle.style.left = pos.x + (Math.random() - 0.5) * 30 + "px";
+      sparkle.style.top = pos.y + (Math.random() - 0.5) * 20 + "px";
+      const colors = ["#FFD54F", "#FF6B9D", "#4FC3F7", "#69F0AE"];
+      sparkle.style.background = colors[Math.floor(Math.random() * colors.length)];
+      sparkle.style.width = 4 + Math.random() * 6 + "px";
+      sparkle.style.height = sparkle.style.width;
+      layer.appendChild(sparkle);
+      sparkle.addEventListener("animationend", () => sparkle.remove(), { once: true });
+    }, 80);
+  }
+  function stopLetterTrail() {
+    if (trailTimer) {
+      clearInterval(trailTimer);
+      trailTimer = null;
+    }
+  }
+
   // js/game.js
   window.LetterShooter = {
     startGame,
@@ -371,43 +468,67 @@
     u.rate = 0.9;
     window.speechSynthesis.speak(u);
   }
+  var ROBOT_PALETTES = {
+    space: [
+      { body: "#1e3a5f", eye: "#4FC3F7", accent: "#4FC3F7", glow: "rgba(79,195,247,0.6)" },
+      { body: "#3d1f2f", eye: "#FF6B9D", accent: "#FF6B9D", glow: "rgba(255,107,157,0.6)" },
+      { body: "#1f3d2f", eye: "#69F0AE", accent: "#69F0AE", glow: "rgba(105,240,174,0.6)" }
+    ],
+    candy: [
+      { body: "#FFFFFF", eye: "#FF6B9D", accent: "#FF6B9D", glow: "rgba(255,107,157,0.5)" },
+      { body: "#FFFFFF", eye: "#FFD54F", accent: "#FFD54F", glow: "rgba(255,213,79,0.5)" },
+      { body: "#FFFFFF", eye: "#B388FF", accent: "#B388FF", glow: "rgba(179,136,255,0.5)" }
+    ]
+  };
   function drawRobot(robotIdx = 0) {
     const { robotWrap } = getEls();
     if (!robotWrap) return;
-    const palettes = [
-      { body: "#1e3a5f", eye: "#4FC3F7", accent: "#4FC3F7", glow: "rgba(79,195,247,0.6)", bg: "#0d1f3c" },
-      // blue
-      { body: "#3d1f2f", eye: "#FF6B9D", accent: "#FF6B9D", glow: "rgba(255,107,157,0.6)", bg: "#1f0d1a" },
-      // pink
-      { body: "#1f3d2f", eye: "#69F0AE", accent: "#69F0AE", glow: "rgba(105,240,174,0.6)", bg: "#0d1f12" }
-      // green
-    ];
+    const theme = loadSettings().theme || "space";
+    const palettes = ROBOT_PALETTES[theme] || ROBOT_PALETTES.space;
     const p = palettes[robotIdx % palettes.length];
     robotWrap.innerHTML = `
-    <svg viewBox="0 0 80 90" width="80" height="90" aria-hidden="true"
-         style="filter:drop-shadow(0 0 8px ${p.glow})">
+    <svg viewBox="0 0 120 130" width="120" height="130" aria-hidden="true"
+         style="filter:drop-shadow(0 0 12px ${p.glow})">
       <!-- glow aura -->
-      <ellipse cx="40" cy="75" rx="30" ry="6" fill="${p.glow}" opacity="0.2"/>
-      <!-- antenna -->
-      <line x1="40" y1="8" x2="40" y2="22" stroke="${p.accent}" stroke-width="3" stroke-linecap="round"/>
-      <circle cx="40" cy="6" r="5" fill="${p.accent}" opacity="0.9"/>
+      <ellipse cx="60" cy="115" rx="42" ry="8" fill="${p.glow}" opacity="0.25"/>
+      <!-- antenna with bobble -->
+      <g class="robot-antenna">
+        <line x1="60" y1="14" x2="60" y2="34" stroke="${p.accent}" stroke-width="4" stroke-linecap="round"/>
+        <circle cx="60" cy="10" r="7" fill="${p.accent}" opacity="0.95"/>
+        <circle cx="58" cy="8" r="2" fill="white" opacity="0.8"/>
+      </g>
       <!-- head -->
-      <rect x="18" y="22" width="44" height="36" rx="10" fill="${p.body}" stroke="${p.accent}" stroke-width="1.5" opacity="0.9"/>
-      <!-- eyes -->
-      <circle cx="30" cy="36" r="7" fill="${p.eye}"/>
-      <circle cx="50" cy="36" r="7" fill="${p.eye}"/>
-      <circle cx="32" cy="34" r="2.5" fill="white"/>
-      <circle cx="52" cy="34" r="2.5" fill="white"/>
+      <rect x="22" y="34" width="76" height="56" rx="14" fill="${p.body}" stroke="${p.accent}" stroke-width="2" opacity="0.95"/>
+      <!-- cheek blush -->
+      <circle cx="30" cy="62" r="6" fill="${p.accent}" opacity="0.3"/>
+      <circle cx="90" cy="62" r="6" fill="${p.accent}" opacity="0.3"/>
+      <!-- eyes (large, expressive) -->
+      <g class="robot-eyes">
+        <circle cx="44" cy="56" r="10" fill="white"/>
+        <circle cx="76" cy="56" r="10" fill="white"/>
+        <circle cx="44" cy="58" r="7" fill="${p.eye}"/>
+        <circle cx="76" cy="58" r="7" fill="${p.eye}"/>
+        <circle cx="46" cy="55" r="2.5" fill="white"/>
+        <circle cx="78" cy="55" r="2.5" fill="white"/>
+      </g>
       <!-- smile -->
-      <path d="M 30 48 Q 40 55 50 48" stroke="${p.eye}" stroke-width="2" fill="none" stroke-linecap="round"/>
+      <path d="M 44 74 Q 60 84 76 74" stroke="${p.eye}" stroke-width="3" fill="none" stroke-linecap="round"/>
       <!-- body -->
-      <rect x="22" y="60" width="36" height="22" rx="6" fill="${p.body}" stroke="${p.accent}" stroke-width="1.5" opacity="0.9"/>
-      <!-- arms -->
-      <rect x="6"  y="62" width="14" height="8" rx="4" fill="${p.body}" stroke="${p.accent}" stroke-width="1.5" opacity="0.9"/>
-      <rect x="60" y="62" width="14" height="8" rx="4" fill="${p.body}" stroke="${p.accent}" stroke-width="1.5" opacity="0.9"/>
+      <rect x="32" y="92" width="56" height="26" rx="8" fill="${p.body}" stroke="${p.accent}" stroke-width="2" opacity="0.95"/>
+      <!-- chest light -->
+      <circle cx="60" cy="105" r="4" fill="${p.accent}" opacity="0.9"/>
+      <!-- arms with hands -->
+      <g class="robot-arm-l">
+        <rect x="10" y="96" width="18" height="10" rx="5" fill="${p.body}" stroke="${p.accent}" stroke-width="2" opacity="0.95"/>
+        <circle cx="8" cy="101" r="6" fill="${p.body}" stroke="${p.accent}" stroke-width="2" opacity="0.95"/>
+      </g>
+      <g class="robot-arm-r">
+        <rect x="92" y="96" width="18" height="10" rx="5" fill="${p.body}" stroke="${p.accent}" stroke-width="2" opacity="0.95"/>
+        <circle cx="112" cy="101" r="6" fill="${p.body}" stroke="${p.accent}" stroke-width="2" opacity="0.95"/>
+      </g>
       <!-- legs -->
-      <rect x="26" y="82" width="10" height="8" rx="3" fill="${p.body}" stroke="${p.accent}" stroke-width="1.5" opacity="0.9"/>
-      <rect x="44" y="82" width="10" height="8" rx="3" fill="${p.body}" stroke="${p.accent}" stroke-width="1.5" opacity="0.9"/>
+      <rect x="40" y="120" width="14" height="10" rx="4" fill="${p.body}" stroke="${p.accent}" stroke-width="2" opacity="0.95"/>
+      <rect x="66" y="120" width="14" height="10" rx="4" fill="${p.body}" stroke="${p.accent}" stroke-width="2" opacity="0.95"/>
     </svg>`;
   }
   function shoot() {
@@ -478,6 +599,10 @@
     fallPaused = false;
     letterEl.style.transition = "none";
     letterEl.style.transform = "translateY(0)";
+    startLetterTrail(() => {
+      const r = letterEl.getBoundingClientRect();
+      return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+    });
     const startMs = performance.now();
     function step(now) {
       if (!gameRunning) return;
@@ -493,6 +618,7 @@
         animFrame = requestAnimationFrame(step);
       } else {
         letterArrived = true;
+        stopLetterTrail();
         letterEl.style.filter = "drop-shadow(0 0 8px #FFD54F)";
         onArrive();
       }
@@ -569,21 +695,28 @@
       score++;
       updateScore();
       clearHighlight();
+      const letterBox = document.getElementById("js-letter")?.getBoundingClientRect();
+      if (letterBox) {
+        confettiBurst(letterBox.left + letterBox.width / 2, letterBox.top + letterBox.height / 2);
+      }
       streak++;
       updateStreak(streak);
       celebrateRobot();
       if (settings.soundFx) playCorrect();
       if (streak === 3 || streak === 5 || streak === 10) {
         if (settings.soundFx) playStreak(streak);
+        streakFlash(streak >= 5 ? "big" : "normal");
       }
       letterArrived = false;
       const { letter: letterEl } = getEls();
       if (letterEl) letterEl.style.filter = "";
+      stopLetterTrail();
       const prog = recordAttempt(currentLetter.toUpperCase(), true);
       const prevMastered = masteredCount(loadProgress()) - 1;
       const afterMastered = masteredCount(prog);
       if (afterMastered > prevMastered) {
         if (settings.soundFx) playUnlock();
+        streakFlash("big");
         showRobotUnlock(afterMastered);
       }
       if (settings.voice && streak >= 1) {
@@ -744,6 +877,10 @@
     toast.classList.add("visible");
     setTimeout(() => toast.classList.remove("visible"), 3e3);
   }
+  function applyTheme(theme) {
+    document.body.setAttribute("data-theme", theme || "space");
+  }
+  applyTheme(loadSettings().theme);
   function openSettings() {
     const panel = document.getElementById("js-settings-panel");
     if (!panel) return;
@@ -758,6 +895,7 @@
     panel.querySelector("#js-unit-select").value = settings.currentUnit;
     panel.querySelector("#js-level-select").value = settings.level;
     panel.querySelector("#js-kb-mode-select").value = settings.kbMode || "compact";
+    panel.querySelector("#js-theme-select").value = settings.theme || "space";
     panel.classList.add("visible");
   }
   function closeSettings() {
@@ -777,11 +915,16 @@
     const unit = panel.querySelector("#js-unit-select")?.value ?? "U1";
     const level = panel.querySelector("#js-level-select")?.value ?? "L0";
     const kbMode = panel.querySelector("#js-kb-mode-select")?.value ?? "compact";
-    const next = { voice, soundFx: sfx, bgm, speed, highContrast: hc, reduceMotion: motion, lang, currentUnit: unit, level, kbMode };
+    const theme = panel.querySelector("#js-theme-select")?.value ?? "space";
+    const next = { voice, soundFx: sfx, bgm, speed, highContrast: hc, reduceMotion: motion, lang, currentUnit: unit, level, kbMode, theme };
     document.body.classList.toggle("high-contrast", hc);
+    applyTheme(theme);
     saveSettings(next);
     closeSettings();
     if (gameRunning) {
+      const prog = loadProgress();
+      const robotIdx = currentRobotIndex(masteredCount(prog));
+      drawRobot(robotIdx);
       renderTouchKeys();
       if (currentLetter) highlightKey(currentLetter);
     }

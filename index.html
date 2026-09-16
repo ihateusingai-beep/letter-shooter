@@ -35,6 +35,41 @@
     --robot-h:   96px;
   }
 
+  /* ── Theme: Candy (Phase 3c) — pastel, cheerful, low-stimulation ─────── */
+  body[data-theme="candy"] {
+    --bg:        #FFE4F1;
+    --bg2:       #FFE9C9;
+    --primary:   #FF6B9D;
+    --primary2:  #FF9D7A;
+    --accent:    #FFD54F;
+    --accent2:   #B388FF;
+    --text:      #4A2C5A;
+    --text-dim:  #9D6B9D;
+    --key-bg:    rgba(255,107,157,0.15);
+    --key-border: rgba(255,107,157,0.5);
+    --key-active: rgba(255,107,157,0.35);
+    --success:   #69F0AE;
+    --success2:  #00E5FF;
+    --panel-bg:  rgba(255,255,255,0.92);
+    --panel-border: rgba(255,107,157,0.3);
+    --shadow:    0 8px 32px rgba(255,107,157,0.25);
+  }
+
+  /* Candy gradient bg */
+  body[data-theme="candy"]::before {
+    background:
+      radial-gradient(ellipse 80% 50% at 50% 0%, rgba(255,213,79,0.25) 0%, transparent 70%),
+      radial-gradient(ellipse 60% 40% at 80% 80%, rgba(179,136,255,0.18) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 35% at 20% 70%, rgba(105,240,174,0.18) 0%, transparent 65%),
+      linear-gradient(180deg, var(--bg2) 0%, var(--bg) 100%);
+  }
+
+  /* Candy particles — softer, more varied */
+  body[data-theme="candy"] .star {
+    background: #FF6B9D;
+    opacity: 0.4;
+  }
+
   body {
     font-family: 'Fredoka', system-ui, -apple-system, sans-serif;
     background: var(--bg);
@@ -261,6 +296,112 @@
     animation: robotCelebrate 0.55s ease-out;
   }
   .no-motion #js-robot-wrap.celebrate { animation: none; }
+
+  /* ── Robot idle animations (Phase 3b) ────────────────────────────────── */
+  @keyframes antennaBobble {
+    0%, 100% { transform: rotate(0deg); }
+    25%      { transform: rotate(-8deg); }
+    75%      { transform: rotate(8deg); }
+  }
+  #js-robot-wrap .robot-antenna {
+    transform-origin: 60px 34px;
+    animation: antennaBobble 3s ease-in-out infinite;
+  }
+
+  @keyframes eyeBlink {
+    0%, 92%, 100% { transform: scaleY(1); }
+    94%, 96%      { transform: scaleY(0.1); }
+  }
+  #js-robot-wrap .robot-eyes {
+    transform-origin: 60px 56px;
+    animation: eyeBlink 5s ease-in-out infinite;
+  }
+
+  @keyframes armSway {
+    0%, 100% { transform: rotate(0deg); }
+    50%      { transform: rotate(-6deg); }
+  }
+  #js-robot-wrap .robot-arm-r {
+    transform-origin: 92px 101px;
+    animation: armSway 2.4s ease-in-out infinite;
+  }
+
+  .no-motion #js-robot-wrap .robot-antenna,
+  .no-motion #js-robot-wrap .robot-eyes,
+  .no-motion #js-robot-wrap .robot-arm-r { animation: none; }
+
+  /* ── Confetti layer (Phase 3a) ─────────────────────────────────────── */
+  #js-confetti-layer {
+    position: fixed; inset: 0;
+    pointer-events: none;
+    z-index: 90;
+    overflow: hidden;
+  }
+  .confetti-piece {
+    position: absolute;
+    pointer-events: none;
+    will-change: transform, opacity;
+    animation: confettiFly 1.2s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+  }
+  @keyframes confettiFly {
+    0% {
+      transform: translate(0, 0) rotate(0deg);
+      opacity: 1;
+    }
+    100% {
+      transform: translate(var(--dx), var(--dy)) rotate(var(--rot));
+      opacity: 0;
+    }
+  }
+  .no-motion .confetti-piece { animation-duration: 0.001ms !important; }
+
+  /* ── Streak flash overlay (Phase 3a) ───────────────────────────────── */
+  #js-streak-flash {
+    position: fixed; inset: 0;
+    pointer-events: none;
+    z-index: 95;
+    opacity: 0;
+    background: radial-gradient(circle at 50% 50%,
+      rgba(255,213,79,0.45) 0%,
+      rgba(255,107,157,0.25) 35%,
+      transparent 70%);
+  }
+  #js-streak-flash.flash-go {
+    animation: streakFlash 0.55s ease-out;
+  }
+  #js-streak-flash.flash-big {
+    background: radial-gradient(circle at 50% 50%,
+      rgba(105,240,174,0.5) 0%,
+      rgba(255,213,79,0.4) 30%,
+      rgba(255,107,157,0.3) 55%,
+      transparent 75%);
+  }
+  @keyframes streakFlash {
+    0%   { opacity: 0; transform: scale(0.6); }
+    30%  { opacity: 1; transform: scale(1.05); }
+    100% { opacity: 0; transform: scale(1.4); }
+  }
+  .no-motion #js-streak-flash.flash-go { animation: none; }
+
+  /* ── Letter trail (Phase 3a, L1 only) ──────────────────────────────── */
+  #js-trail-layer {
+    position: fixed; inset: 0;
+    pointer-events: none;
+    z-index: 5;
+    overflow: hidden;
+  }
+  .trail-sparkle {
+    position: absolute;
+    border-radius: 50%;
+    pointer-events: none;
+    box-shadow: 0 0 6px currentColor;
+    animation: trailFade 0.7s ease-out forwards;
+  }
+  @keyframes trailFade {
+    0%   { transform: scale(1); opacity: 0.9; }
+    100% { transform: scale(0.2); opacity: 0; }
+  }
+  .no-motion .trail-sparkle { animation-duration: 0.001ms !important; }
 
   /* ── Flash ─────────────────────────────────────────────────── */
   #js-flash {
@@ -676,6 +817,15 @@
 <!-- ── Flash ─────────────────────────────────────────────────────────────── -->
 <div id="js-flash" aria-hidden="true"></div>
 
+<!-- ── Confetti layer (Phase 3a) ──────────────────────────────────────────── -->
+<div id="js-confetti-layer" aria-hidden="true"></div>
+
+<!-- ── Streak flash overlay (Phase 3a) ──────────────────────────────────── -->
+<div id="js-streak-flash" aria-hidden="true"></div>
+
+<!-- ── Letter trail layer (Phase 3a) ────────────────────────────────────── -->
+<div id="js-trail-layer" aria-hidden="true"></div>
+
 <!-- ── Bottom — touch keys ──────────────────────────────────────────────── -->
 <div class="bottom-bar">
   <div id="js-touch-keys" role="group" aria-label="Letter keys"></div>
@@ -791,6 +941,17 @@
       <select id="js-kb-mode-select">
         <option value="full">完整 26 鍵</option>
         <option value="compact" selected>精簡（目標字母）</option>
+      </select>
+    </div>
+
+    <div class="setting-row">
+      <label>
+        主題 Theme
+        <span class="sublabel">太空 / 糖果（Candy pastel）</span>
+      </label>
+      <select id="js-theme-select">
+        <option value="space" selected>🌌 太空 Space</option>
+        <option value="candy">🍬 糖果 Candy</option>
       </select>
     </div>
 

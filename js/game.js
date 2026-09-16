@@ -4,6 +4,7 @@ import { loadProgress, recordAttempt, masteredCount } from './progress.js';
 import { activeLetters, currentRobotIndex } from './curriculum.js';
 import { t, pickT, setLang } from './i18n.js';
 import { playCorrect, playWrong, playStreak, playUnlock, unlockAudio } from './sfx.js';
+import { confettiBurst, streakFlash, startLetterTrail, stopLetterTrail } from './fx.js';
 
 // Attach public API to window for non-module HTML
 window.LetterShooter = {
@@ -88,44 +89,73 @@ export function speakLetter(letter) {
   window.speechSynthesis.speak(u);
 }
 
+// ── Robot palettes per theme (Phase 3c) ────────────────────────────────────
+const ROBOT_PALETTES = {
+  space: [
+    { body: '#1e3a5f', eye: '#4FC3F7', accent: '#4FC3F7', glow: 'rgba(79,195,247,0.6)' },
+    { body: '#3d1f2f', eye: '#FF6B9D', accent: '#FF6B9D', glow: 'rgba(255,107,157,0.6)' },
+    { body: '#1f3d2f', eye: '#69F0AE', accent: '#69F0AE', glow: 'rgba(105,240,174,0.6)' },
+  ],
+  candy: [
+    { body: '#FFFFFF', eye: '#FF6B9D', accent: '#FF6B9D', glow: 'rgba(255,107,157,0.5)' },
+    { body: '#FFFFFF', eye: '#FFD54F', accent: '#FFD54F', glow: 'rgba(255,213,79,0.5)' },
+    { body: '#FFFFFF', eye: '#B388FF', accent: '#B388FF', glow: 'rgba(179,136,255,0.5)' },
+  ],
+};
+
 // ── Robot ──────────────────────────────────────────────────────────────────
-// CSS-drawn robots: base + 2 unlockable variants
+// CSS-drawn robots: base + 2 unlockable variants — bigger eyes, bobble antenna
 export function drawRobot(robotIdx = 0) {
   const { robotWrap } = getEls();
   if (!robotWrap) return;
 
-  const palettes = [
-    { body: '#1e3a5f', eye: '#4FC3F7', accent: '#4FC3F7', glow: 'rgba(79,195,247,0.6)', bg: '#0d1f3c' }, // blue
-    { body: '#3d1f2f', eye: '#FF6B9D', accent: '#FF6B9D', glow: 'rgba(255,107,157,0.6)', bg: '#1f0d1a' }, // pink
-    { body: '#1f3d2f', eye: '#69F0AE', accent: '#69F0AE', glow: 'rgba(105,240,174,0.6)', bg: '#0d1f12' }, // green
-  ];
+  const theme = loadSettings().theme || 'space';
+  const palettes = ROBOT_PALETTES[theme] || ROBOT_PALETTES.space;
   const p = palettes[robotIdx % palettes.length];
 
   robotWrap.innerHTML = `
-    <svg viewBox="0 0 80 90" width="80" height="90" aria-hidden="true"
-         style="filter:drop-shadow(0 0 8px ${p.glow})">
+    <svg viewBox="0 0 120 130" width="120" height="130" aria-hidden="true"
+         style="filter:drop-shadow(0 0 12px ${p.glow})">
       <!-- glow aura -->
-      <ellipse cx="40" cy="75" rx="30" ry="6" fill="${p.glow}" opacity="0.2"/>
-      <!-- antenna -->
-      <line x1="40" y1="8" x2="40" y2="22" stroke="${p.accent}" stroke-width="3" stroke-linecap="round"/>
-      <circle cx="40" cy="6" r="5" fill="${p.accent}" opacity="0.9"/>
+      <ellipse cx="60" cy="115" rx="42" ry="8" fill="${p.glow}" opacity="0.25"/>
+      <!-- antenna with bobble -->
+      <g class="robot-antenna">
+        <line x1="60" y1="14" x2="60" y2="34" stroke="${p.accent}" stroke-width="4" stroke-linecap="round"/>
+        <circle cx="60" cy="10" r="7" fill="${p.accent}" opacity="0.95"/>
+        <circle cx="58" cy="8" r="2" fill="white" opacity="0.8"/>
+      </g>
       <!-- head -->
-      <rect x="18" y="22" width="44" height="36" rx="10" fill="${p.body}" stroke="${p.accent}" stroke-width="1.5" opacity="0.9"/>
-      <!-- eyes -->
-      <circle cx="30" cy="36" r="7" fill="${p.eye}"/>
-      <circle cx="50" cy="36" r="7" fill="${p.eye}"/>
-      <circle cx="32" cy="34" r="2.5" fill="white"/>
-      <circle cx="52" cy="34" r="2.5" fill="white"/>
+      <rect x="22" y="34" width="76" height="56" rx="14" fill="${p.body}" stroke="${p.accent}" stroke-width="2" opacity="0.95"/>
+      <!-- cheek blush -->
+      <circle cx="30" cy="62" r="6" fill="${p.accent}" opacity="0.3"/>
+      <circle cx="90" cy="62" r="6" fill="${p.accent}" opacity="0.3"/>
+      <!-- eyes (large, expressive) -->
+      <g class="robot-eyes">
+        <circle cx="44" cy="56" r="10" fill="white"/>
+        <circle cx="76" cy="56" r="10" fill="white"/>
+        <circle cx="44" cy="58" r="7" fill="${p.eye}"/>
+        <circle cx="76" cy="58" r="7" fill="${p.eye}"/>
+        <circle cx="46" cy="55" r="2.5" fill="white"/>
+        <circle cx="78" cy="55" r="2.5" fill="white"/>
+      </g>
       <!-- smile -->
-      <path d="M 30 48 Q 40 55 50 48" stroke="${p.eye}" stroke-width="2" fill="none" stroke-linecap="round"/>
+      <path d="M 44 74 Q 60 84 76 74" stroke="${p.eye}" stroke-width="3" fill="none" stroke-linecap="round"/>
       <!-- body -->
-      <rect x="22" y="60" width="36" height="22" rx="6" fill="${p.body}" stroke="${p.accent}" stroke-width="1.5" opacity="0.9"/>
-      <!-- arms -->
-      <rect x="6"  y="62" width="14" height="8" rx="4" fill="${p.body}" stroke="${p.accent}" stroke-width="1.5" opacity="0.9"/>
-      <rect x="60" y="62" width="14" height="8" rx="4" fill="${p.body}" stroke="${p.accent}" stroke-width="1.5" opacity="0.9"/>
+      <rect x="32" y="92" width="56" height="26" rx="8" fill="${p.body}" stroke="${p.accent}" stroke-width="2" opacity="0.95"/>
+      <!-- chest light -->
+      <circle cx="60" cy="105" r="4" fill="${p.accent}" opacity="0.9"/>
+      <!-- arms with hands -->
+      <g class="robot-arm-l">
+        <rect x="10" y="96" width="18" height="10" rx="5" fill="${p.body}" stroke="${p.accent}" stroke-width="2" opacity="0.95"/>
+        <circle cx="8" cy="101" r="6" fill="${p.body}" stroke="${p.accent}" stroke-width="2" opacity="0.95"/>
+      </g>
+      <g class="robot-arm-r">
+        <rect x="92" y="96" width="18" height="10" rx="5" fill="${p.body}" stroke="${p.accent}" stroke-width="2" opacity="0.95"/>
+        <circle cx="112" cy="101" r="6" fill="${p.body}" stroke="${p.accent}" stroke-width="2" opacity="0.95"/>
+      </g>
       <!-- legs -->
-      <rect x="26" y="82" width="10" height="8" rx="3" fill="${p.body}" stroke="${p.accent}" stroke-width="1.5" opacity="0.9"/>
-      <rect x="44" y="82" width="10" height="8" rx="3" fill="${p.body}" stroke="${p.accent}" stroke-width="1.5" opacity="0.9"/>
+      <rect x="40" y="120" width="14" height="10" rx="4" fill="${p.body}" stroke="${p.accent}" stroke-width="2" opacity="0.95"/>
+      <rect x="66" y="120" width="14" height="10" rx="4" fill="${p.body}" stroke="${p.accent}" stroke-width="2" opacity="0.95"/>
     </svg>`;
 }
 
@@ -216,6 +246,12 @@ function startFall(onArrive) {
   letterEl.style.transition = 'none';
   letterEl.style.transform = 'translateY(0)';
 
+  // Start sparkle trail following the letter
+  startLetterTrail(() => {
+    const r = letterEl.getBoundingClientRect();
+    return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+  });
+
   const startMs = performance.now();
 
   function step(now) {
@@ -236,6 +272,7 @@ function startFall(onArrive) {
     } else {
       // Arrived — stop here; student can still press the key
       letterArrived = true;
+      stopLetterTrail();
       // Brief visual pulse to signal "waiting"
       letterEl.style.filter = 'drop-shadow(0 0 8px #FFD54F)';
       onArrive();
@@ -317,6 +354,12 @@ export function handleKey(pressed) {
     updateScore();
     clearHighlight();
 
+    // ── Confetti burst at letter position ────────────────────────────────
+    const letterBox = document.getElementById('js-letter')?.getBoundingClientRect();
+    if (letterBox) {
+      confettiBurst(letterBox.left + letterBox.width / 2, letterBox.top + letterBox.height / 2);
+    }
+
     // ── Streak + reward feedback ────────────────────────────────────────
     streak++;
     updateStreak(streak);
@@ -324,18 +367,22 @@ export function handleKey(pressed) {
     if (settings.soundFx) playCorrect();
     if (streak === 3 || streak === 5 || streak === 10) {
       if (settings.soundFx) playStreak(streak);
+      // Visual flash on milestone
+      streakFlash(streak >= 5 ? 'big' : 'normal');
     }
 
     // Reset arrived state
     letterArrived = false;
     const { letter: letterEl } = getEls();
     if (letterEl) letterEl.style.filter = '';
+    stopLetterTrail();
 
     const prog = recordAttempt(currentLetter.toUpperCase(), true);
     const prevMastered = masteredCount(loadProgress()) - 1;
     const afterMastered = masteredCount(prog);
     if (afterMastered > prevMastered) {
       if (settings.soundFx) playUnlock();
+      streakFlash('big');
       showRobotUnlock(afterMastered);
     }
 
@@ -536,6 +583,13 @@ function showToast(title, body) {
 }
 
 // ── Settings panel ──────────────────────────────────────────────────────────
+export function applyTheme(theme) {
+  document.body.setAttribute('data-theme', theme || 'space');
+}
+
+// ── Boot: apply saved theme + high-contrast class before first paint ───────
+applyTheme(loadSettings().theme);
+
 export function openSettings() {
   const panel = document.getElementById('js-settings-panel');
   if (!panel) return;
@@ -551,6 +605,7 @@ export function openSettings() {
   panel.querySelector('#js-unit-select').value = settings.currentUnit;
   panel.querySelector('#js-level-select').value = settings.level;
   panel.querySelector('#js-kb-mode-select').value = settings.kbMode || 'compact';
+  panel.querySelector('#js-theme-select').value = settings.theme || 'space';
 
   panel.classList.add('visible');
 }
@@ -574,16 +629,21 @@ export function applySettings() {
   const unit   = panel.querySelector('#js-unit-select')?.value ?? 'U1';
   const level  = panel.querySelector('#js-level-select')?.value ?? 'L0';
   const kbMode = panel.querySelector('#js-kb-mode-select')?.value ?? 'compact';
+  const theme  = panel.querySelector('#js-theme-select')?.value ?? 'space';
 
-  const next = { voice, soundFx: sfx, bgm, speed, highContrast: hc, reduceMotion: motion, lang, currentUnit: unit, level, kbMode };
+  const next = { voice, soundFx: sfx, bgm, speed, highContrast: hc, reduceMotion: motion, lang, currentUnit: unit, level, kbMode, theme };
 
   document.body.classList.toggle('high-contrast', hc);
+  applyTheme(theme);
 
   saveSettings(next);
   closeSettings();
 
-  // Re-render keyboard with new mode
+  // Re-render keyboard with new mode + theme robot palette
   if (gameRunning) {
+    const prog = loadProgress();
+    const robotIdx = currentRobotIndex(masteredCount(prog));
+    drawRobot(robotIdx);
     renderTouchKeys();
     if (currentLetter) highlightKey(currentLetter);
   }

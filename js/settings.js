@@ -3,6 +3,7 @@ const DEFAULTS = {
   voice: true,       // TTS on/off
   soundFx: true,     // SFX chime / streak / unlock sounds
   bgm: false,        // Background music (default OFF — SEN overstimulation safety)
+  theme: 'space',    // 'space' | 'candy'
   speed: 'slow',      // 'verySlow' | 'slow' | 'medium'
   highContrast: false,
   reduceMotion: false,
