@@ -4,14 +4,35 @@
 let flashTimer = null;
 let trailTimer = null;
 
-// ── Per-letter symbol confetti (Phase 10d) ──────────────────────────────────
-// Letters with associated symbols (memorable associations for SEN learners)
+// ── Per-letter symbol confetti (Phase 10d + 11) ─────────────────────────────
+// Iconic picture-word associations for SEN learners (all 26 letters).
 export const LETTER_SYMBOLS = {
-  A: '✈️',
-  C: '🌙',
-  E: '⭐',
-  H: '❤️',
-  M: '🌊',
+  A: '✈️',   // Airplane
+  B: '🏀',   // Ball
+  C: '🌙',   // Crescent moon
+  D: '💎',   // Diamond
+  E: '⭐',   // Star
+  F: '🐟',   // Fish
+  G: '🍇',   // Grapes
+  H: '❤️',   // Heart
+  I: '🍦',   // Ice cream
+  J: '🧃',   // Juice
+  K: '🔑',   // Key
+  L: '🍋',   // Lemon
+  M: '🌊',   // Wave
+  N: '🌙',   // Night
+  O: '🍊',   // Orange
+  P: '🍕',   // Pizza
+  Q: '👑',   // Queen
+  R: '🌈',   // Rainbow
+  S: '☀️',   // Sun
+  T: '🌳',   // Tree
+  U: '☂️',   // Umbrella
+  V: '🎻',   // Violin
+  W: '🐋',   // Whale
+  X: '❌',   // X mark
+  Y: '🪀',   // Yo-yo
+  Z: '⚡',   // Lightning (zap)
 };
 
 // ── Confetti burst on correct answer ────────────────────────────────────────

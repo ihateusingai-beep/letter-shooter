@@ -314,10 +314,57 @@
   var trailTimer = null;
   var LETTER_SYMBOLS = {
     A: "\u2708\uFE0F",
+    // Airplane
+    B: "\u{1F3C0}",
+    // Ball
     C: "\u{1F319}",
+    // Crescent moon
+    D: "\u{1F48E}",
+    // Diamond
     E: "\u2B50",
+    // Star
+    F: "\u{1F41F}",
+    // Fish
+    G: "\u{1F347}",
+    // Grapes
     H: "\u2764\uFE0F",
-    M: "\u{1F30A}"
+    // Heart
+    I: "\u{1F366}",
+    // Ice cream
+    J: "\u{1F9C3}",
+    // Juice
+    K: "\u{1F511}",
+    // Key
+    L: "\u{1F34B}",
+    // Lemon
+    M: "\u{1F30A}",
+    // Wave
+    N: "\u{1F319}",
+    // Night
+    O: "\u{1F34A}",
+    // Orange
+    P: "\u{1F355}",
+    // Pizza
+    Q: "\u{1F451}",
+    // Queen
+    R: "\u{1F308}",
+    // Rainbow
+    S: "\u2600\uFE0F",
+    // Sun
+    T: "\u{1F333}",
+    // Tree
+    U: "\u2602\uFE0F",
+    // Umbrella
+    V: "\u{1F3BB}",
+    // Violin
+    W: "\u{1F40B}",
+    // Whale
+    X: "\u274C",
+    // X mark
+    Y: "\u{1FA80}",
+    // Yo-yo
+    Z: "\u26A1"
+    // Lightning (zap)
   };
   function confettiBurst(originX, originY, opts = {}) {
     const container = document.getElementById("js-confetti-layer");
