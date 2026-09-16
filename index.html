@@ -269,16 +269,20 @@
 
   /* Hint label above keyboard */
   .kb-hint {
-    font-size: 11px;
-    font-weight: 600;
-    color: var(--text-dim);
-    letter-spacing: 0.05em;
+    font-size: 16px;
+    font-weight: 800;
+    color: rgba(255,255,255,0.4);
+    letter-spacing: 0.04em;
     text-transform: uppercase;
-    margin-bottom: 4px;
-    min-height: 14px;
+    margin-bottom: 6px;
+    min-height: 20px;
     transition: color 0.3s;
+    font-family: 'Fredoka', sans-serif;
   }
-  .kb-hint.has-hint { color: var(--primary2); }
+  .kb-hint.has-hint {
+    color: var(--primary2);
+    text-shadow: 0 0 12px rgba(79,195,247,0.5);
+  }
 
   /* Keyboard row */
   .kb-row {
@@ -314,16 +318,18 @@
   }
   /* Hint: this is the target letter */
   .kb-key.key-hint {
-    background: rgba(79,195,247,0.25);
-    border-color: var(--primary2);
+    background: rgba(79,195,247,0.3);
+    border-color: white;
     color: white;
-    font-size: 17px;
+    font-size: 18px;
+    font-weight: 900;
+    border-width: 3px;
     box-shadow:
-      0 0 16px rgba(79,195,247,0.5),
-      0 0 32px rgba(79,195,247,0.2),
-      inset 0 0 12px rgba(79,195,247,0.15);
+      0 0 20px rgba(79,195,247,0.7),
+      0 0 40px rgba(79,195,247,0.3),
+      inset 0 0 16px rgba(79,195,247,0.2);
     animation: keyPulse 1.5s ease-in-out infinite;
-    transform: scale(1.1);
+    transform: scale(1.15);
     z-index: 2;
     position: relative;
   }
@@ -342,6 +348,15 @@
   .kb-key.no-motion {
     transition: none !important;
     animation: none !important;
+  }
+
+  /* Pause: dim all keys */
+  .bottom-bar.paused .kb-key {
+    opacity: 0.3;
+    pointer-events: none;
+  }
+  .bottom-bar.paused .kb-hint {
+    opacity: 1;
   }
 
   /* Responsive: smaller keys on narrow screens */
@@ -600,7 +615,8 @@
 
   <div style="display:flex;align-items:center;gap:8px;">
     <span class="unit-badge" id="js-unit">U1·ABC</span>
-    <button class="icon-btn" id="js-progress-btn" aria-label="Teacher Progress" title="Teacher Progress">📊</button>
+    <button class="icon-btn" id="js-pause-btn" aria-label="Pause" title="Pause / Resume">⏸</button>
+    <button class="icon-btn" id="js-progress-btn" aria-label="Teacher Progress">📊</button>
     <button class="icon-btn" id="js-settings-btn" aria-label="Settings">⚙️</button>
   </div>
 </div>
@@ -706,6 +722,17 @@
 
     <div class="setting-row">
       <label>
+        鍵盤模式 Keyboard
+        <span class="sublabel">精簡=只顯示目標字母</span>
+      </label>
+      <select id="js-kb-mode-select">
+        <option value="full">完整 26 鍵</option>
+        <option value="compact" selected>精簡（目標字母）</option>
+      </select>
+    </div>
+
+    <div class="setting-row">
+      <label>
         高對比 High Contrast
         <span class="sublabel">深色背景大字</span>
       </label>
@@ -775,12 +802,12 @@ document.addEventListener('keydown', (e) => {
 document.addEventListener('keydown', (e) => {
   const key = e.key.toUpperCase();
   if (!/^[A-Z]$/.test(key)) return;
-  document.querySelector(`.touch-key[data-letter="${key}"]`)?.classList.add('pressed');
+  document.querySelector(`.kb-key[data-letter="${key}"]`)?.classList.add('pressed');
 });
 document.addEventListener('keyup', (e) => {
   const key = e.key.toUpperCase();
   if (!/^[A-Z]$/.test(key)) return;
-  document.querySelector(`.touch-key[data-letter="${key}"]`)?.classList.remove('pressed');
+  document.querySelector(`.kb-key[data-letter="${key}"]`)?.classList.remove('pressed');
 });
 
 // ── Settings panel buttons ───────────────────────────────────────────────
@@ -797,6 +824,7 @@ document.getElementById('js-settings-apply')?.addEventListener('click', () => {
 
 // ── Progress panel buttons ────────────────────────────────────────────────
 document.getElementById('js-progress-btn')?.addEventListener('click', LS.openProgressPanel);
+document.getElementById('js-pause-btn')?.addEventListener('click', LS.togglePause);
 document.getElementById('js-progress-close')?.addEventListener('click', LS.closeProgressPanel);
 
 // ── Start button ──────────────────────────────────────────────────────────

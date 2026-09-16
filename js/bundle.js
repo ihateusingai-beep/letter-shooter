@@ -10,8 +10,10 @@
     lang: "zh",
     // UI language: 'zh' | 'en'
     currentUnit: "U1",
-    level: "L0"
+    level: "L0",
     // 'L0' | 'L1'
+    kbMode: "compact"
+    // 'full' | 'compact' — compact shows only target letter
   };
   function loadSettings() {
     try {
@@ -292,6 +294,8 @@
       el.style.transform = "scale(1)";
     });
     currentLetter = letter;
+    compactKeys = getCompactKeys(letter);
+    renderTouchKeys();
     highlightKey(letter);
   }
   var fallPaused = false;
@@ -351,6 +355,33 @@
       animFrame = null;
     }
   }
+  var paused = false;
+  function togglePause() {
+    if (!gameRunning) return;
+    paused = !paused;
+    const btn = document.getElementById("js-pause-btn");
+    if (btn) btn.textContent = paused ? "\u25B6" : "\u23F8";
+    const bottomBar = document.querySelector(".bottom-bar");
+    const hint = document.getElementById("js-kb-hint");
+    if (paused) {
+      if (animFrame) {
+        cancelAnimationFrame(animFrame);
+        animFrame = null;
+      }
+      bottomBar?.classList.add("paused");
+      if (hint) {
+        hint.textContent = "\u23F8 \u5DF2\u66AB\u505C";
+        hint.classList.add("has-hint");
+      }
+    } else {
+      bottomBar?.classList.remove("paused");
+      if (hint && currentLetter) {
+        hint.textContent = "";
+        hint.classList.remove("has-hint");
+        highlightKey(currentLetter);
+      }
+    }
+  }
   function nextTurn(level, keys) {
     if (!gameRunning) return;
     const { letter: letterEl } = getEls();
@@ -394,32 +425,65 @@
     ["A", "S", "D", "F", "G", "H", "J", "K", "L"],
     ["Z", "X", "C", "V", "B", "N", "M"]
   ];
+  var currentKbMode = "compact";
+  var compactKeys = [];
+  function getCompactKeys(targetLetter) {
+    const all = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+    const target = targetLetter.toUpperCase();
+    const others = all.filter((l) => l !== target);
+    const shuffled = others.sort(() => Math.random() - 0.5).slice(0, 3);
+    const keys = [target, ...shuffled].sort(() => Math.random() - 0.5);
+    return keys;
+  }
   function renderTouchKeys() {
     const container = document.getElementById("js-touch-keys");
     if (!container) return;
     container.innerHTML = "";
     const settings = loadSettings();
     const reduceMotion = settings.reduceMotion;
+    currentKbMode = settings.kbMode || "compact";
     const hint = document.createElement("div");
     hint.className = "kb-hint";
     hint.id = "js-kb-hint";
     container.appendChild(hint);
-    QWERTY_ROWS.forEach((row) => {
-      const rowEl = document.createElement("div");
-      rowEl.className = "kb-row";
-      row.forEach((letter) => {
-        const btn = document.createElement("button");
-        btn.className = "kb-key";
-        btn.textContent = letter;
-        btn.setAttribute("data-letter", letter);
-        btn.setAttribute("aria-label", `Letter ${letter}`);
-        if (reduceMotion) btn.classList.add("no-motion");
-        btn.addEventListener("click", () => handleKey(letter));
-        rowEl.appendChild(btn);
+    if (currentKbMode === "full") {
+      QWERTY_ROWS.forEach((row) => {
+        const rowEl = document.createElement("div");
+        rowEl.className = "kb-row";
+        row.forEach((letter) => {
+          const btn = makeKeyBtn(letter, reduceMotion);
+          rowEl.appendChild(btn);
+        });
+        container.appendChild(rowEl);
       });
-      container.appendChild(rowEl);
-    });
+    } else {
+      const keys = compactKeys.length ? compactKeys : getCompactKeys("A");
+      const row1 = keys.slice(0, 2);
+      const row2 = keys.slice(2, 4);
+      [row1, row2].forEach((row) => {
+        const rowEl = document.createElement("div");
+        rowEl.className = "kb-row";
+        row.forEach((letter) => {
+          const btn = makeKeyBtn(letter, reduceMotion);
+          btn.style.minWidth = "72px";
+          btn.style.height = "64px";
+          btn.style.fontSize = "24px";
+          rowEl.appendChild(btn);
+        });
+        container.appendChild(rowEl);
+      });
+    }
     if (currentLetter) highlightKey(currentLetter);
+  }
+  function makeKeyBtn(letter, reduceMotion) {
+    const btn = document.createElement("button");
+    btn.className = "kb-key";
+    btn.textContent = letter;
+    btn.setAttribute("data-letter", letter);
+    btn.setAttribute("aria-label", `Letter ${letter}`);
+    if (reduceMotion) btn.classList.add("no-motion");
+    btn.addEventListener("click", () => handleKey(letter));
+    return btn;
   }
   function highlightKey(letter) {
     const hint = document.getElementById("js-kb-hint");
@@ -428,13 +492,9 @@
     document.querySelectorAll(".kb-key").forEach((btn) => {
       const isTarget = btn.getAttribute("data-letter") === letter.toUpperCase();
       btn.classList.toggle("key-hint", isTarget);
-      if (!isTarget) {
-        btn.style.opacity = "1";
-      }
     });
     if (hint) {
-      const label = lang === "zh" ? `\u8ACB\u6309 ${letter.toUpperCase()}` : `Press ${letter.toUpperCase()}`;
-      hint.textContent = label;
+      hint.textContent = lang === "zh" ? `\u8ACB\u6309 ${letter.toUpperCase()}` : `Press ${letter.toUpperCase()}`;
       hint.classList.add("has-hint");
     }
   }
@@ -487,6 +547,7 @@
     panel.querySelector("#js-lang-select").value = settings.lang;
     panel.querySelector("#js-unit-select").value = settings.currentUnit;
     panel.querySelector("#js-level-select").value = settings.level;
+    panel.querySelector("#js-kb-mode-select").value = settings.kbMode || "compact";
     panel.classList.add("visible");
   }
   function closeSettings() {
@@ -503,13 +564,15 @@
     const lang = panel.querySelector("#js-lang-select")?.value ?? "zh";
     const unit = panel.querySelector("#js-unit-select")?.value ?? "U1";
     const level = panel.querySelector("#js-level-select")?.value ?? "L0";
-    const next = { voice, speed, highContrast: hc, reduceMotion: motion, lang, currentUnit: unit, level };
+    const kbMode = panel.querySelector("#js-kb-mode-select")?.value ?? "compact";
+    const next = { voice, speed, highContrast: hc, reduceMotion: motion, lang, currentUnit: unit, level, kbMode };
     document.body.classList.toggle("high-contrast", hc);
-    document.querySelectorAll(".touch-key").forEach((btn) => {
-      btn.classList.toggle("no-motion", motion);
-    });
     saveSettings(next);
     closeSettings();
+    if (gameRunning) {
+      renderTouchKeys();
+      if (currentLetter) highlightKey(currentLetter);
+    }
   }
   function openProgressPanel() {
     const panel = document.getElementById("js-progress-panel");

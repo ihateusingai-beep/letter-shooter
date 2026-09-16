@@ -169,7 +169,11 @@ export function showLetter(letter) {
     el.style.transform = 'scale(1)';
   });
   currentLetter = letter;
-  highlightKey(letter); // highlight virtual key
+
+  // Update compact keys for this letter
+  compactKeys = getCompactKeys(letter);
+  renderTouchKeys();
+  highlightKey(letter);
 }
 
 // ── L1: fall animation ──────────────────────────────────────────────────────
@@ -245,6 +249,25 @@ export function stopGame() {
   if (animFrame) { cancelAnimationFrame(animFrame); animFrame = null; }
 }
 
+let paused = false;
+
+export function togglePause() {
+  if (!gameRunning) return;
+  paused = !paused;
+  const btn = document.getElementById('js-pause-btn');
+  if (btn) btn.textContent = paused ? '▶' : '⏸';
+  const bottomBar = document.querySelector('.bottom-bar');
+  const hint = document.getElementById('js-kb-hint');
+  if (paused) {
+    if (animFrame) { cancelAnimationFrame(animFrame); animFrame = null; }
+    bottomBar?.classList.add('paused');
+    if (hint) { hint.textContent = '⏸ 已暫停'; hint.classList.add('has-hint'); }
+  } else {
+    bottomBar?.classList.remove('paused');
+    if (hint && currentLetter) { hint.textContent = ''; hint.classList.remove('has-hint'); highlightKey(currentLetter); }
+  }
+}
+
 function nextTurn(level, keys) {
   if (!gameRunning) return;
 
@@ -295,12 +318,25 @@ export function handleKey(pressed) {
   }
 }
 
-// ── Touch keys — full QWERTY virtual keyboard ───────────────────────────────
+// ── Touch keys — virtual keyboard (full or compact) ──────────────────────────
 const QWERTY_ROWS = [
   ['Q','W','E','R','T','Y','U','I','O','P'],
   ['A','S','D','F','G','H','J','K','L'],
   ['Z','X','C','V','B','N','M'],
 ];
+
+let currentKbMode = 'compact';
+let compactKeys = []; // letters shown in compact mode
+
+function getCompactKeys(targetLetter) {
+  const all = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+  const target = targetLetter.toUpperCase();
+  const others = all.filter(l => l !== target);
+  // Shuffle others, pick 3
+  const shuffled = others.sort(() => Math.random() - 0.5).slice(0, 3);
+  const keys = [target, ...shuffled].sort(() => Math.random() - 0.5);
+  return keys;
+}
 
 export function renderTouchKeys() {
   const container = document.getElementById('js-touch-keys');
@@ -309,6 +345,7 @@ export function renderTouchKeys() {
 
   const settings = loadSettings();
   const reduceMotion = settings.reduceMotion;
+  currentKbMode = settings.kbMode || 'compact';
 
   // Hint label
   const hint = document.createElement('div');
@@ -316,24 +353,49 @@ export function renderTouchKeys() {
   hint.id = 'js-kb-hint';
   container.appendChild(hint);
 
-  QWERTY_ROWS.forEach(row => {
-    const rowEl = document.createElement('div');
-    rowEl.className = 'kb-row';
-    row.forEach(letter => {
-      const btn = document.createElement('button');
-      btn.className = 'kb-key';
-      btn.textContent = letter;
-      btn.setAttribute('data-letter', letter);
-      btn.setAttribute('aria-label', `Letter ${letter}`);
-      if (reduceMotion) btn.classList.add('no-motion');
-      btn.addEventListener('click', () => handleKey(letter));
-      rowEl.appendChild(btn);
+  if (currentKbMode === 'full') {
+    // Full QWERTY
+    QWERTY_ROWS.forEach(row => {
+      const rowEl = document.createElement('div');
+      rowEl.className = 'kb-row';
+      row.forEach(letter => {
+        const btn = makeKeyBtn(letter, reduceMotion);
+        rowEl.appendChild(btn);
+      });
+      container.appendChild(rowEl);
     });
-    container.appendChild(rowEl);
-  });
+  } else {
+    // Compact: show 4 keys (target + 3 others) in 2-row layout
+    const keys = compactKeys.length ? compactKeys : getCompactKeys('A');
+    const row1 = keys.slice(0, 2);
+    const row2 = keys.slice(2, 4);
+    [row1, row2].forEach(row => {
+      const rowEl = document.createElement('div');
+      rowEl.className = 'kb-row';
+      row.forEach(letter => {
+        const btn = makeKeyBtn(letter, reduceMotion);
+        // Compact keys bigger
+        btn.style.minWidth = '72px';
+        btn.style.height = '64px';
+        btn.style.fontSize = '24px';
+        rowEl.appendChild(btn);
+      });
+      container.appendChild(rowEl);
+    });
+  }
 
-  // Apply hint if game already running with a current letter
   if (currentLetter) highlightKey(currentLetter);
+}
+
+function makeKeyBtn(letter, reduceMotion) {
+  const btn = document.createElement('button');
+  btn.className = 'kb-key';
+  btn.textContent = letter;
+  btn.setAttribute('data-letter', letter);
+  btn.setAttribute('aria-label', `Letter ${letter}`);
+  if (reduceMotion) btn.classList.add('no-motion');
+  btn.addEventListener('click', () => handleKey(letter));
+  return btn;
 }
 
 // Highlight the target key, dim all others
@@ -345,18 +407,12 @@ export function highlightKey(letter) {
   document.querySelectorAll('.kb-key').forEach(btn => {
     const isTarget = btn.getAttribute('data-letter') === letter.toUpperCase();
     btn.classList.toggle('key-hint', isTarget);
-
-    // Dim non-target keys (already dim by default, keep as-is)
-    if (!isTarget) {
-      btn.style.opacity = '1'; // reset any forced opacity
-    }
   });
 
   if (hint) {
-    const label = lang === 'zh'
+    hint.textContent = lang === 'zh'
       ? `請按 ${letter.toUpperCase()}`
       : `Press ${letter.toUpperCase()}`;
-    hint.textContent = label;
     hint.classList.add('has-hint');
   }
 }
@@ -420,6 +476,7 @@ export function openSettings() {
   panel.querySelector('#js-lang-select').value = settings.lang;
   panel.querySelector('#js-unit-select').value = settings.currentUnit;
   panel.querySelector('#js-level-select').value = settings.level;
+  panel.querySelector('#js-kb-mode-select').value = settings.kbMode || 'compact';
 
   panel.classList.add('visible');
 }
@@ -440,17 +497,20 @@ export function applySettings() {
   const lang   = panel.querySelector('#js-lang-select')?.value ?? 'zh';
   const unit   = panel.querySelector('#js-unit-select')?.value ?? 'U1';
   const level  = panel.querySelector('#js-level-select')?.value ?? 'L0';
+  const kbMode = panel.querySelector('#js-kb-mode-select')?.value ?? 'compact';
 
-  const next = { voice, speed, highContrast: hc, reduceMotion: motion, lang, currentUnit: unit, level };
+  const next = { voice, speed, highContrast: hc, reduceMotion: motion, lang, currentUnit: unit, level, kbMode };
 
   document.body.classList.toggle('high-contrast', hc);
 
-  document.querySelectorAll('.touch-key').forEach(btn => {
-    btn.classList.toggle('no-motion', motion);
-  });
-
   saveSettings(next);
   closeSettings();
+
+  // Re-render keyboard with new mode
+  if (gameRunning) {
+    renderTouchKeys();
+    if (currentLetter) highlightKey(currentLetter);
+  }
 }
 
 // ── Teacher Progress Panel ───────────────────────────────────────────────────
