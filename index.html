@@ -70,6 +70,37 @@
     opacity: 0.4;
   }
 
+  /* ── Theme: Ocean (Phase 5) — aqua/teal, mid-tone, calm ─────────────── */
+  body[data-theme="ocean"] {
+    --bg:        #E0F7FA;
+    --bg2:       #B2EBF2;
+    --primary:   #00BCD4;
+    --primary2:  #26C6DA;
+    --accent:    #FFCA28;
+    --accent2:   #66BB6A;
+    --text:      #004D40;
+    --text-dim:  #4DB6AC;
+    --key-bg:    rgba(0,188,212,0.15);
+    --key-border: rgba(0,188,212,0.5);
+    --key-active: rgba(0,188,212,0.35);
+    --success:   #69F0AE;
+    --success2:  #26C6DA;
+    --panel-bg:  rgba(255,255,255,0.92);
+    --panel-border: rgba(0,188,212,0.3);
+    --shadow:    0 8px 32px rgba(0,188,212,0.25);
+  }
+  body[data-theme="ocean"]::before {
+    background:
+      radial-gradient(ellipse 80% 50% at 50% 0%, rgba(255,202,40,0.18) 0%, transparent 70%),
+      radial-gradient(ellipse 60% 40% at 80% 80%, rgba(102,187,106,0.18) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 35% at 20% 70%, rgba(38,198,218,0.18) 0%, transparent 65%),
+      linear-gradient(180deg, var(--bg2) 0%, var(--bg) 100%);
+  }
+  body[data-theme="ocean"] .star {
+    background: #00BCD4;
+    opacity: 0.35;
+  }
+
   body {
     font-family: 'Fredoka', system-ui, -apple-system, sans-serif;
     background: var(--bg);
@@ -112,6 +143,37 @@
     0%,100% { opacity: 0.2; transform: scale(1); }
     50%      { opacity: 0.8; transform: scale(1.4); }
   }
+
+  /* ── Ocean bubbles (Phase 5) ────────────────────────────────────── */
+  .ocean-bubbles {
+    position: fixed; inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    overflow: hidden;
+    display: none;
+  }
+  body[data-theme="ocean"] .ocean-bubbles { display: block; }
+  .bubble {
+    position: absolute;
+    bottom: -40px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 30% 30%,
+      rgba(255,255,255,0.85) 0%,
+      rgba(255,255,255,0.35) 50%,
+      rgba(178,235,242,0.25) 100%);
+    border: 1px solid rgba(255,255,255,0.5);
+    animation: bubbleRise linear infinite;
+    opacity: 0;
+    will-change: transform, opacity;
+  }
+  @keyframes bubbleRise {
+    0%   { transform: translateY(0) translateX(0); opacity: 0; }
+    10%  { opacity: 0.75; }
+    50%  { transform: translateY(-50vh) translateX(15px); opacity: 0.7; }
+    90%  { opacity: 0.4; }
+    100% { transform: translateY(-110vh) translateX(-15px); opacity: 0; }
+  }
+  .no-motion .bubble { animation-duration: 0.001ms !important; }
 
   /* ── High contrast ─────────────────────────────────────────── */
   body.high-contrast {
@@ -783,6 +845,9 @@
 </head>
 <body>
 
+<!-- ── Ocean bubbles (Phase 5) — only visible when theme=ocean ────────────── -->
+<div class="ocean-bubbles" id="js-bubble-layer" aria-hidden="true"></div>
+
 <!-- ── Top bar ─────────────────────────────────────────────────────────────── -->
 <div class="top-bar">
   <div class="score-block">
@@ -949,11 +1014,12 @@
     <div class="setting-row">
       <label>
         主題 Theme
-        <span class="sublabel">太空 / 糖果（Candy pastel）</span>
+        <span class="sublabel">太空 / 糖果 / 海洋</span>
       </label>
       <select id="js-theme-select">
         <option value="space" selected>🌌 太空 Space</option>
         <option value="candy">🍬 糖果 Candy</option>
+        <option value="ocean">🌊 海洋 Ocean</option>
       </select>
     </div>
 
@@ -1062,9 +1128,24 @@ document.getElementById('js-start-btn')?.addEventListener('click', () => {
   const s = LS.loadSettings ? LS.loadSettings() : {};
   LS.startGame(s.currentUnit || 'U1', s.level || 'L0');
 });
-</script>
 
-// ── First load: show start overlay ───────────────────────────────────────
+// ── Ocean bubbles: populate the bubble layer on boot (Phase 5) ─────────────
+(function populateBubbles() {
+  const layer = document.getElementById('js-bubble-layer');
+  if (!layer) return;
+  const COUNT = 14;
+  for (let i = 0; i < COUNT; i++) {
+    const b = document.createElement('div');
+    b.className = 'bubble';
+    const size = 8 + Math.random() * 28;
+    b.style.width = size + 'px';
+    b.style.height = size + 'px';
+    b.style.left = (Math.random() * 100) + '%';
+    b.style.animationDuration = (8 + Math.random() * 8) + 's';
+    b.style.animationDelay = (-Math.random() * 12) + 's';
+    layer.appendChild(b);
+  }
+})();
 </script>
 </body>
 </html>

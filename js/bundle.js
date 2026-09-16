@@ -175,6 +175,7 @@
       theme: "Theme",
       themeSpace: "Space",
       themeCandy: "Candy",
+      themeOcean: "Ocean",
       robotUnlock: "New robot unlocked!",
       // Praise phrases (random pick on correct)
       praise: ["Great!", "Yes!", "Wonderful!", "Awesome!", "Nice!"],
@@ -210,6 +211,7 @@
       theme: "\u4E3B\u984C",
       themeSpace: "\u592A\u7A7A",
       themeCandy: "\u7CD6\u679C",
+      themeOcean: "\u6D77\u6D0B",
       robotUnlock: "\u65B0\u6A5F\u68B0\u4EBA\u89E3\u9396\u4E86\uFF01",
       praise: ["\u505A\u5F97\u597D\uFF01", "\u5F88\u597D\uFF01", "\u592A\u68D2\u4E86\uFF01", "\u597D\u53FB\uFF01", "\u7E7C\u7E8C\uFF01"],
       nudge: ["\u518D\u8A66\u4E00\u6B21\uFF01", "\u5DEE\u5C11\u5C11\uFF01", "\u52A0\u6CB9\uFF01"]
@@ -662,6 +664,11 @@
       { body: "#FFFFFF", eye: "#FF6B9D", accent: "#FF6B9D", glow: "rgba(255,107,157,0.5)" },
       { body: "#FFFFFF", eye: "#FFD54F", accent: "#FFD54F", glow: "rgba(255,213,79,0.5)" },
       { body: "#FFFFFF", eye: "#B388FF", accent: "#B388FF", glow: "rgba(179,136,255,0.5)" }
+    ],
+    ocean: [
+      { body: "#FFFFFF", eye: "#00BCD4", accent: "#00BCD4", glow: "rgba(0,188,212,0.5)" },
+      { body: "#FFFFFF", eye: "#FFCA28", accent: "#FFCA28", glow: "rgba(255,202,40,0.5)" },
+      { body: "#FFFFFF", eye: "#66BB6A", accent: "#66BB6A", glow: "rgba(102,187,106,0.5)" }
     ]
   };
   function drawRobot(robotIdx = 0) {

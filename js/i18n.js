@@ -29,6 +29,7 @@ export const i18n = {
     theme: 'Theme',
     themeSpace: 'Space',
     themeCandy: 'Candy',
+    themeOcean: 'Ocean',
     robotUnlock: 'New robot unlocked!',
     // Praise phrases (random pick on correct)
     praise: ['Great!', 'Yes!', 'Wonderful!', 'Awesome!', 'Nice!'],
@@ -64,6 +65,7 @@ export const i18n = {
     theme: '主題',
     themeSpace: '太空',
     themeCandy: '糖果',
+    themeOcean: '海洋',
     robotUnlock: '新機械人解鎖了！',
     praise: ['做得好！', '很好！', '太棒了！', '好叻！', '繼續！'],
     nudge: ['再試一次！', '差少少！', '加油！'],

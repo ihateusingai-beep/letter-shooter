@@ -102,6 +102,11 @@ const ROBOT_PALETTES = {
     { body: '#FFFFFF', eye: '#FFD54F', accent: '#FFD54F', glow: 'rgba(255,213,79,0.5)' },
     { body: '#FFFFFF', eye: '#B388FF', accent: '#B388FF', glow: 'rgba(179,136,255,0.5)' },
   ],
+  ocean: [
+    { body: '#FFFFFF', eye: '#00BCD4', accent: '#00BCD4', glow: 'rgba(0,188,212,0.5)' },
+    { body: '#FFFFFF', eye: '#FFCA28', accent: '#FFCA28', glow: 'rgba(255,202,40,0.5)' },
+    { body: '#FFFFFF', eye: '#66BB6A', accent: '#66BB6A', glow: 'rgba(102,187,106,0.5)' },
+  ],
 };
 
 // ── Robot ──────────────────────────────────────────────────────────────────
