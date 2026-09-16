@@ -420,6 +420,17 @@
       }, b.delay);
     });
   }
+  function floatCombo(text, originX, originY, opts = {}) {
+    const layer = document.getElementById("js-combo-layer");
+    if (!layer) return;
+    const el = document.createElement("div");
+    el.className = "combo-text" + (opts.tier ? " tier-" + opts.tier : "");
+    el.textContent = text;
+    el.style.left = originX + "px";
+    el.style.top = originY + "px";
+    layer.appendChild(el);
+    el.addEventListener("animationend", () => el.remove(), { once: true });
+  }
   function streakFlash(intensity = "normal") {
     const flash = document.getElementById("js-streak-flash");
     if (!flash) return;
@@ -433,6 +444,35 @@
       flash.classList.remove("flash-go");
       flash.classList.remove("flash-big");
     }, 600);
+  }
+  function letterSparkle(originX, originY, opts = {}) {
+    const container = document.getElementById("js-confetti-layer");
+    if (!container) return;
+    const count = opts.count || 10;
+    const color = opts.color || "#FFFFFF";
+    for (let i = 0; i < count; i++) {
+      const piece = document.createElement("div");
+      piece.className = "confetti-piece sparkle";
+      piece.style.left = originX + "px";
+      piece.style.top = originY + "px";
+      piece.style.background = color;
+      piece.style.borderRadius = "50%";
+      const size = 3 + Math.random() * 3;
+      piece.style.width = size + "px";
+      piece.style.height = size + "px";
+      piece.style.boxShadow = `0 0 4px ${color}`;
+      const angle = Math.PI * 2 * i / count + (Math.random() - 0.5) * 0.4;
+      const dist = 30 + Math.random() * 50;
+      const dx = Math.cos(angle) * dist;
+      const dy = Math.sin(angle) * dist;
+      const rot = (Math.random() - 0.5) * 360;
+      piece.style.setProperty("--dx", dx + "px");
+      piece.style.setProperty("--dy", dy + "px");
+      piece.style.setProperty("--rot", rot + "deg");
+      piece.style.animationDuration = 0.6 + Math.random() * 0.3 + "s";
+      container.appendChild(piece);
+      piece.addEventListener("animationend", () => piece.remove(), { once: true });
+    }
   }
   function startLetterTrail(getPosition) {
     stopLetterTrail();
@@ -711,10 +751,25 @@
   function updateStars(total) {
     const num = document.getElementById("js-stars-num");
     const bar = document.getElementById("js-stars-bar-fill");
+    const next = document.getElementById("js-stars-next");
     if (num) num.textContent = total;
+    const milestones = ACHIEVEMENT_MILESTONES.map((m) => m.stars);
+    const nextMs = milestones.find((m) => m > total);
     if (bar) {
-      const pct = Math.min(100, total % 10 * 10);
+      const target = nextMs || total + 10;
+      const prevMs = milestones.filter((m) => m <= total).pop() || 0;
+      const pct = Math.min(100, (total - prevMs) / (target - prevMs) * 100);
       bar.style.width = pct + "%";
+    }
+    if (next) {
+      if (!nextMs) {
+        next.textContent = "\u{1F451} MAX";
+        next.classList.add("zero");
+      } else {
+        const remaining = nextMs - total;
+        next.textContent = `\u4E0B\u4E00\u500B ${remaining} \u7C92`;
+        next.classList.remove("zero");
+      }
     }
   }
   function speakLetter(letter) {
@@ -842,6 +897,12 @@
       el.style.transform = "scale(1)";
     });
     currentLetter = letter;
+    setTimeout(() => {
+      const r = el.getBoundingClientRect();
+      letterSparkle(r.left + r.width / 2, r.top + r.height / 2, {
+        color: getComputedStyle(document.documentElement).getPropertyValue("--primary2").trim() || "#4FC3F7"
+      });
+    }, 200);
     compactKeys = getCompactKeys(letter);
     renderTouchKeys();
     highlightKey(letter);
@@ -981,6 +1042,15 @@
           letterBox.top + letterBox.height / 2,
           { theme: settings.theme || "space" }
         );
+        const lang = settings.lang || "zh";
+        const tier = streak >= 10 ? 10 : streak >= 5 ? 5 : streak >= 3 ? 3 : 1;
+        const combos = {
+          1: lang === "zh" ? "+1" : "+1",
+          3: lang === "zh" ? "\u53FB!" : "Good!",
+          5: lang === "zh" ? "\u5F88\u597D!" : "Great!",
+          10: lang === "zh" ? "\u592A\u68D2\u4E86!" : "Amazing!"
+        };
+        floatCombo(combos[tier], letterBox.left + letterBox.width / 2, letterBox.top, { tier });
       }
       celebrateRobot(streak);
       if (settings.soundFx) playCorrect();

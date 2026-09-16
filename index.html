@@ -229,6 +229,63 @@
   }
   .no-motion .sparkle-fall { animation-duration: 0.001ms !important; }
 
+  /* ── Floating combo text (Phase 9b) ─────────────────────────────────── */
+  #js-combo-layer {
+    position: fixed; inset: 0;
+    z-index: 60;
+    pointer-events: none;
+    overflow: hidden;
+  }
+  .combo-text {
+    position: absolute;
+    font-family: 'Fredoka', sans-serif;
+    font-weight: 900;
+    font-size: 28px;
+    color: white;
+    text-shadow: 0 0 16px rgba(79,195,247,0.9), 0 2px 4px rgba(0,0,0,0.4);
+    animation: comboRise 1.2s ease-out forwards;
+    transform: translate(-50%, -50%);
+    white-space: nowrap;
+  }
+  .combo-text.tier-1 {
+    color: var(--primary2);
+    text-shadow: 0 0 16px rgba(0,212,255,0.8), 0 2px 4px rgba(0,0,0,0.4);
+    font-size: 24px;
+  }
+  .combo-text.tier-3 {
+    color: var(--accent2);
+    text-shadow: 0 0 20px rgba(255,107,157,0.9), 0 2px 4px rgba(0,0,0,0.4);
+    font-size: 32px;
+  }
+  .combo-text.tier-5 {
+    color: #FFD54F;
+    text-shadow: 0 0 24px rgba(255,213,79,0.95), 0 2px 4px rgba(0,0,0,0.4);
+    font-size: 38px;
+  }
+  .combo-text.tier-10 {
+    color: #69F0AE;
+    text-shadow: 0 0 30px rgba(105,240,174,1), 0 2px 4px rgba(0,0,0,0.4);
+    font-size: 44px;
+    background: linear-gradient(90deg, #4FC3F7, #FF6B9D, #FFD54F, #69F0AE);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  body[data-theme="candy"] .combo-text.tier-1 {
+    color: #FF6B9D;
+    text-shadow: 0 0 16px rgba(255,107,157,0.8), 0 2px 4px rgba(0,0,0,0.4);
+  }
+  body[data-theme="ocean"] .combo-text.tier-1 {
+    color: #00BCD4;
+    text-shadow: 0 0 16px rgba(0,188,212,0.8), 0 2px 4px rgba(0,0,0,0.4);
+  }
+  @keyframes comboRise {
+    0%   { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+    20%  { transform: translate(-50%, -70%) scale(1.2); opacity: 1; }
+    100% { transform: translate(-50%, -180%) scale(1); opacity: 0; }
+  }
+  .no-motion .combo-text { animation-duration: 0.001ms !important; }
+
   /* ── High contrast ─────────────────────────────────────────── */
   body.high-contrast {
     --bg: #000;
@@ -328,6 +385,14 @@
   body[data-theme="ocean"] .stars-bar-fill {
     background: linear-gradient(90deg, #00BCD4, #66BB6A);
   }
+  /* Next milestone hint (Phase 9a) */
+  .stars-next {
+    font-size: 10px; font-weight: 700;
+    color: var(--text-dim);
+    margin-left: 4px;
+    white-space: nowrap;
+  }
+  .stars-next.zero { color: var(--success); }
 
   /* ── Streak counter (fire) ──────────────────────────────────── */
   .streak-block {
@@ -1071,6 +1136,9 @@
 <!-- ── Falling sparkle rain (Phase 8c, space theme) ──────────────────────── -->
 <div class="sparkle-rain" id="js-sparkle-rain" aria-hidden="true"></div>
 
+<!-- ── Floating combo text layer (Phase 9b) ──────────────────────────────── -->
+<div id="js-combo-layer" aria-hidden="true"></div>
+
 <!-- ── Top bar ─────────────────────────────────────────────────────────────── -->
 <div class="top-bar">
   <div class="score-block">
@@ -1084,6 +1152,7 @@
     <div class="stars-bar">
       <div class="stars-bar-fill" id="js-stars-bar-fill"></div>
     </div>
+    <span class="stars-next" id="js-stars-next" aria-label="Next milestone"></span>
   </div>
 
   <div class="streak-block" id="js-streak-wrap" aria-live="polite">

@@ -137,6 +137,20 @@ export function megaFireworks(opts = {}) {
   });
 }
 
+// ── Floating combo text on correct (Phase 9b) ──────────────────────────────
+// Rises from letter position and fades. Phrase varies by streak tier.
+export function floatCombo(text, originX, originY, opts = {}) {
+  const layer = document.getElementById('js-combo-layer');
+  if (!layer) return;
+  const el = document.createElement('div');
+  el.className = 'combo-text' + (opts.tier ? ' tier-' + opts.tier : '');
+  el.textContent = text;
+  el.style.left = originX + 'px';
+  el.style.top  = originY + 'px';
+  layer.appendChild(el);
+  el.addEventListener('animationend', () => el.remove(), { once: true });
+}
+
 // ── Streak flash: brief radial pulse for milestones ────────────────────────
 export function streakFlash(intensity = 'normal') {
   const flash = document.getElementById('js-streak-flash');
@@ -152,6 +166,41 @@ export function streakFlash(intensity = 'normal') {
     flash.classList.remove('flash-go');
     flash.classList.remove('flash-big');
   }, 600);
+}
+
+// ── Letter sparkle burst on appear (Phase 9c) ───────────────────────────────
+// Smaller, gentler than confetti — radiates outward from letter on show.
+export function letterSparkle(originX, originY, opts = {}) {
+  const container = document.getElementById('js-confetti-layer');
+  if (!container) return;
+  const count = opts.count || 10;
+  const color = opts.color || '#FFFFFF';
+  for (let i = 0; i < count; i++) {
+    const piece = document.createElement('div');
+    piece.className = 'confetti-piece sparkle';
+    piece.style.left = originX + 'px';
+    piece.style.top  = originY + 'px';
+    piece.style.background = color;
+    piece.style.borderRadius = '50%';
+    const size = 3 + Math.random() * 3;
+    piece.style.width = size + 'px';
+    piece.style.height = size + 'px';
+    piece.style.boxShadow = `0 0 4px ${color}`;
+
+    const angle = (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.4;
+    const dist = 30 + Math.random() * 50;
+    const dx = Math.cos(angle) * dist;
+    const dy = Math.sin(angle) * dist;
+    const rot = (Math.random() - 0.5) * 360;
+
+    piece.style.setProperty('--dx', dx + 'px');
+    piece.style.setProperty('--dy', dy + 'px');
+    piece.style.setProperty('--rot', rot + 'deg');
+    piece.style.animationDuration = (0.6 + Math.random() * 0.3) + 's';
+
+    container.appendChild(piece);
+    piece.addEventListener('animationend', () => piece.remove(), { once: true });
+  }
 }
 
 // ── Letter trail: sparkle particles following falling letter ───────────────

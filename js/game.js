@@ -4,7 +4,7 @@ import { loadProgress, recordAttempt, masteredCount } from './progress.js';
 import { activeLetters, currentRobotIndex } from './curriculum.js';
 import { t, pickT, setLang } from './i18n.js';
 import { playCorrect, playWrong, playStreak, playUnlock, unlockAudio } from './sfx.js';
-import { confettiBurst, streakFlash, megaFireworks, startLetterTrail, stopLetterTrail } from './fx.js';
+import { confettiBurst, streakFlash, megaFireworks, startLetterTrail, stopLetterTrail, letterSparkle, floatCombo } from './fx.js';
 import { startBgm, stopBgm, pauseBgm, resumeBgm, unlockBgm } from './bgm.js';
 
 // Attach public API to window for non-module HTML
@@ -81,15 +81,30 @@ function updateStreak(n) {
   }
 }
 
-// ── Stars display + progress bar (Phase 6d) ────────────────────────────────
+// ── Stars display + progress bar (Phase 6d) + next milestone (Phase 9a) ───
 function updateStars(total) {
   const num = document.getElementById('js-stars-num');
   const bar = document.getElementById('js-stars-bar-fill');
+  const next = document.getElementById('js-stars-next');
   if (num) num.textContent = total;
+  // Find next milestone from ACHIEVEMENT_MILESTONES
+  const milestones = ACHIEVEMENT_MILESTONES.map(m => m.stars);
+  const nextMs = milestones.find(m => m > total);
   if (bar) {
-    // progress toward next 10-star milestone (visualization only)
-    const pct = Math.min(100, (total % 10) * 10);
+    const target = nextMs || (total + 10);
+    const prevMs = milestones.filter(m => m <= total).pop() || 0;
+    const pct = Math.min(100, ((total - prevMs) / (target - prevMs)) * 100);
     bar.style.width = pct + '%';
+  }
+  if (next) {
+    if (!nextMs) {
+      next.textContent = '👑 MAX';
+      next.classList.add('zero');
+    } else {
+      const remaining = nextMs - total;
+      next.textContent = `下一個 ${remaining} 粒`;
+      next.classList.remove('zero');
+    }
   }
 }
 
@@ -237,6 +252,14 @@ export function showLetter(letter) {
     el.style.transform = 'scale(1)';
   });
   currentLetter = letter;
+
+  // Sparkle burst around letter on appear (Phase 9c)
+  setTimeout(() => {
+    const r = el.getBoundingClientRect();
+    letterSparkle(r.left + r.width / 2, r.top + r.height / 2, {
+      color: getComputedStyle(document.documentElement).getPropertyValue('--primary2').trim() || '#4FC3F7',
+    });
+  }, 200);
 
   // Update compact keys for this letter
   compactKeys = getCompactKeys(letter);
@@ -402,6 +425,17 @@ export function handleKey(pressed) {
         letterBox.top + letterBox.height / 2,
         { theme: settings.theme || 'space' }
       );
+
+      // Floating combo text (Phase 9b) — escalates by streak tier
+      const lang = settings.lang || 'zh';
+      const tier = streak >= 10 ? 10 : streak >= 5 ? 5 : streak >= 3 ? 3 : 1;
+      const combos = {
+        1:  lang === 'zh' ? '+1'      : '+1',
+        3:  lang === 'zh' ? '叻!'      : 'Good!',
+        5:  lang === 'zh' ? '很好!'    : 'Great!',
+        10: lang === 'zh' ? '太棒了!'  : 'Amazing!',
+      };
+      floatCombo(combos[tier], letterBox.left + letterBox.width / 2, letterBox.top, { tier });
     }
 
     // ── Reward feedback ─────────────────────────────────────────────────
