@@ -57,6 +57,8 @@ export function updateScore() {
   void scoreEl.offsetWidth;
   scoreEl.classList.add('pop');
   scoreEl.addEventListener('transitionend', () => scoreEl.classList.remove('pop'), { once: true });
+  // Rainbow shift when streak ≥ 5 (Phase 8b)
+  scoreEl.classList.toggle('rainbow', streak >= 5);
 }
 
 export function updateUnit(unitKey) {
@@ -381,9 +383,16 @@ export function handleKey(pressed) {
     flashSuccess();
     score++;
     stars++;
+    streak++;
     updateScore();
     updateStars(stars);
+    updateStreak(streak);
     clearHighlight();
+
+    // Achievement toast at star milestones (Phase 8a)
+    if (stars === 10 || stars === 25 || stars === 50 || stars === 100) {
+      showAchievement(stars);
+    }
 
     // ── Themed confetti burst at letter position (Phase 6a) ─────────────
     const letterBox = document.getElementById('js-letter')?.getBoundingClientRect();
@@ -395,9 +404,7 @@ export function handleKey(pressed) {
       );
     }
 
-    // ── Streak + reward feedback ────────────────────────────────────────
-    streak++;
-    updateStreak(streak);
+    // ── Reward feedback ─────────────────────────────────────────────────
     celebrateRobot(streak);
     if (settings.soundFx) playCorrect();
     if (streak === 3 || streak === 5 || streak === 10) {
@@ -439,6 +446,7 @@ export function handleKey(pressed) {
     // Wrong: gentle — no fail language, no buzzer
     streak = 0;
     updateStreak(0);
+    updateScore(); // refresh rainbow off
     recordAttempt(currentLetter.toUpperCase(), false);
     shakeLetter();
     if (settings.soundFx) playWrong();
@@ -632,6 +640,34 @@ function showToast(title, body) {
   toast.classList.add('visible');
 
   setTimeout(() => toast.classList.remove('visible'), 3000);
+}
+
+// ── Achievement toast (Phase 8a) — bigger, themed pop at star milestones ───
+const ACHIEVEMENT_MILESTONES = [
+  { stars: 10,  icon: '🌟', title_zh: '獲得 10 粒星！',  title_en: '10 Stars!',  body_zh: '繼續努力！', body_en: 'Keep going!' },
+  { stars: 25,  icon: '🏆', title_zh: '獲得 25 粒星！',  title_en: '25 Stars!',  body_zh: '太厲害了！', body_en: 'Amazing!' },
+  { stars: 50,  icon: '💎', title_zh: '獲得 50 粒星！',  title_en: '50 Stars!',  body_zh: '超級叻！',   body_en: 'Superstar!' },
+  { stars: 100, icon: '👑', title_zh: '100 粒星！',      title_en: '100 Stars!', body_zh: '完美！',     body_en: 'Perfect!' },
+];
+
+function showAchievement(stars) {
+  const ms = ACHIEVEMENT_MILESTONES.find(m => m.stars === stars);
+  if (!ms) return;
+  const ach = document.getElementById('js-ach-toast');
+  const icon = document.getElementById('js-ach-icon');
+  const title = document.getElementById('js-ach-title');
+  const body = document.getElementById('js-ach-body');
+  if (!ach || !icon || !title || !body) return;
+  const lang = loadSettings().lang;
+  icon.textContent = ms.icon;
+  title.textContent = lang === 'zh' ? ms.title_zh : ms.title_en;
+  body.textContent  = lang === 'zh' ? ms.body_zh  : ms.body_en;
+  ach.classList.remove('visible');
+  void ach.offsetWidth;
+  ach.classList.add('visible');
+  // Mega fireworks on every achievement
+  megaFireworks({ theme: loadSettings().theme || 'space' });
+  setTimeout(() => ach.classList.remove('visible'), 2200);
 }
 
 // ── Settings panel ──────────────────────────────────────────────────────────

@@ -202,6 +202,33 @@
   }
   .no-motion .float-emoji { animation-duration: 0.001ms !important; }
 
+  /* ── Falling sparkle rain (Phase 8c) — space theme only ───────────── */
+  .sparkle-rain {
+    position: fixed; inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    overflow: hidden;
+    display: none;
+  }
+  body[data-theme="space"] .sparkle-rain { display: block; }
+  .sparkle-fall {
+    position: absolute;
+    top: -10px;
+    border-radius: 50%;
+    background: white;
+    box-shadow: 0 0 6px rgba(255,255,255,0.8);
+    animation: sparkleFall linear infinite;
+    will-change: transform, opacity;
+  }
+  @keyframes sparkleFall {
+    0%   { transform: translateY(0) translateX(0); opacity: 0; }
+    10%  { opacity: 0.7; }
+    50%  { transform: translateY(50vh) translateX(10px); opacity: 0.6; }
+    90%  { opacity: 0.4; }
+    100% { transform: translateY(110vh) translateX(-10px); opacity: 0; }
+  }
+  .no-motion .sparkle-fall { animation-duration: 0.001ms !important; }
+
   /* ── High contrast ─────────────────────────────────────────── */
   body.high-contrast {
     --bg: #000;
@@ -250,6 +277,18 @@
     transform: scale(1.2);
     text-shadow: 0 0 30px rgba(0,212,255,0.9);
   }
+  /* Score rainbow when streak ≥5 (Phase 8b) */
+  @keyframes scoreRainbow {
+    0%   { color: #4FC3F7; text-shadow: 0 0 20px rgba(79,195,247,0.8); }
+    25%  { color: #FF6B9D; text-shadow: 0 0 20px rgba(255,107,157,0.8); }
+    50%  { color: #FFD54F; text-shadow: 0 0 20px rgba(255,213,79,0.8); }
+    75%  { color: #69F0AE; text-shadow: 0 0 20px rgba(105,240,174,0.8); }
+    100% { color: #4FC3F7; text-shadow: 0 0 20px rgba(79,195,247,0.8); }
+  }
+  .score-num.rainbow {
+    animation: scoreRainbow 2.2s linear infinite;
+  }
+  .no-motion .score-num.rainbow { animation: none; color: #FF6B9D; }
 
   .streak-num.zero { opacity: 0.35; }
 
@@ -887,6 +926,38 @@
   #js-toast .toast-title { font-weight: 700; font-size: 15px; color: white; }
   #js-toast .toast-body  { font-size: 13px; color: var(--text-dim); margin-top: 2px; }
 
+  /* ── Achievement toast (Phase 8a) ─────────────────────────────── */
+  #js-ach-toast {
+    position: fixed;
+    top: 35%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.6);
+    background: linear-gradient(135deg, rgba(255,213,79,0.95) 0%, rgba(255,107,157,0.95) 50%, rgba(179,136,255,0.95) 100%);
+    border: 3px solid rgba(255,255,255,0.5);
+    border-radius: 24px;
+    padding: 24px 40px;
+    box-shadow: 0 12px 48px rgba(255,107,157,0.5), 0 0 80px rgba(255,213,79,0.3);
+    z-index: 320;
+    opacity: 0;
+    pointer-events: none;
+    text-align: center;
+    min-width: 240px;
+  }
+  #js-ach-toast.visible {
+    animation: achPop 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  }
+  @keyframes achPop {
+    0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.4) rotate(-10deg); }
+    40%  { opacity: 1; transform: translate(-50%, -50%) scale(1.1) rotate(2deg); }
+    60%  { transform: translate(-50%, -50%) scale(0.95) rotate(-1deg); }
+    80%  { transform: translate(-50%, -50%) scale(1.02) rotate(0deg); opacity: 1; }
+    100% { opacity: 0; transform: translate(-50%, -50%) scale(1) translateY(-30px); }
+  }
+  .no-motion #js-ach-toast.visible { animation: none; opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  #js-ach-toast .ach-icon { font-size: 56px; margin-bottom: 8px; line-height: 1; }
+  #js-ach-toast .ach-title { font-weight: 900; font-size: 22px; color: white; text-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+  #js-ach-toast .ach-body  { font-size: 14px; color: rgba(255,255,255,0.9); margin-top: 4px; font-weight: 600; }
+
   /* ── Teacher Progress Panel ─────────────────────────────────────────── */
   #js-progress-panel {
     position: fixed; inset: 0;
@@ -996,6 +1067,9 @@
 
 <!-- ── Themed floating background (Phase 7b) ───────────────────────────────── -->
 <div class="float-layer" id="js-float-layer" aria-hidden="true"></div>
+
+<!-- ── Falling sparkle rain (Phase 8c, space theme) ──────────────────────── -->
+<div class="sparkle-rain" id="js-sparkle-rain" aria-hidden="true"></div>
 
 <!-- ── Top bar ─────────────────────────────────────────────────────────────── -->
 <div class="top-bar">
@@ -1215,6 +1289,13 @@
   <div class="toast-body"   id="js-toast-body"></div>
 </div>
 
+<!-- ── Achievement toast (Phase 8a) ───────────────────────────────────────── -->
+<div id="js-ach-toast" role="status" aria-live="polite">
+  <div class="ach-icon" id="js-ach-icon">🏆</div>
+  <div class="ach-title" id="js-ach-title"></div>
+  <div class="ach-body" id="js-ach-body"></div>
+</div>
+
 <!-- ── Teacher Progress Overlay ──────────────────────────────────────────── -->
 <div id="js-progress-panel" role="dialog" aria-modal="true" aria-label="Teacher Progress" hidden>
   <div class="settings-header">
@@ -1267,6 +1348,7 @@ document.getElementById('js-settings-apply')?.addEventListener('click', () => {
   // Refresh themed floating background for new theme
   const s = LS.loadSettings ? LS.loadSettings() : {};
   populateFloatLayer(s.theme || 'space');
+  populateSparkleRain(s.theme || 'space');
   // Restart game with new unit/level if game is running
   const overlay = document.getElementById('js-start-overlay');
   if (!overlay?.classList.contains('hidden')) return;
@@ -1333,6 +1415,27 @@ function populateFloatLayer(theme) {
 }
 // Initial populate based on saved theme
 populateFloatLayer(JSON.parse(localStorage.getItem('ls-settings') || '{}').theme || 'space');
+
+// ── Falling sparkle rain (Phase 8c) — space theme only ─────────────────────
+function populateSparkleRain(theme) {
+  const layer = document.getElementById('js-sparkle-rain');
+  if (!layer) return;
+  layer.innerHTML = '';
+  if (theme !== 'space') return;
+  const COUNT = 24;
+  for (let i = 0; i < COUNT; i++) {
+    const s = document.createElement('div');
+    s.className = 'sparkle-fall';
+    const size = 2 + Math.random() * 4;
+    s.style.width = size + 'px';
+    s.style.height = size + 'px';
+    s.style.left = (Math.random() * 100) + '%';
+    s.style.animationDuration = (4 + Math.random() * 6) + 's';
+    s.style.animationDelay = (-Math.random() * 8) + 's';
+    layer.appendChild(s);
+  }
+}
+populateSparkleRain(JSON.parse(localStorage.getItem('ls-settings') || '{}').theme || 'space');
 </script>
 </body>
 </html>

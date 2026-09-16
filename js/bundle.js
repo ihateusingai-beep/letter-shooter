@@ -689,6 +689,7 @@
     void scoreEl.offsetWidth;
     scoreEl.classList.add("pop");
     scoreEl.addEventListener("transitionend", () => scoreEl.classList.remove("pop"), { once: true });
+    scoreEl.classList.toggle("rainbow", streak >= 5);
   }
   function updateUnit(unitKey) {
     const { unitEl } = getEls();
@@ -965,9 +966,14 @@
       flashSuccess();
       score++;
       stars++;
+      streak++;
       updateScore();
       updateStars(stars);
+      updateStreak(streak);
       clearHighlight();
+      if (stars === 10 || stars === 25 || stars === 50 || stars === 100) {
+        showAchievement(stars);
+      }
       const letterBox = document.getElementById("js-letter")?.getBoundingClientRect();
       if (letterBox) {
         confettiBurst(
@@ -976,8 +982,6 @@
           { theme: settings.theme || "space" }
         );
       }
-      streak++;
-      updateStreak(streak);
       celebrateRobot(streak);
       if (settings.soundFx) playCorrect();
       if (streak === 3 || streak === 5 || streak === 10) {
@@ -1009,6 +1013,7 @@
     } else {
       streak = 0;
       updateStreak(0);
+      updateScore();
       recordAttempt(currentLetter.toUpperCase(), false);
       shakeLetter();
       if (settings.soundFx) playWrong();
@@ -1166,6 +1171,30 @@
     toastBody.textContent = body;
     toast.classList.add("visible");
     setTimeout(() => toast.classList.remove("visible"), 3e3);
+  }
+  var ACHIEVEMENT_MILESTONES = [
+    { stars: 10, icon: "\u{1F31F}", title_zh: "\u7372\u5F97 10 \u7C92\u661F\uFF01", title_en: "10 Stars!", body_zh: "\u7E7C\u7E8C\u52AA\u529B\uFF01", body_en: "Keep going!" },
+    { stars: 25, icon: "\u{1F3C6}", title_zh: "\u7372\u5F97 25 \u7C92\u661F\uFF01", title_en: "25 Stars!", body_zh: "\u592A\u53B2\u5BB3\u4E86\uFF01", body_en: "Amazing!" },
+    { stars: 50, icon: "\u{1F48E}", title_zh: "\u7372\u5F97 50 \u7C92\u661F\uFF01", title_en: "50 Stars!", body_zh: "\u8D85\u7D1A\u53FB\uFF01", body_en: "Superstar!" },
+    { stars: 100, icon: "\u{1F451}", title_zh: "100 \u7C92\u661F\uFF01", title_en: "100 Stars!", body_zh: "\u5B8C\u7F8E\uFF01", body_en: "Perfect!" }
+  ];
+  function showAchievement(stars2) {
+    const ms = ACHIEVEMENT_MILESTONES.find((m) => m.stars === stars2);
+    if (!ms) return;
+    const ach = document.getElementById("js-ach-toast");
+    const icon = document.getElementById("js-ach-icon");
+    const title = document.getElementById("js-ach-title");
+    const body = document.getElementById("js-ach-body");
+    if (!ach || !icon || !title || !body) return;
+    const lang = loadSettings().lang;
+    icon.textContent = ms.icon;
+    title.textContent = lang === "zh" ? ms.title_zh : ms.title_en;
+    body.textContent = lang === "zh" ? ms.body_zh : ms.body_en;
+    ach.classList.remove("visible");
+    void ach.offsetWidth;
+    ach.classList.add("visible");
+    megaFireworks({ theme: loadSettings().theme || "space" });
+    setTimeout(() => ach.classList.remove("visible"), 2200);
   }
   function applyTheme(theme) {
     document.body.setAttribute("data-theme", theme || "space");
