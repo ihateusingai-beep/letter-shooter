@@ -364,7 +364,8 @@ function nextTurn(level, keys) {
 
   if (level === 'L1') {
     startFall(() => {
-      // Arrived — visual cue only; student still has time to press correct key
+      // Arrived — visual cue: robot does a brief "reach up" reaction
+      robotReach();
     });
   }
 }
@@ -477,6 +478,15 @@ function celebrateRobot(streakN = 1) {
   if (streakN >= 10) wrap.classList.add('celebrate-mega');
   else if (streakN >= 5) wrap.classList.add('celebrate-big');
   else wrap.classList.add('celebrate');
+}
+
+// ── Robot reach-up: when letter arrives (L1), robot lifts arms briefly ─────
+function robotReach() {
+  const wrap = document.getElementById('js-robot-wrap');
+  if (!wrap) return;
+  wrap.classList.remove('reach');
+  void wrap.offsetWidth;
+  wrap.classList.add('reach');
 }
 
 // ── Touch keys — virtual keyboard (full or compact) ──────────────────────────

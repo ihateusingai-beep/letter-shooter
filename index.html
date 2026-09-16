@@ -175,6 +175,33 @@
   }
   .no-motion .bubble { animation-duration: 0.001ms !important; }
 
+  /* ── Themed floating background (Phase 7b) ───────────────────────── */
+  .float-layer {
+    position: fixed; inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    overflow: hidden;
+    display: none;
+  }
+  body[data-theme="space"] .float-layer,
+  body[data-theme="candy"] .float-layer { display: block; }
+  .float-emoji {
+    position: absolute;
+    font-size: 24px;
+    opacity: 0;
+    animation: floatDrift linear infinite;
+    will-change: transform, opacity;
+    filter: drop-shadow(0 0 6px rgba(255,255,255,0.3));
+  }
+  @keyframes floatDrift {
+    0%   { transform: translate(0, 0) rotate(0deg); opacity: 0; }
+    10%  { opacity: 0.55; }
+    50%  { transform: translate(20px, -50vh) rotate(15deg); opacity: 0.55; }
+    90%  { opacity: 0.35; }
+    100% { transform: translate(-30px, -110vh) rotate(-10deg); opacity: 0; }
+  }
+  .no-motion .float-emoji { animation-duration: 0.001ms !important; }
+
   /* ── High contrast ─────────────────────────────────────────── */
   body.high-contrast {
     --bg: #000;
@@ -343,10 +370,23 @@
     80%      { transform: translateX(10px) scale(1); }
   }
   @keyframes letterPulse {
-    0%,100% { filter: drop-shadow(0 0 20px rgba(79,195,247,0.5)); }
-    50%      { filter: drop-shadow(0 0 40px rgba(79,195,247,0.9)); }
+    0%,100% {
+      filter: drop-shadow(0 0 18px rgba(79,195,247,0.45));
+      text-shadow:
+        0 0 30px rgba(79,195,247,0.6),
+        0 0 60px rgba(79,195,247,0.3),
+        0 4px 8px rgba(0,0,0,0.4);
+    }
+    50% {
+      filter: drop-shadow(0 0 36px rgba(79,195,247,0.95))
+              drop-shadow(0 0 60px rgba(79,195,247,0.5));
+      text-shadow:
+        0 0 50px rgba(79,195,247,1),
+        0 0 100px rgba(79,195,247,0.7),
+        0 4px 8px rgba(0,0,0,0.4);
+    }
   }
-  #js-letter { animation: letterPulse 3s ease-in-out infinite; }
+  #js-letter { animation: letterPulse 2.4s ease-in-out infinite; }
   .no-motion #js-letter { animation: none; filter: none; }
   .no-motion #js-letter.shake { animation: none; }
 
@@ -422,6 +462,26 @@
   .no-motion #js-robot-wrap.celebrate,
   .no-motion #js-robot-wrap.celebrate-big,
   .no-motion #js-robot-wrap.celebrate-mega { animation: none; }
+
+  /* ── Robot reach-up (Phase 7c) — when letter arrives ─────────────────── */
+  @keyframes armReachL {
+    0%, 100% { transform: rotate(0deg) translateY(0); }
+    50%      { transform: rotate(-150deg) translateY(-8px); }
+  }
+  @keyframes armReachR {
+    0%, 100% { transform: rotate(0deg) translateY(0); }
+    50%      { transform: rotate(150deg) translateY(-8px); }
+  }
+  #js-robot-wrap.reach .robot-arm-l {
+    transform-origin: 28px 101px;
+    animation: armReachL 0.6s ease-out;
+  }
+  #js-robot-wrap.reach .robot-arm-r {
+    transform-origin: 92px 101px;
+    animation: armReachR 0.6s ease-out;
+  }
+  .no-motion #js-robot-wrap.reach .robot-arm-l,
+  .no-motion #js-robot-wrap.reach .robot-arm-r { animation: none; }
 
   /* ── Robot idle animations (Phase 3b) ────────────────────────────────── */
   @keyframes antennaBobble {
@@ -934,6 +994,9 @@
 <!-- ── Ocean bubbles (Phase 5) — only visible when theme=ocean ────────────── -->
 <div class="ocean-bubbles" id="js-bubble-layer" aria-hidden="true"></div>
 
+<!-- ── Themed floating background (Phase 7b) ───────────────────────────────── -->
+<div class="float-layer" id="js-float-layer" aria-hidden="true"></div>
+
 <!-- ── Top bar ─────────────────────────────────────────────────────────────── -->
 <div class="top-bar">
   <div class="score-block">
@@ -1201,10 +1264,12 @@ document.getElementById('js-settings-btn')?.addEventListener('click', LS.openSet
 document.getElementById('js-settings-close')?.addEventListener('click', LS.closeSettings);
 document.getElementById('js-settings-apply')?.addEventListener('click', () => {
   LS.applySettings();
+  // Refresh themed floating background for new theme
+  const s = LS.loadSettings ? LS.loadSettings() : {};
+  populateFloatLayer(s.theme || 'space');
   // Restart game with new unit/level if game is running
   const overlay = document.getElementById('js-start-overlay');
   if (!overlay?.classList.contains('hidden')) return;
-  const s = LS.loadSettings ? LS.loadSettings() : {};
   LS.startGame(s.currentUnit || 'U1', s.level || 'L0');
 });
 
@@ -1240,6 +1305,34 @@ document.getElementById('js-start-btn')?.addEventListener('click', () => {
     layer.appendChild(b);
   }
 })();
+
+// ── Themed floating background (Phase 7b) ─────────────────────────────────
+const FLOAT_EMOJIS = {
+  space: ['⭐', '🌟', '💫', '✨'],
+  candy: ['🍬', '🍭', '💗', '🍩', '🌸'],
+  ocean: [], // ocean uses bubbles instead
+};
+function populateFloatLayer(theme) {
+  const layer = document.getElementById('js-float-layer');
+  if (!layer) return;
+  layer.innerHTML = '';
+  const emojis = FLOAT_EMOJIS[theme] || FLOAT_EMOJIS.space;
+  if (emojis.length === 0) return; // ocean has bubbles
+  const COUNT = theme === 'space' ? 10 : 8;
+  for (let i = 0; i < COUNT; i++) {
+    const el = document.createElement('div');
+    el.className = 'float-emoji';
+    el.textContent = emojis[i % emojis.length];
+    el.style.left = (Math.random() * 100) + '%';
+    el.style.bottom = (-Math.random() * 30) + '%';
+    el.style.fontSize = (16 + Math.random() * 14) + 'px';
+    el.style.animationDuration = (10 + Math.random() * 8) + 's';
+    el.style.animationDelay = (-Math.random() * 14) + 's';
+    layer.appendChild(el);
+  }
+}
+// Initial populate based on saved theme
+populateFloatLayer(JSON.parse(localStorage.getItem('ls-settings') || '{}').theme || 'space');
 </script>
 </body>
 </html>

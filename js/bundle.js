@@ -952,6 +952,7 @@
     speakLetter(letter);
     if (level === "L1") {
       startFall(() => {
+        robotReach();
       });
     }
   }
@@ -1042,6 +1043,13 @@
     if (streakN >= 10) wrap.classList.add("celebrate-mega");
     else if (streakN >= 5) wrap.classList.add("celebrate-big");
     else wrap.classList.add("celebrate");
+  }
+  function robotReach() {
+    const wrap = document.getElementById("js-robot-wrap");
+    if (!wrap) return;
+    wrap.classList.remove("reach");
+    void wrap.offsetWidth;
+    wrap.classList.add("reach");
   }
   var QWERTY_ROWS = [
     ["Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"],
