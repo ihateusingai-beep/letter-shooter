@@ -7,6 +7,8 @@
     // SFX chime / streak / unlock sounds
     bgm: false,
     // Background music (default OFF — SEN overstimulation safety)
+    bgmTrack: "space",
+    // 'space' | 'xylophone' | 'rain' — only used when bgm=true
     theme: "space",
     // 'space' | 'candy'
     speed: "slow",
@@ -151,6 +153,10 @@
       voice: "Voice",
       soundFx: "Sound Effects",
       bgm: "Background Music",
+      bgmOff: "Off",
+      bgmSpace: "Space",
+      bgmXylophone: "Xylophone",
+      bgmRain: "Rain",
       on: "On",
       off: "Off",
       speed: "Speed",
@@ -182,6 +188,10 @@
       voice: "\u8A9E\u97F3",
       soundFx: "\u97F3\u6548",
       bgm: "\u80CC\u666F\u97F3\u6A02",
+      bgmOff: "\u95DC",
+      bgmSpace: "\u592A\u7A7A",
+      bgmXylophone: "\u6728\u7434",
+      bgmRain: "\u96E8\u8072",
       on: "\u958B",
       off: "\u95DC",
       speed: "\u901F\u5EA6",
@@ -386,6 +396,179 @@
     }
   }
 
+  // js/bgm.js
+  var bgmCtx = null;
+  var bgmMaster = null;
+  var activeNodes = [];
+  var loopTimers = [];
+  var isPlaying = false;
+  var currentTrack = null;
+  var BASE_VOL = 0.18;
+  function ensureCtx2() {
+    if (bgmCtx) return bgmCtx;
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return null;
+    bgmCtx = new AC();
+    bgmMaster = bgmCtx.createGain();
+    bgmMaster.gain.value = 0;
+    bgmMaster.connect(bgmCtx.destination);
+    return bgmCtx;
+  }
+  function unlockBgm() {
+    ensureCtx2();
+    if (bgmCtx && bgmCtx.state === "suspended") bgmCtx.resume();
+  }
+  function tearDown() {
+    loopTimers.forEach((id) => clearInterval(id));
+    loopTimers = [];
+    activeNodes.forEach((n) => {
+      try {
+        if (n.stop) n.stop();
+        if (n.disconnect) n.disconnect();
+      } catch {
+      }
+    });
+    activeNodes = [];
+  }
+  function startBgm(trackName) {
+    if (!ensureCtx2()) return;
+    if (!trackName || trackName === "off") {
+      stopBgm();
+      return;
+    }
+    if (bgmCtx.state === "suspended") bgmCtx.resume();
+    tearDown();
+    currentTrack = trackName;
+    isPlaying = true;
+    bgmMaster.gain.cancelScheduledValues(bgmCtx.currentTime);
+    bgmMaster.gain.setValueAtTime(bgmMaster.gain.value, bgmCtx.currentTime);
+    bgmMaster.gain.linearRampToValueAtTime(BASE_VOL, bgmCtx.currentTime + 1.5);
+    if (trackName === "space") startSpace();
+    else if (trackName === "xylophone") startXylophone();
+    else if (trackName === "rain") startRain();
+  }
+  function stopBgm() {
+    if (!bgmCtx || !bgmMaster) {
+      isPlaying = false;
+      return;
+    }
+    bgmMaster.gain.cancelScheduledValues(bgmCtx.currentTime);
+    bgmMaster.gain.setValueAtTime(bgmMaster.gain.value, bgmCtx.currentTime);
+    bgmMaster.gain.linearRampToValueAtTime(0, bgmCtx.currentTime + 0.4);
+    isPlaying = false;
+    currentTrack = null;
+    setTimeout(tearDown, 500);
+  }
+  function pauseBgm() {
+    if (!bgmCtx || !bgmMaster || !isPlaying) return;
+    bgmMaster.gain.cancelScheduledValues(bgmCtx.currentTime);
+    bgmMaster.gain.setValueAtTime(bgmMaster.gain.value, bgmCtx.currentTime);
+    bgmMaster.gain.linearRampToValueAtTime(0, bgmCtx.currentTime + 0.25);
+  }
+  function resumeBgm() {
+    if (!bgmCtx || !bgmMaster || !isPlaying || !currentTrack) return;
+    if (bgmCtx.state === "suspended") bgmCtx.resume();
+    bgmMaster.gain.cancelScheduledValues(bgmCtx.currentTime);
+    bgmMaster.gain.setValueAtTime(bgmMaster.gain.value, bgmCtx.currentTime);
+    bgmMaster.gain.linearRampToValueAtTime(BASE_VOL, bgmCtx.currentTime + 0.4);
+  }
+  function startSpace() {
+    const t2 = bgmCtx.currentTime;
+    const notes = [130.81, 196, 261.63];
+    notes.forEach((freq, i) => {
+      const osc = bgmCtx.createOscillator();
+      const g = bgmCtx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = freq;
+      const lfo = bgmCtx.createOscillator();
+      const lfoGain = bgmCtx.createGain();
+      lfo.frequency.value = 0.15 + i * 0.05;
+      lfoGain.gain.value = 0.04;
+      lfo.connect(lfoGain);
+      lfoGain.connect(g.gain);
+      g.gain.value = 0.2 / notes.length;
+      osc.connect(g);
+      g.connect(bgmMaster);
+      osc.start(t2);
+      lfo.start(t2);
+      activeNodes.push(osc, lfo, g, lfoGain);
+    });
+  }
+  function startXylophone() {
+    const scale = [
+      261.63,
+      293.66,
+      329.63,
+      392,
+      440,
+      523.25,
+      587.33,
+      659.25,
+      783.99,
+      880
+    ];
+    let idx = 0;
+    const playNote = () => {
+      const t2 = bgmCtx.currentTime;
+      const freq = scale[idx % scale.length];
+      idx++;
+      const osc = bgmCtx.createOscillator();
+      const g = bgmCtx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = freq;
+      g.gain.setValueAtTime(0, t2);
+      g.gain.linearRampToValueAtTime(0.25, t2 + 0.01);
+      g.gain.exponentialRampToValueAtTime(1e-3, t2 + 1.2);
+      osc.connect(g);
+      g.connect(bgmMaster);
+      osc.start(t2);
+      osc.stop(t2 + 1.3);
+      setTimeout(() => {
+        try {
+          osc.disconnect();
+          g.disconnect();
+        } catch {
+        }
+      }, 1500);
+    };
+    playNote();
+    const id = setInterval(playNote, 2500);
+    loopTimers.push(id);
+  }
+  function startRain() {
+    const t2 = bgmCtx.currentTime;
+    const bufferSize = 2 * bgmCtx.sampleRate;
+    const buffer = bgmCtx.createBuffer(1, bufferSize, bgmCtx.sampleRate);
+    const data = buffer.getChannelData(0);
+    let last = 0;
+    for (let i = 0; i < bufferSize; i++) {
+      last = last + (Math.random() - 0.5) * 0.05;
+      last = Math.max(-1, Math.min(1, last * 0.99));
+      data[i] = last * 0.5;
+    }
+    const source = bgmCtx.createBufferSource();
+    source.buffer = buffer;
+    source.loop = true;
+    const bandpass = bgmCtx.createBiquadFilter();
+    bandpass.type = "bandpass";
+    bandpass.frequency.value = 1400;
+    bandpass.Q.value = 0.6;
+    const g = bgmCtx.createGain();
+    g.gain.value = 1.2;
+    const lfo = bgmCtx.createOscillator();
+    const lfoGain = bgmCtx.createGain();
+    lfo.frequency.value = 0.08;
+    lfoGain.gain.value = 0.3;
+    lfo.connect(lfoGain);
+    lfoGain.connect(g.gain);
+    source.connect(bandpass);
+    bandpass.connect(g);
+    g.connect(bgmMaster);
+    source.start(t2);
+    lfo.start(t2);
+    activeNodes.push(source, bandpass, g, lfo, lfoGain);
+  }
+
   // js/game.js
   window.LetterShooter = {
     startGame,
@@ -405,6 +588,7 @@
     fallDuration,
     setLang,
     unlockAudio,
+    unlockBgm,
     openProgressPanel,
     closeProgressPanel,
     highlightKey,
@@ -638,6 +822,8 @@
     drawRobot(robotIdx);
     renderTouchKeys();
     nextTurn(level, touchKeys);
+    const settings = loadSettings();
+    if (settings.bgm) startBgm(settings.bgmTrack || "space");
   }
   function stopGame() {
     gameRunning = false;
@@ -645,6 +831,7 @@
       cancelAnimationFrame(animFrame);
       animFrame = null;
     }
+    stopBgm();
   }
   var paused = false;
   function togglePause() {
@@ -660,12 +847,14 @@
         animFrame = null;
       }
       bottomBar?.classList.add("paused");
+      pauseBgm();
       if (hint) {
         hint.textContent = "\u23F8 \u5DF2\u66AB\u505C";
         hint.classList.add("has-hint");
       }
     } else {
       bottomBar?.classList.remove("paused");
+      resumeBgm();
       if (hint && currentLetter) {
         hint.textContent = "";
         hint.classList.remove("has-hint");
@@ -887,7 +1076,7 @@
     const settings = loadSettings();
     panel.querySelector("#js-voice-toggle").checked = settings.voice;
     panel.querySelector("#js-sfx-toggle").checked = settings.soundFx;
-    panel.querySelector("#js-bgm-toggle").checked = settings.bgm;
+    panel.querySelector("#js-bgm-select").value = settings.bgm ? settings.bgmTrack || "space" : "off";
     panel.querySelector("#js-speed-select").value = settings.speed;
     panel.querySelector("#js-hc-toggle").checked = settings.highContrast;
     panel.querySelector("#js-motion-toggle").checked = settings.reduceMotion;
@@ -907,7 +1096,9 @@
     if (!panel) return;
     const voice = panel.querySelector("#js-voice-toggle")?.checked ?? true;
     const sfx = panel.querySelector("#js-sfx-toggle")?.checked ?? true;
-    const bgm = panel.querySelector("#js-bgm-toggle")?.checked ?? false;
+    const bgmSel = panel.querySelector("#js-bgm-select")?.value ?? "off";
+    const bgm = bgmSel !== "off";
+    const bgmTrack = bgmSel === "off" ? loadSettings().bgmTrack || "space" : bgmSel;
     const speed = panel.querySelector("#js-speed-select")?.value ?? "slow";
     const hc = panel.querySelector("#js-hc-toggle")?.checked ?? false;
     const motion = panel.querySelector("#js-motion-toggle")?.checked ?? false;
@@ -916,9 +1107,11 @@
     const level = panel.querySelector("#js-level-select")?.value ?? "L0";
     const kbMode = panel.querySelector("#js-kb-mode-select")?.value ?? "compact";
     const theme = panel.querySelector("#js-theme-select")?.value ?? "space";
-    const next = { voice, soundFx: sfx, bgm, speed, highContrast: hc, reduceMotion: motion, lang, currentUnit: unit, level, kbMode, theme };
+    const next = { voice, soundFx: sfx, bgm, bgmTrack, speed, highContrast: hc, reduceMotion: motion, lang, currentUnit: unit, level, kbMode, theme };
     document.body.classList.toggle("high-contrast", hc);
     applyTheme(theme);
+    if (bgm) startBgm(bgmTrack);
+    else stopBgm();
     saveSettings(next);
     closeSettings();
     if (gameRunning) {

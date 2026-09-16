@@ -5,13 +5,14 @@ import { activeLetters, currentRobotIndex } from './curriculum.js';
 import { t, pickT, setLang } from './i18n.js';
 import { playCorrect, playWrong, playStreak, playUnlock, unlockAudio } from './sfx.js';
 import { confettiBurst, streakFlash, startLetterTrail, stopLetterTrail } from './fx.js';
+import { startBgm, stopBgm, pauseBgm, resumeBgm, unlockBgm } from './bgm.js';
 
 // Attach public API to window for non-module HTML
 window.LetterShooter = {
   startGame, handleKey, openSettings, closeSettings, applySettings,
   renderTouchKeys, speakLetter, shoot, flashSuccess, shakeLetter,
   showLetter, updateScore, drawRobot,
-  loadSettings, fallDuration, setLang, unlockAudio,
+  loadSettings, fallDuration, setLang, unlockAudio, unlockBgm,
   openProgressPanel, closeProgressPanel,
   highlightKey, clearHighlight,
 };
@@ -298,11 +299,16 @@ export function startGame(unitKey = 'U1', level = 'L0') {
   drawRobot(robotIdx);
   renderTouchKeys(); // full QWERTY keyboard, no args
   nextTurn(level, touchKeys);
+
+  // Start BGM if enabled
+  const settings = loadSettings();
+  if (settings.bgm) startBgm(settings.bgmTrack || 'space');
 }
 
 export function stopGame() {
   gameRunning = false;
   if (animFrame) { cancelAnimationFrame(animFrame); animFrame = null; }
+  stopBgm();
 }
 
 let paused = false;
@@ -317,9 +323,11 @@ export function togglePause() {
   if (paused) {
     if (animFrame) { cancelAnimationFrame(animFrame); animFrame = null; }
     bottomBar?.classList.add('paused');
+    pauseBgm();
     if (hint) { hint.textContent = '⏸ 已暫停'; hint.classList.add('has-hint'); }
   } else {
     bottomBar?.classList.remove('paused');
+    resumeBgm();
     if (hint && currentLetter) { hint.textContent = ''; hint.classList.remove('has-hint'); highlightKey(currentLetter); }
   }
 }
@@ -597,7 +605,7 @@ export function openSettings() {
   const settings = loadSettings();
   panel.querySelector('#js-voice-toggle').checked = settings.voice;
   panel.querySelector('#js-sfx-toggle').checked = settings.soundFx;
-  panel.querySelector('#js-bgm-toggle').checked = settings.bgm;
+  panel.querySelector('#js-bgm-select').value = settings.bgm ? (settings.bgmTrack || 'space') : 'off';
   panel.querySelector('#js-speed-select').value = settings.speed;
   panel.querySelector('#js-hc-toggle').checked = settings.highContrast;
   panel.querySelector('#js-motion-toggle').checked = settings.reduceMotion;
@@ -621,7 +629,9 @@ export function applySettings() {
 
   const voice  = panel.querySelector('#js-voice-toggle')?.checked ?? true;
   const sfx    = panel.querySelector('#js-sfx-toggle')?.checked ?? true;
-  const bgm    = panel.querySelector('#js-bgm-toggle')?.checked ?? false;
+  const bgmSel = panel.querySelector('#js-bgm-select')?.value ?? 'off';
+  const bgm    = bgmSel !== 'off';
+  const bgmTrack = bgmSel === 'off' ? (loadSettings().bgmTrack || 'space') : bgmSel;
   const speed  = panel.querySelector('#js-speed-select')?.value ?? 'slow';
   const hc     = panel.querySelector('#js-hc-toggle')?.checked ?? false;
   const motion = panel.querySelector('#js-motion-toggle')?.checked ?? false;
@@ -631,10 +641,14 @@ export function applySettings() {
   const kbMode = panel.querySelector('#js-kb-mode-select')?.value ?? 'compact';
   const theme  = panel.querySelector('#js-theme-select')?.value ?? 'space';
 
-  const next = { voice, soundFx: sfx, bgm, speed, highContrast: hc, reduceMotion: motion, lang, currentUnit: unit, level, kbMode, theme };
+  const next = { voice, soundFx: sfx, bgm, bgmTrack, speed, highContrast: hc, reduceMotion: motion, lang, currentUnit: unit, level, kbMode, theme };
 
   document.body.classList.toggle('high-contrast', hc);
   applyTheme(theme);
+
+  // Apply BGM choice
+  if (bgm) startBgm(bgmTrack);
+  else stopBgm();
 
   saveSettings(next);
   closeSettings();

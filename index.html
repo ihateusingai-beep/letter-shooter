@@ -915,10 +915,12 @@
         背景音樂 BGM
         <span class="sublabel">預設關閉，避免分心</span>
       </label>
-      <label class="toggle">
-        <input type="checkbox" id="js-bgm-toggle">
-        <span class="toggle-slider"></span>
-      </label>
+      <select id="js-bgm-select">
+        <option value="off" selected>關 Off</option>
+        <option value="space">🌌 太空 Space</option>
+        <option value="xylophone">🎵 木琴 Xylophone</option>
+        <option value="rain">🌧️ 雨聲 Rain</option>
+      </select>
     </div>
 
     <div class="setting-row">
@@ -1054,8 +1056,9 @@ document.getElementById('js-progress-close')?.addEventListener('click', LS.close
 // ── Start button ──────────────────────────────────────────────────────────
 document.getElementById('js-start-btn')?.addEventListener('click', () => {
   document.getElementById('js-start-overlay')?.classList.add('hidden');
-  // Unlock Web Audio context on first user gesture (iOS Safari)
+  // Unlock Web Audio contexts on first user gesture (iOS Safari)
   if (LS.unlockAudio) LS.unlockAudio();
+  if (LS.unlockBgm) LS.unlockBgm();
   const s = LS.loadSettings ? LS.loadSettings() : {};
   LS.startGame(s.currentUnit || 'U1', s.level || 'L0');
 });
