@@ -44,7 +44,13 @@ function pickLetter(keys) {
 
 export function updateScore() {
   const { scoreEl } = getEls();
-  if (scoreEl) scoreEl.textContent = score;
+  if (!scoreEl) return;
+  scoreEl.textContent = score;
+  // Pop animation
+  scoreEl.classList.remove('pop');
+  void scoreEl.offsetWidth;
+  scoreEl.classList.add('pop');
+  scoreEl.addEventListener('transitionend', () => scoreEl.classList.remove('pop'), { once: true });
 }
 
 export function updateUnit(unitKey) {
@@ -70,28 +76,38 @@ export function drawRobot(robotIdx = 0) {
   const { robotWrap } = getEls();
   if (!robotWrap) return;
 
-  const colors = [
-    { body: '#E8F4FD', eye: '#1A1A2E', accent: '#4FC3F7' },  // base: blue
-    { body: '#FDE8E8', eye: '#1A1A2E', accent: '#EF9A9A' },  // 1: pink
-    { body: '#E8FDE8', eye: '#1A1A2E', accent: '#A5D6A7' },  // 2: green
+  const palettes = [
+    { body: '#1e3a5f', eye: '#4FC3F7', accent: '#4FC3F7', glow: 'rgba(79,195,247,0.6)', bg: '#0d1f3c' }, // blue
+    { body: '#3d1f2f', eye: '#FF6B9D', accent: '#FF6B9D', glow: 'rgba(255,107,157,0.6)', bg: '#1f0d1a' }, // pink
+    { body: '#1f3d2f', eye: '#69F0AE', accent: '#69F0AE', glow: 'rgba(105,240,174,0.6)', bg: '#0d1f12' }, // green
   ];
-  const c = colors[robotIdx % colors.length];
+  const p = palettes[robotIdx % palettes.length];
 
   robotWrap.innerHTML = `
-    <svg viewBox="0 0 80 90" width="80" height="90" aria-hidden="true">
-      <line x1="40" y1="8" x2="40" y2="22" stroke="${c.accent}" stroke-width="3" stroke-linecap="round"/>
-      <circle cx="40" cy="6" r="5" fill="${c.accent}"/>
-      <rect x="18" y="22" width="44" height="36" rx="10" fill="${c.body}" stroke="${c.accent}" stroke-width="2"/>
-      <circle cx="30" cy="36" r="7" fill="${c.eye}"/>
-      <circle cx="50" cy="36" r="7" fill="${c.eye}"/>
+    <svg viewBox="0 0 80 90" width="80" height="90" aria-hidden="true"
+         style="filter:drop-shadow(0 0 8px ${p.glow})">
+      <!-- glow aura -->
+      <ellipse cx="40" cy="75" rx="30" ry="6" fill="${p.glow}" opacity="0.2"/>
+      <!-- antenna -->
+      <line x1="40" y1="8" x2="40" y2="22" stroke="${p.accent}" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="40" cy="6" r="5" fill="${p.accent}" opacity="0.9"/>
+      <!-- head -->
+      <rect x="18" y="22" width="44" height="36" rx="10" fill="${p.body}" stroke="${p.accent}" stroke-width="1.5" opacity="0.9"/>
+      <!-- eyes -->
+      <circle cx="30" cy="36" r="7" fill="${p.eye}"/>
+      <circle cx="50" cy="36" r="7" fill="${p.eye}"/>
       <circle cx="32" cy="34" r="2.5" fill="white"/>
       <circle cx="52" cy="34" r="2.5" fill="white"/>
-      <path d="M 30 48 Q 40 55 50 48" stroke="${c.eye}" stroke-width="2" fill="none" stroke-linecap="round"/>
-      <rect x="22" y="60" width="36" height="22" rx="6" fill="${c.body}" stroke="${c.accent}" stroke-width="2"/>
-      <rect x="6"  y="62" width="14" height="8" rx="4" fill="${c.body}" stroke="${c.accent}" stroke-width="2"/>
-      <rect x="60" y="62" width="14" height="8" rx="4" fill="${c.body}" stroke="${c.accent}" stroke-width="2"/>
-      <rect x="26" y="82" width="10" height="8" rx="3" fill="${c.body}" stroke="${c.accent}" stroke-width="2"/>
-      <rect x="44" y="82" width="10" height="8" rx="3" fill="${c.body}" stroke="${c.accent}" stroke-width="2"/>
+      <!-- smile -->
+      <path d="M 30 48 Q 40 55 50 48" stroke="${p.eye}" stroke-width="2" fill="none" stroke-linecap="round"/>
+      <!-- body -->
+      <rect x="22" y="60" width="36" height="22" rx="6" fill="${p.body}" stroke="${p.accent}" stroke-width="1.5" opacity="0.9"/>
+      <!-- arms -->
+      <rect x="6"  y="62" width="14" height="8" rx="4" fill="${p.body}" stroke="${p.accent}" stroke-width="1.5" opacity="0.9"/>
+      <rect x="60" y="62" width="14" height="8" rx="4" fill="${p.body}" stroke="${p.accent}" stroke-width="1.5" opacity="0.9"/>
+      <!-- legs -->
+      <rect x="26" y="82" width="10" height="8" rx="3" fill="${p.body}" stroke="${p.accent}" stroke-width="1.5" opacity="0.9"/>
+      <rect x="44" y="82" width="10" height="8" rx="3" fill="${p.body}" stroke="${p.accent}" stroke-width="1.5" opacity="0.9"/>
     </svg>`;
 }
 
