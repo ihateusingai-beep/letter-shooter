@@ -32,7 +32,7 @@
     --shadow:    0 8px 32px rgba(0,0,0,0.4);
     --top-h:     60px;
     --bot-h:     130px;
-    --robot-h:   96px;
+    --robot-h:   180px;
   }
 
   /* ── Theme: Candy (Phase 3c) — pastel, cheerful, low-stimulation ─────── */
@@ -577,11 +577,11 @@
     50%      { transform: rotate(150deg) translateY(-8px); }
   }
   #js-robot-wrap.reach .robot-arm-l {
-    transform-origin: 28px 101px;
+    transform-origin: 36px 137px;
     animation: armReachL 0.6s ease-out;
   }
   #js-robot-wrap.reach .robot-arm-r {
-    transform-origin: 92px 101px;
+    transform-origin: 124px 137px;
     animation: armReachR 0.6s ease-out;
   }
   .no-motion #js-robot-wrap.reach .robot-arm-l,
@@ -594,7 +594,7 @@
     75%      { transform: rotate(8deg); }
   }
   #js-robot-wrap .robot-antenna {
-    transform-origin: 60px 34px;
+    transform-origin: 80px 44px;
     animation: antennaBobble 3s ease-in-out infinite;
   }
 
@@ -603,7 +603,7 @@
     94%, 96%      { transform: scaleY(0.1); }
   }
   #js-robot-wrap .robot-eyes {
-    transform-origin: 60px 56px;
+    transform-origin: 80px 74px;
     animation: eyeBlink 5s ease-in-out infinite;
   }
 
@@ -612,13 +612,136 @@
     50%      { transform: rotate(-6deg); }
   }
   #js-robot-wrap .robot-arm-r {
-    transform-origin: 92px 101px;
+    transform-origin: 124px 137px;
     animation: armSway 2.4s ease-in-out infinite;
   }
 
   .no-motion #js-robot-wrap .robot-antenna,
   .no-motion #js-robot-wrap .robot-eyes,
   .no-motion #js-robot-wrap .robot-arm-r { animation: none; }
+
+  /* ── Mascot companion (Phase 10c) ────────────────────────────────────── */
+  .mascot-zone {
+    position: fixed;
+    bottom: var(--bot-h);
+    left: calc(50% - 160px);
+    width: 80px;
+    height: 80px;
+    z-index: 5;
+    pointer-events: none;
+    transform-origin: center bottom;
+  }
+  /* On small viewports, hide mascot (saves horizontal space) */
+  @media (max-width: 480px) {
+    .mascot-zone { display: none; }
+  }
+  #js-mascot-wrap svg { display: block; }
+  @keyframes mascotIdle {
+    0%, 100% { transform: translateY(0) rotate(-2deg); }
+    50%      { transform: translateY(-4px) rotate(2deg); }
+  }
+  #js-mascot-wrap.mascot-idle svg {
+    animation: mascotIdle 2.6s ease-in-out infinite;
+    transform-origin: center bottom;
+  }
+  @keyframes mascotHappy {
+    0%   { transform: translateY(0) scale(1) rotate(0deg); }
+    20%  { transform: translateY(-30px) scale(1.1) rotate(-8deg); }
+    40%  { transform: translateY(-10px) scale(1) rotate(8deg); }
+    60%  { transform: translateY(-25px) scale(1.05) rotate(-5deg); }
+    80%  { transform: translateY(-5px) scale(1) rotate(3deg); }
+    100% { transform: translateY(0) scale(1) rotate(0deg); }
+  }
+  #js-mascot-wrap.mascot-happy svg {
+    animation: mascotHappy 0.9s ease-out;
+    transform-origin: center bottom;
+  }
+  @keyframes mascotSad {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    25%      { transform: translateY(2px) rotate(-3deg); }
+    75%      { transform: translateY(2px) rotate(3deg); }
+  }
+  #js-mascot-wrap.mascot-sad svg {
+    animation: mascotSad 0.6s ease-out;
+    transform-origin: center bottom;
+  }
+  @keyframes mascotCheer {
+    0%   { transform: translateY(0) scale(1); }
+    10%  { transform: translateY(-15px) scale(1.15); }
+    20%  { transform: translateY(0) scale(1); }
+    30%  { transform: translateY(-15px) scale(1.15); }
+    40%  { transform: translateY(0) scale(1); }
+    100% { transform: translateY(0) scale(1); }
+  }
+  #js-mascot-wrap.mascot-cheer svg {
+    animation: mascotCheer 1.2s ease-out;
+    transform-origin: center bottom;
+  }
+  .no-motion #js-mascot-wrap svg { animation: none !important; }
+
+  /* ── Floor decoration (Phase 10b) ────────────────────────────────────── */
+  .floor-decor {
+    position: fixed;
+    bottom: 0;
+    left: 0; right: 0;
+    height: calc(var(--bot-h) - 30px);
+    z-index: 2;
+    pointer-events: none;
+    overflow: hidden;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-around;
+    padding: 0 8%;
+    font-size: 28px;
+    opacity: 0.85;
+  }
+  /* Per-theme floor emoji */
+  .floor-decor { display: none; }
+  body[data-theme="space"] .floor-decor { display: flex; }
+  body[data-theme="candy"] .floor-decor { display: flex; }
+  body[data-theme="ocean"] .floor-decor { display: flex; }
+  .floor-emoji {
+    display: inline-block;
+    will-change: transform;
+  }
+  /* Sway for ocean plants */
+  @keyframes swayLR {
+    0%, 100% { transform: rotate(-3deg); }
+    50%      { transform: rotate(3deg); }
+  }
+  body[data-theme="ocean"] .floor-emoji.sway {
+    animation: swayLR 3.2s ease-in-out infinite;
+    transform-origin: bottom center;
+  }
+  /* Bob for candy items */
+  @keyframes bobUp {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-4px); }
+  }
+  body[data-theme="candy"] .floor-emoji {
+    animation: bobUp 2.4s ease-in-out infinite;
+  }
+  body[data-theme="candy"] .floor-emoji:nth-child(2n) {
+    animation-delay: -0.6s;
+  }
+  body[data-theme="candy"] .floor-emoji:nth-child(3n) {
+    animation-delay: -1.2s;
+  }
+  /* Twinkle for space items */
+  @keyframes starTwinkle {
+    0%, 100% { opacity: 0.7; transform: scale(1); }
+    50%      { opacity: 1;   transform: scale(1.15); }
+  }
+  body[data-theme="space"] .floor-emoji.twinkle {
+    animation: starTwinkle 2.8s ease-in-out infinite;
+  }
+  body[data-theme="space"] .floor-emoji.twinkle:nth-child(2n) {
+    animation-delay: -0.9s;
+  }
+  body[data-theme="space"] .floor-emoji.twinkle:nth-child(3n) {
+    animation-delay: -1.8s;
+  }
+  .no-motion .floor-emoji { animation: none !important; }
 
   /* ── Confetti layer (Phase 3a) ─────────────────────────────────────── */
   #js-confetti-layer {
@@ -1178,6 +1301,12 @@
 
 <!-- ── Robot ─────────────────────────────────────────────────────────────── -->
 <div class="robot-zone" id="js-robot-wrap" aria-hidden="true"></div>
+
+<!-- ── Mascot companion (Phase 10c) ─────────────────────────────────────── -->
+<div class="mascot-zone" id="js-mascot-wrap" aria-hidden="true"></div>
+
+<!-- ── Floor decoration (Phase 10b) ─────────────────────────────────────── -->
+<div class="floor-decor" id="js-floor-decor" aria-hidden="true"></div>
 
 <!-- ── Flash ─────────────────────────────────────────────────────────────── -->
 <div id="js-flash" aria-hidden="true"></div>

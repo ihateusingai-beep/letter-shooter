@@ -4,13 +4,25 @@
 let flashTimer = null;
 let trailTimer = null;
 
+// ── Per-letter symbol confetti (Phase 10d) ──────────────────────────────────
+// Letters with associated symbols (memorable associations for SEN learners)
+export const LETTER_SYMBOLS = {
+  A: '✈️',
+  C: '🌙',
+  E: '⭐',
+  H: '❤️',
+  M: '🌊',
+};
+
 // ── Confetti burst on correct answer ────────────────────────────────────────
 // opts.theme: 'space' | 'candy' | 'ocean' — picks shape family
+// opts.letter: optional uppercase letter — adds themed symbol confetti
 export function confettiBurst(originX, originY, opts = {}) {
   const container = document.getElementById('js-confetti-layer');
   if (!container) return;
 
   const theme = opts.theme || 'space';
+  const letter = opts.letter;
   const count = opts.count || 32;
 
   // Theme-specific palettes
@@ -81,6 +93,27 @@ export function confettiBurst(originX, originY, opts = {}) {
 
     container.appendChild(piece);
     piece.addEventListener('animationend', () => piece.remove(), { once: true });
+  }
+
+  // Phase 10d: per-letter symbol particles (3 large emoji floating up)
+  if (letter && LETTER_SYMBOLS[letter]) {
+    for (let i = 0; i < 3; i++) {
+      const sym = document.createElement('div');
+      sym.className = 'confetti-piece letter-symbol';
+      sym.textContent = LETTER_SYMBOLS[letter];
+      sym.style.fontSize = '36px';
+      sym.style.left = originX + 'px';
+      sym.style.top  = originY + 'px';
+      sym.style.background = 'transparent';
+      const dx = (i - 1) * 60 + (Math.random() - 0.5) * 30;
+      const dy = -120 - Math.random() * 60;
+      sym.style.setProperty('--dx', dx + 'px');
+      sym.style.setProperty('--dy', dy + 'px');
+      sym.style.setProperty('--rot', (Math.random() - 0.5) * 180 + 'deg');
+      sym.style.animationDuration = (1.4 + Math.random() * 0.4) + 's';
+      container.appendChild(sym);
+      sym.addEventListener('animationend', () => sym.remove(), { once: true });
+    }
   }
 }
 

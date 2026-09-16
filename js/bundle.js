@@ -312,10 +312,18 @@
   // js/fx.js
   var flashTimer = null;
   var trailTimer = null;
+  var LETTER_SYMBOLS = {
+    A: "\u2708\uFE0F",
+    C: "\u{1F319}",
+    E: "\u2B50",
+    H: "\u2764\uFE0F",
+    M: "\u{1F30A}"
+  };
   function confettiBurst(originX, originY, opts = {}) {
     const container = document.getElementById("js-confetti-layer");
     if (!container) return;
     const theme = opts.theme || "space";
+    const letter = opts.letter;
     const count = opts.count || 32;
     const palettes = {
       space: ["#4FC3F7", "#FF6B9D", "#FFD54F", "#69F0AE", "#CE93D8", "#FF8A65", "#80DEEA", "#F48FB1"],
@@ -375,6 +383,25 @@
       piece.style.animationDuration = 0.9 + Math.random() * 0.5 + "s";
       container.appendChild(piece);
       piece.addEventListener("animationend", () => piece.remove(), { once: true });
+    }
+    if (letter && LETTER_SYMBOLS[letter]) {
+      for (let i = 0; i < 3; i++) {
+        const sym = document.createElement("div");
+        sym.className = "confetti-piece letter-symbol";
+        sym.textContent = LETTER_SYMBOLS[letter];
+        sym.style.fontSize = "36px";
+        sym.style.left = originX + "px";
+        sym.style.top = originY + "px";
+        sym.style.background = "transparent";
+        const dx = (i - 1) * 60 + (Math.random() - 0.5) * 30;
+        const dy = -120 - Math.random() * 60;
+        sym.style.setProperty("--dx", dx + "px");
+        sym.style.setProperty("--dy", dy + "px");
+        sym.style.setProperty("--rot", (Math.random() - 0.5) * 180 + "deg");
+        sym.style.animationDuration = 1.4 + Math.random() * 0.4 + "s";
+        container.appendChild(sym);
+        sym.addEventListener("animationend", () => sym.remove(), { once: true });
+      }
     }
   }
   function megaFireworks(opts = {}) {
@@ -799,6 +826,83 @@
       { body: "#FFFFFF", eye: "#66BB6A", accent: "#66BB6A", glow: "rgba(102,187,106,0.5)" }
     ]
   };
+  function drawMascot() {
+    const wrap = document.getElementById("js-mascot-wrap");
+    if (!wrap) return;
+    const theme = loadSettings().theme || "space";
+    const palettes = {
+      space: { body: "#FFE4B5", accent: "#FF6B9D", cheek: "#FFB3C6", eye: "#1a1a3e" },
+      candy: { body: "#FFD9E8", accent: "#FF6B9D", cheek: "#FF8FB1", eye: "#4A2C5A" },
+      ocean: { body: "#B2EBF2", accent: "#00BCD4", cheek: "#80DEEA", eye: "#004D40" }
+    };
+    const p = palettes[theme] || palettes.space;
+    wrap.innerHTML = `
+    <svg viewBox="0 0 80 80" width="80" height="80" aria-hidden="true"
+         style="filter:drop-shadow(0 4px 8px rgba(0,0,0,0.25))">
+      <!-- ears -->
+      <path d="M 18 22 L 14 6 L 30 16 Z" fill="${p.body}" stroke="${p.accent}" stroke-width="2" stroke-linejoin="round"/>
+      <path d="M 62 22 L 66 6 L 50 16 Z" fill="${p.body}" stroke="${p.accent}" stroke-width="2" stroke-linejoin="round"/>
+      <path d="M 20 18 L 18 10 L 26 16 Z" fill="${p.cheek}" opacity="0.7"/>
+      <path d="M 60 18 L 62 10 L 54 16 Z" fill="${p.cheek}" opacity="0.7"/>
+      <!-- head -->
+      <circle cx="40" cy="38" r="22" fill="${p.body}" stroke="${p.accent}" stroke-width="2"/>
+      <!-- eyes -->
+      <ellipse cx="32" cy="36" rx="3" ry="4.5" fill="${p.eye}"/>
+      <ellipse cx="48" cy="36" rx="3" ry="4.5" fill="${p.eye}"/>
+      <circle cx="33" cy="34.5" r="1" fill="white"/>
+      <circle cx="49" cy="34.5" r="1" fill="white"/>
+      <!-- nose -->
+      <path d="M 38 42 L 42 42 L 40 45 Z" fill="${p.accent}"/>
+      <!-- mouth -->
+      <path d="M 40 45 Q 36 49 33 46" stroke="${p.accent}" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+      <path d="M 40 45 Q 44 49 47 46" stroke="${p.accent}" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+      <!-- whiskers -->
+      <line x1="18" y1="40" x2="28" y2="42" stroke="${p.accent}" stroke-width="1" stroke-linecap="round"/>
+      <line x1="18" y1="44" x2="28" y2="44" stroke="${p.accent}" stroke-width="1" stroke-linecap="round"/>
+      <line x1="62" y1="40" x2="52" y2="42" stroke="${p.accent}" stroke-width="1" stroke-linecap="round"/>
+      <line x1="62" y1="44" x2="52" y2="44" stroke="${p.accent}" stroke-width="1" stroke-linecap="round"/>
+      <!-- cheeks -->
+      <circle cx="26" cy="46" r="3" fill="${p.cheek}" opacity="0.6"/>
+      <circle cx="54" cy="46" r="3" fill="${p.cheek}" opacity="0.6"/>
+      <!-- body hint -->
+      <ellipse cx="40" cy="68" rx="16" ry="10" fill="${p.body}" stroke="${p.accent}" stroke-width="2" opacity="0.85"/>
+    </svg>`;
+    wrap.classList.remove("mascot-idle", "mascot-happy", "mascot-sad", "mascot-cheer");
+    wrap.classList.add("mascot-idle");
+  }
+  function mascotReact(kind) {
+    const wrap = document.getElementById("js-mascot-wrap");
+    if (!wrap) return;
+    const cls = kind === "happy" ? "mascot-happy" : kind === "sad" ? "mascot-sad" : kind === "cheer" ? "mascot-cheer" : "mascot-idle";
+    wrap.classList.remove("mascot-idle", "mascot-happy", "mascot-sad", "mascot-cheer");
+    void wrap.offsetWidth;
+    wrap.classList.add(cls);
+    if (kind !== "idle") {
+      setTimeout(() => {
+        wrap.classList.remove(cls);
+        wrap.classList.add("mascot-idle");
+      }, kind === "cheer" ? 1300 : kind === "happy" ? 950 : 650);
+    }
+  }
+  var FLOOR_EMOJIS = {
+    space: ["\u2B50", "\u{1F31F}", "\u{1FA90}", "\u{1F680}", "\u2B50", "\u{1F31F}", "\u2B50", "\u{1F319}"],
+    candy: ["\u{1F36D}", "\u{1F369}", "\u{1F338}", "\u{1F36C}", "\u{1F338}", "\u{1F369}", "\u{1F36D}", "\u{1F33C}"],
+    ocean: ["\u{1FAB8}", "\u{1F41A}", "\u{1FAB8}", "\u{1F420}", "\u{1FAB8}", "\u{1F41A}", "\u{1FAB8}", "\u{1F33F}"]
+  };
+  function populateFloor(theme) {
+    const floor = document.getElementById("js-floor-decor");
+    if (!floor) return;
+    floor.innerHTML = "";
+    const emojis = FLOOR_EMOJIS[theme] || FLOOR_EMOJIS.space;
+    emojis.forEach((emo, i) => {
+      const span = document.createElement("span");
+      span.className = "floor-emoji";
+      if (theme === "ocean") span.classList.add("sway");
+      if (theme === "space" && i % 2 === 0) span.classList.add("twinkle");
+      span.textContent = emo;
+      floor.appendChild(span);
+    });
+  }
   function drawRobot(robotIdx = 0) {
     const { robotWrap } = getEls();
     if (!robotWrap) return;
@@ -806,48 +910,49 @@
     const palettes = ROBOT_PALETTES[theme] || ROBOT_PALETTES.space;
     const p = palettes[robotIdx % palettes.length];
     robotWrap.innerHTML = `
-    <svg viewBox="0 0 120 130" width="120" height="130" aria-hidden="true"
-         style="filter:drop-shadow(0 0 12px ${p.glow})">
+    <svg viewBox="0 0 160 180" width="160" height="180" aria-hidden="true"
+         style="filter:drop-shadow(0 0 16px ${p.glow})">
       <!-- glow aura -->
-      <ellipse cx="60" cy="115" rx="42" ry="8" fill="${p.glow}" opacity="0.25"/>
+      <ellipse cx="80" cy="160" rx="58" ry="10" fill="${p.glow}" opacity="0.25"/>
       <!-- antenna with bobble -->
       <g class="robot-antenna">
-        <line x1="60" y1="14" x2="60" y2="34" stroke="${p.accent}" stroke-width="4" stroke-linecap="round"/>
-        <circle cx="60" cy="10" r="7" fill="${p.accent}" opacity="0.95"/>
-        <circle cx="58" cy="8" r="2" fill="white" opacity="0.8"/>
+        <line x1="80" y1="18" x2="80" y2="44" stroke="${p.accent}" stroke-width="5" stroke-linecap="round"/>
+        <circle cx="80" cy="13" r="9" fill="${p.accent}" opacity="0.95"/>
+        <circle cx="77" cy="10" r="3" fill="white" opacity="0.85"/>
       </g>
       <!-- head -->
-      <rect x="22" y="34" width="76" height="56" rx="14" fill="${p.body}" stroke="${p.accent}" stroke-width="2" opacity="0.95"/>
+      <rect x="28" y="44" width="104" height="76" rx="18" fill="${p.body}" stroke="${p.accent}" stroke-width="2.5" opacity="0.95"/>
       <!-- cheek blush -->
-      <circle cx="30" cy="62" r="6" fill="${p.accent}" opacity="0.3"/>
-      <circle cx="90" cy="62" r="6" fill="${p.accent}" opacity="0.3"/>
+      <circle cx="40" cy="82" r="8" fill="${p.accent}" opacity="0.3"/>
+      <circle cx="120" cy="82" r="8" fill="${p.accent}" opacity="0.3"/>
       <!-- eyes (large, expressive) -->
       <g class="robot-eyes">
-        <circle cx="44" cy="56" r="10" fill="white"/>
-        <circle cx="76" cy="56" r="10" fill="white"/>
-        <circle cx="44" cy="58" r="7" fill="${p.eye}"/>
-        <circle cx="76" cy="58" r="7" fill="${p.eye}"/>
-        <circle cx="46" cy="55" r="2.5" fill="white"/>
-        <circle cx="78" cy="55" r="2.5" fill="white"/>
+        <circle cx="58" cy="74" r="14" fill="white"/>
+        <circle cx="102" cy="74" r="14" fill="white"/>
+        <circle cx="58" cy="77" r="10" fill="${p.eye}"/>
+        <circle cx="102" cy="77" r="10" fill="${p.eye}"/>
+        <circle cx="61" cy="73" r="3.5" fill="white"/>
+        <circle cx="105" cy="73" r="3.5" fill="white"/>
       </g>
       <!-- smile -->
-      <path d="M 44 74 Q 60 84 76 74" stroke="${p.eye}" stroke-width="3" fill="none" stroke-linecap="round"/>
+      <path d="M 58 100 Q 80 114 102 100" stroke="${p.eye}" stroke-width="4" fill="none" stroke-linecap="round"/>
       <!-- body -->
-      <rect x="32" y="92" width="56" height="26" rx="8" fill="${p.body}" stroke="${p.accent}" stroke-width="2" opacity="0.95"/>
+      <rect x="42" y="124" width="76" height="36" rx="10" fill="${p.body}" stroke="${p.accent}" stroke-width="2.5" opacity="0.95"/>
       <!-- chest light -->
-      <circle cx="60" cy="105" r="4" fill="${p.accent}" opacity="0.9"/>
+      <circle cx="80" cy="142" r="5.5" fill="${p.accent}" opacity="0.9"/>
+      <circle cx="80" cy="142" r="9" fill="${p.accent}" opacity="0.2"/>
       <!-- arms with hands -->
       <g class="robot-arm-l">
-        <rect x="10" y="96" width="18" height="10" rx="5" fill="${p.body}" stroke="${p.accent}" stroke-width="2" opacity="0.95"/>
-        <circle cx="8" cy="101" r="6" fill="${p.body}" stroke="${p.accent}" stroke-width="2" opacity="0.95"/>
+        <rect x="12" y="130" width="24" height="14" rx="7" fill="${p.body}" stroke="${p.accent}" stroke-width="2.5" opacity="0.95"/>
+        <circle cx="10" cy="137" r="8" fill="${p.body}" stroke="${p.accent}" stroke-width="2.5" opacity="0.95"/>
       </g>
       <g class="robot-arm-r">
-        <rect x="92" y="96" width="18" height="10" rx="5" fill="${p.body}" stroke="${p.accent}" stroke-width="2" opacity="0.95"/>
-        <circle cx="112" cy="101" r="6" fill="${p.body}" stroke="${p.accent}" stroke-width="2" opacity="0.95"/>
+        <rect x="124" y="130" width="24" height="14" rx="7" fill="${p.body}" stroke="${p.accent}" stroke-width="2.5" opacity="0.95"/>
+        <circle cx="150" cy="137" r="8" fill="${p.body}" stroke="${p.accent}" stroke-width="2.5" opacity="0.95"/>
       </g>
       <!-- legs -->
-      <rect x="40" y="120" width="14" height="10" rx="4" fill="${p.body}" stroke="${p.accent}" stroke-width="2" opacity="0.95"/>
-      <rect x="66" y="120" width="14" height="10" rx="4" fill="${p.body}" stroke="${p.accent}" stroke-width="2" opacity="0.95"/>
+      <rect x="54" y="160" width="20" height="14" rx="5" fill="${p.body}" stroke="${p.accent}" stroke-width="2.5" opacity="0.95"/>
+      <rect x="86" y="160" width="20" height="14" rx="5" fill="${p.body}" stroke="${p.accent}" stroke-width="2.5" opacity="0.95"/>
     </svg>`;
   }
   function shoot() {
@@ -963,6 +1068,8 @@
     updateStreak(0);
     updateStars(0);
     drawRobot(robotIdx);
+    drawMascot();
+    populateFloor(loadSettings().theme || "space");
     renderTouchKeys();
     nextTurn(level, touchKeys);
     const settings = loadSettings();
@@ -1040,7 +1147,7 @@
         confettiBurst(
           letterBox.left + letterBox.width / 2,
           letterBox.top + letterBox.height / 2,
-          { theme: settings.theme || "space" }
+          { theme: settings.theme || "space", letter: currentLetter }
         );
         const lang = settings.lang || "zh";
         const tier = streak >= 10 ? 10 : streak >= 5 ? 5 : streak >= 3 ? 3 : 1;
@@ -1053,6 +1160,7 @@
         floatCombo(combos[tier], letterBox.left + letterBox.width / 2, letterBox.top, { tier });
       }
       celebrateRobot(streak);
+      mascotReact(streak >= 5 ? "cheer" : "happy");
       if (settings.soundFx) playCorrect();
       if (streak === 3 || streak === 5 || streak === 10) {
         if (settings.soundFx) playStreak(streak);
@@ -1086,6 +1194,7 @@
       updateScore();
       recordAttempt(currentLetter.toUpperCase(), false);
       shakeLetter();
+      mascotReact("sad");
       if (settings.soundFx) playWrong();
       if (settings.voice) speakNudge();
     }
@@ -1318,6 +1427,8 @@
       const prog = loadProgress();
       const robotIdx = currentRobotIndex(masteredCount(prog));
       drawRobot(robotIdx);
+      drawMascot();
+      populateFloor(theme);
       renderTouchKeys();
       if (currentLetter) highlightKey(currentLetter);
     }
