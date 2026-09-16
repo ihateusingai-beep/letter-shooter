@@ -10,6 +10,7 @@ window.LetterShooter = {
   renderTouchKeys, speakLetter, shoot, flashSuccess, shakeLetter,
   showLetter, updateScore, drawRobot,
   loadSettings, fallDuration, setLang,
+  openProgressPanel, closeProgressPanel,
 };
 
 // ── State ──────────────────────────────────────────────────────────────────
@@ -344,6 +345,8 @@ export function openSettings() {
   panel.querySelector('#js-hc-toggle').checked = settings.highContrast;
   panel.querySelector('#js-motion-toggle').checked = settings.reduceMotion;
   panel.querySelector('#js-lang-select').value = settings.lang;
+  panel.querySelector('#js-unit-select').value = settings.currentUnit;
+  panel.querySelector('#js-level-select').value = settings.level;
 
   panel.classList.add('visible');
 }
@@ -362,8 +365,10 @@ export function applySettings() {
   const hc     = panel.querySelector('#js-hc-toggle')?.checked ?? false;
   const motion = panel.querySelector('#js-motion-toggle')?.checked ?? false;
   const lang   = panel.querySelector('#js-lang-select')?.value ?? 'zh';
+  const unit   = panel.querySelector('#js-unit-select')?.value ?? 'U1';
+  const level  = panel.querySelector('#js-level-select')?.value ?? 'L0';
 
-  const next = { voice, speed, highContrast: hc, reduceMotion: motion, lang };
+  const next = { voice, speed, highContrast: hc, reduceMotion: motion, lang, currentUnit: unit, level };
 
   document.body.classList.toggle('high-contrast', hc);
 
@@ -371,6 +376,67 @@ export function applySettings() {
     btn.classList.toggle('no-motion', motion);
   });
 
-  saveSettings(next);   // ← was missing; now persists to localStorage
+  saveSettings(next);
   closeSettings();
+}
+
+// ── Teacher Progress Panel ───────────────────────────────────────────────────
+export function openProgressPanel() {
+  const panel = document.getElementById('js-progress-panel');
+  if (!panel) return;
+  renderProgressGrid();
+  panel.removeAttribute('hidden');
+}
+
+export function closeProgressPanel() {
+  const panel = document.getElementById('js-progress-panel');
+  if (panel) panel.setAttribute('hidden', '');
+}
+
+export function renderProgressGrid() {
+  const grid = document.getElementById('js-progress-grid');
+  const title = document.getElementById('js-progress-title');
+  if (!grid) return;
+
+  const settings = loadSettings();
+  const prog = loadProgress();
+  const lang = settings.lang;
+
+  // Update title
+  if (title) {
+    title.textContent = lang === 'zh' ? '字母進度' : 'Letter Progress';
+  }
+
+  // Update legend labels
+  const legend = document.getElementById('js-progress-legend');
+  if (legend) {
+    legend.innerHTML = `
+      <span class="legend-item"><span class="legend-dot dot-unopened"></span>${lang === 'zh' ? '未開始' : 'Unopened'}</span>
+      <span class="legend-item"><span class="legend-dot dot-new"></span>${lang === 'zh' ? '新學' : 'New'}</span>
+      <span class="legend-item"><span class="legend-dot dot-practice"></span>${lang === 'zh' ? '練習中' : 'Practice'}</span>
+      <span class="legend-item"><span class="legend-dot dot-mastered"></span>${lang === 'zh' ? '已掌握' : 'Mastered'}</span>
+    `;
+  }
+
+  grid.innerHTML = '';
+  const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+  const statusLabel = {
+    unopened: lang === 'zh' ? '未開始' : 'Unopened',
+    new:      lang === 'zh' ? '新學' : 'New',
+    practice: lang === 'zh' ? '練習中' : 'Practice',
+    mastered: lang === 'zh' ? '已掌握' : 'Mastered',
+  };
+
+  ALPHABET.forEach(letter => {
+    const entry = prog[letter] || { status: 'unopened' };
+    const cell = document.createElement('div');
+    cell.className = `progress-cell st-${entry.status}`;
+    cell.setAttribute('role', 'img');
+    cell.setAttribute('aria-label', `${letter}: ${statusLabel[entry.status] || entry.status}`);
+    cell.innerHTML = `
+      <span>${letter}</span>
+      <span class="cell-label">${statusLabel[entry.status] || entry.status}</span>
+    `;
+    grid.appendChild(cell);
+  });
 }

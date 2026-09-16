@@ -324,6 +324,56 @@
   #js-toast .toast-title { font-weight: 700; font-size: 15px; }
   #js-toast .toast-body  { font-size: 13px; color: #666; margin-top: 2px; }
 
+  /* ── Teacher Progress Panel ─────────────────────────────────────────── */
+  #js-progress-panel {
+    position: fixed; inset: 0;
+    background: rgba(240,244,255,0.97);
+    z-index: 200;
+    display: flex; flex-direction: column;
+    padding: 24px 20px;
+    overflow-y: auto;
+  }
+  #js-progress-panel[hidden] { display: none; }
+
+  .progress-legend {
+    display: flex; flex-wrap: wrap; gap: 12px;
+    margin-bottom: 20px;
+    font-size: 13px; font-weight: 600;
+  }
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+  .legend-dot {
+    width: 14px; height: 14px; border-radius: 4px;
+    display: inline-block; flex-shrink: 0;
+  }
+  .dot-unopened { background: #DDD; }
+  .dot-new      { background: #4FC3F7; }
+  .dot-practice  { background: #FFD54F; }
+  .dot-mastered  { background: #69F0AE; }
+
+  .progress-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(52px, 1fr));
+    gap: 10px;
+    max-width: 480px;
+  }
+  .progress-cell {
+    display: flex; flex-direction: column; align-items: center;
+    justify-content: center;
+    padding: 8px 4px;
+    border-radius: 10px;
+    border: 2px solid transparent;
+    font-size: 22px; font-weight: 800;
+    min-height: 64px;
+  }
+  .progress-cell .cell-label {
+    font-size: 10px; font-weight: 600; margin-top: 3px;
+    text-transform: uppercase; letter-spacing: 0.03em;
+  }
+  .progress-cell.st-unopened { background: #EEE; color: #AAA; border-color: #DDD; }
+  .progress-cell.st-new      { background: #E3F4FD; color: #0288D1; border-color: #4FC3F7; }
+  .progress-cell.st-practice  { background: #FFF8E1; color: #F57F17; border-color: #FFD54F; }
+  .progress-cell.st-mastered  { background: #E8F5E9; color: #2E7D32; border-color: #69F0AE; }
+
   /* ── Start overlay ────────────────────────────────────────── */
   #js-start-overlay {
     position: fixed; inset: 0;
@@ -375,6 +425,7 @@
 
   <div style="display:flex;align-items:center;gap:8px;">
     <span class="unit-badge" id="js-unit">U1·ABC</span>
+    <button class="icon-btn" id="js-progress-btn" aria-label="Teacher Progress" title="Teacher Progress">📊</button>
     <button class="icon-btn" id="js-settings-btn" aria-label="Settings">⚙️</button>
   </div>
 </div>
@@ -422,6 +473,36 @@
       <select id="js-lang-select">
         <option value="zh">繁體中文</option>
         <option value="en">English</option>
+      </select>
+    </div>
+
+    <div class="setting-row">
+      <label>
+        單元 Unit
+        <span class="sublabel">U1–U10（U10=混合複習）</span>
+      </label>
+      <select id="js-unit-select">
+        <option value="U1">U1·ABC</option>
+        <option value="U2">U2·EFS</option>
+        <option value="U3">U3·IOT</option>
+        <option value="U4">U4·MPH</option>
+        <option value="U5">U5·DGU</option>
+        <option value="U6">U6·LRN</option>
+        <option value="U7">U7·JKW</option>
+        <option value="U8">U8·VXQ</option>
+        <option value="U9">U9·YZ</option>
+        <option value="U10">U10·混合複習</option>
+      </select>
+    </div>
+
+    <div class="setting-row">
+      <label>
+        難度 Level
+        <span class="sublabel">L0=靜止 L1=慢落</span>
+      </label>
+      <select id="js-level-select">
+        <option value="L0">L0 靜止</option>
+        <option value="L1">L1 慢落</option>
       </select>
     </div>
 
@@ -483,6 +564,23 @@
   <div class="toast-body"   id="js-toast-body"></div>
 </div>
 
+<!-- ── Teacher Progress Overlay ──────────────────────────────────────────── -->
+<div id="js-progress-panel" role="dialog" aria-modal="true" aria-label="Teacher Progress" hidden>
+  <div class="settings-header">
+    <h2 id="js-progress-title">字母進度</h2>
+    <button class="settings-close" id="js-progress-close" aria-label="Close">✕</button>
+  </div>
+
+  <div class="progress-legend" id="js-progress-legend" aria-label="Legend">
+    <span class="legend-item"><span class="legend-dot dot-unopened"></span>未開始</span>
+    <span class="legend-item"><span class="legend-dot dot-new"></span>新學</span>
+    <span class="legend-item"><span class="legend-dot dot-practice"></span>練習中</span>
+    <span class="legend-item"><span class="legend-dot dot-mastered"></span>已掌握</span>
+  </div>
+
+  <div class="progress-grid" id="js-progress-grid" aria-label="Letter progress"></div>
+</div>
+
 <!-- ── Script ───────────────────────────────────────────────────────────── -->
 <script src="./js/bundle.js"></script>
 <script type="module">
@@ -513,7 +611,18 @@ document.addEventListener('keyup', (e) => {
 // ── Settings panel buttons ───────────────────────────────────────────────
 document.getElementById('js-settings-btn')?.addEventListener('click', LS.openSettings);
 document.getElementById('js-settings-close')?.addEventListener('click', LS.closeSettings);
-document.getElementById('js-settings-apply')?.addEventListener('click', () => LS.applySettings());
+document.getElementById('js-settings-apply')?.addEventListener('click', () => {
+  LS.applySettings();
+  // Restart game with new unit/level if game is running
+  const overlay = document.getElementById('js-start-overlay');
+  if (!overlay?.classList.contains('hidden')) return;
+  const s = LS.loadSettings ? LS.loadSettings() : {};
+  LS.startGame(s.currentUnit || 'U1', s.level || 'L0');
+});
+
+// ── Progress panel buttons ────────────────────────────────────────────────
+document.getElementById('js-progress-btn')?.addEventListener('click', LS.openProgressPanel);
+document.getElementById('js-progress-close')?.addEventListener('click', LS.closeProgressPanel);
 
 // ── Start button ──────────────────────────────────────────────────────────
 document.getElementById('js-start-btn')?.addEventListener('click', () => {

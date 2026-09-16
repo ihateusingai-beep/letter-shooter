@@ -156,7 +156,9 @@
     drawRobot,
     loadSettings,
     fallDuration,
-    setLang
+    setLang,
+    openProgressPanel,
+    closeProgressPanel
   };
   var score = 0;
   var currentLetter = null;
@@ -422,6 +424,8 @@
     panel.querySelector("#js-hc-toggle").checked = settings.highContrast;
     panel.querySelector("#js-motion-toggle").checked = settings.reduceMotion;
     panel.querySelector("#js-lang-select").value = settings.lang;
+    panel.querySelector("#js-unit-select").value = settings.currentUnit;
+    panel.querySelector("#js-level-select").value = settings.level;
     panel.classList.add("visible");
   }
   function closeSettings() {
@@ -436,12 +440,64 @@
     const hc = panel.querySelector("#js-hc-toggle")?.checked ?? false;
     const motion = panel.querySelector("#js-motion-toggle")?.checked ?? false;
     const lang = panel.querySelector("#js-lang-select")?.value ?? "zh";
-    const next = { voice, speed, highContrast: hc, reduceMotion: motion, lang };
+    const unit = panel.querySelector("#js-unit-select")?.value ?? "U1";
+    const level = panel.querySelector("#js-level-select")?.value ?? "L0";
+    const next = { voice, speed, highContrast: hc, reduceMotion: motion, lang, currentUnit: unit, level };
     document.body.classList.toggle("high-contrast", hc);
     document.querySelectorAll(".touch-key").forEach((btn) => {
       btn.classList.toggle("no-motion", motion);
     });
     saveSettings(next);
     closeSettings();
+  }
+  function openProgressPanel() {
+    const panel = document.getElementById("js-progress-panel");
+    if (!panel) return;
+    renderProgressGrid();
+    panel.removeAttribute("hidden");
+  }
+  function closeProgressPanel() {
+    const panel = document.getElementById("js-progress-panel");
+    if (panel) panel.setAttribute("hidden", "");
+  }
+  function renderProgressGrid() {
+    const grid = document.getElementById("js-progress-grid");
+    const title = document.getElementById("js-progress-title");
+    if (!grid) return;
+    const settings = loadSettings();
+    const prog = loadProgress();
+    const lang = settings.lang;
+    if (title) {
+      title.textContent = lang === "zh" ? "\u5B57\u6BCD\u9032\u5EA6" : "Letter Progress";
+    }
+    const legend = document.getElementById("js-progress-legend");
+    if (legend) {
+      legend.innerHTML = `
+      <span class="legend-item"><span class="legend-dot dot-unopened"></span>${lang === "zh" ? "\u672A\u958B\u59CB" : "Unopened"}</span>
+      <span class="legend-item"><span class="legend-dot dot-new"></span>${lang === "zh" ? "\u65B0\u5B78" : "New"}</span>
+      <span class="legend-item"><span class="legend-dot dot-practice"></span>${lang === "zh" ? "\u7DF4\u7FD2\u4E2D" : "Practice"}</span>
+      <span class="legend-item"><span class="legend-dot dot-mastered"></span>${lang === "zh" ? "\u5DF2\u638C\u63E1" : "Mastered"}</span>
+    `;
+    }
+    grid.innerHTML = "";
+    const ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+    const statusLabel = {
+      unopened: lang === "zh" ? "\u672A\u958B\u59CB" : "Unopened",
+      new: lang === "zh" ? "\u65B0\u5B78" : "New",
+      practice: lang === "zh" ? "\u7DF4\u7FD2\u4E2D" : "Practice",
+      mastered: lang === "zh" ? "\u5DF2\u638C\u63E1" : "Mastered"
+    };
+    ALPHABET.forEach((letter) => {
+      const entry = prog[letter] || { status: "unopened" };
+      const cell = document.createElement("div");
+      cell.className = `progress-cell st-${entry.status}`;
+      cell.setAttribute("role", "img");
+      cell.setAttribute("aria-label", `${letter}: ${statusLabel[entry.status] || entry.status}`);
+      cell.innerHTML = `
+      <span>${letter}</span>
+      <span class="cell-label">${statusLabel[entry.status] || entry.status}</span>
+    `;
+      grid.appendChild(cell);
+    });
   }
 })();
