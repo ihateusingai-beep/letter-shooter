@@ -1,6 +1,8 @@
 // js/settings.js — localStorage-backed settings
 const DEFAULTS = {
   voice: true,       // TTS on/off
+  soundFx: true,     // SFX chime / streak / unlock sounds
+  bgm: false,        // Background music (default OFF — SEN overstimulation safety)
   speed: 'slow',      // 'verySlow' | 'slow' | 'medium'
   highContrast: false,
   reduceMotion: false,

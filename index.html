@@ -127,6 +127,29 @@
     text-shadow: 0 0 30px rgba(0,212,255,0.9);
   }
 
+  /* ── Streak counter (fire) ──────────────────────────────────── */
+  .streak-block {
+    display: flex; align-items: center; gap: 4px;
+    margin-left: 12px;
+  }
+  .streak-icon {
+    font-size: 18px;
+    filter: drop-shadow(0 0 4px rgba(255,107,157,0.6));
+    transition: transform 0.2s;
+  }
+  .streak-num {
+    font-size: 16px; font-weight: 800;
+    color: var(--accent2);
+    text-shadow: 0 0 10px rgba(255,107,157,0.5);
+    transition: transform 0.15s, text-shadow 0.15s;
+    min-width: 28px; text-align: left;
+  }
+  .streak-num.pop {
+    transform: scale(1.35);
+    text-shadow: 0 0 20px rgba(255,107,157,0.95);
+  }
+  .streak-num.zero { opacity: 0.35; }
+
   .unit-badge {
     background: linear-gradient(135deg, var(--primary), var(--primary2));
     color: #0a0a2a;
@@ -225,6 +248,19 @@
   }
   .no-motion .robot-zone { animation: none; }
   #js-robot-wrap svg { display: block; filter: drop-shadow(0 4px 12px rgba(79,195,247,0.3)); }
+
+  /* Correct-answer robot celebrate: jump + wiggle */
+  @keyframes robotCelebrate {
+    0%   { transform: translateX(-50%) translateY(0) rotate(0deg); }
+    25%  { transform: translateX(-50%) translateY(-22px) rotate(-6deg); }
+    50%  { transform: translateX(-50%) translateY(-12px) rotate(0deg); }
+    75%  { transform: translateX(-50%) translateY(-22px) rotate(6deg); }
+    100% { transform: translateX(-50%) translateY(0) rotate(0deg); }
+  }
+  #js-robot-wrap.celebrate {
+    animation: robotCelebrate 0.55s ease-out;
+  }
+  .no-motion #js-robot-wrap.celebrate { animation: none; }
 
   /* ── Flash ─────────────────────────────────────────────────── */
   #js-flash {
@@ -613,6 +649,11 @@
     <span class="score-num" id="js-score">0</span>
   </div>
 
+  <div class="streak-block" id="js-streak-wrap" aria-live="polite">
+    <span class="streak-icon">🔥</span>
+    <span class="streak-num" id="js-streak">×0</span>
+  </div>
+
   <div style="display:flex;align-items:center;gap:8px;">
     <span class="unit-badge" id="js-unit">U1·ABC</span>
     <button class="icon-btn" id="js-pause-btn" aria-label="Pause" title="Pause / Resume">⏸</button>
@@ -704,6 +745,28 @@
       </label>
       <label class="toggle">
         <input type="checkbox" id="js-voice-toggle" checked>
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+
+    <div class="setting-row">
+      <label>
+        音效 Sound FX
+        <span class="sublabel">答對/連對/解鎖音效</span>
+      </label>
+      <label class="toggle">
+        <input type="checkbox" id="js-sfx-toggle" checked>
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+
+    <div class="setting-row">
+      <label>
+        背景音樂 BGM
+        <span class="sublabel">預設關閉，避免分心</span>
+      </label>
+      <label class="toggle">
+        <input type="checkbox" id="js-bgm-toggle">
         <span class="toggle-slider"></span>
       </label>
     </div>
@@ -830,6 +893,8 @@ document.getElementById('js-progress-close')?.addEventListener('click', LS.close
 // ── Start button ──────────────────────────────────────────────────────────
 document.getElementById('js-start-btn')?.addEventListener('click', () => {
   document.getElementById('js-start-overlay')?.classList.add('hidden');
+  // Unlock Web Audio context on first user gesture (iOS Safari)
+  if (LS.unlockAudio) LS.unlockAudio();
   const s = LS.loadSettings ? LS.loadSettings() : {};
   LS.startGame(s.currentUnit || 'U1', s.level || 'L0');
 });

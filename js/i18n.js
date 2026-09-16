@@ -5,6 +5,8 @@ export const i18n = {
     settings: 'Settings',
     unit: 'Unit',
     voice: 'Voice',
+    soundFx: 'Sound Effects',
+    bgm: 'Background Music',
     on: 'On',
     off: 'Off',
     speed: 'Speed',
@@ -19,15 +21,20 @@ export const i18n = {
     mastered: 'Mastered',
     practice: 'Practice',
     newLetter: 'New',
-    // robot unlock
+    streak: 'Streak',
     robotUnlock: 'New robot unlocked!',
-    // touch key labels
+    // Praise phrases (random pick on correct)
+    praise: ['Great!', 'Yes!', 'Wonderful!', 'Awesome!', 'Nice!'],
+    // Wrong-answer gentle nudge (no fail language)
+    nudge: ['Try once more!', 'Almost! Keep going!', 'You can do it!'],
   },
   zh: {
     score: '分數',
     settings: '設定',
     unit: '單元',
     voice: '語音',
+    soundFx: '音效',
+    bgm: '背景音樂',
     on: '開',
     off: '關',
     speed: '速度',
@@ -42,7 +49,10 @@ export const i18n = {
     mastered: '已掌握',
     practice: '練習中',
     newLetter: '新學',
+    streak: '連對',
     robotUnlock: '新機械人解鎖了！',
+    praise: ['做得好！', '很好！', '太棒了！', '好叻！', '繼續！'],
+    nudge: ['再試一次！', '差少少！', '加油！'],
   }
 };
 
@@ -54,6 +64,14 @@ export function getLang() {
 export function t(key) {
   const lang = getLang();
   return i18n[lang]?.[key] ?? i18n['zh'][key] ?? key;
+}
+
+// Random pick from array (e.g. praise, nudge)
+export function pickT(key) {
+  const lang = getLang();
+  const arr = i18n[lang]?.[key] ?? i18n['zh'][key];
+  if (!Array.isArray(arr) || arr.length === 0) return key;
+  return arr[Math.floor(Math.random() * arr.length)];
 }
 
 export function setLang(lang) {

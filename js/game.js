@@ -2,20 +2,22 @@
 import { loadSettings, saveSettings, fallDuration } from './settings.js';
 import { loadProgress, recordAttempt, masteredCount } from './progress.js';
 import { activeLetters, currentRobotIndex } from './curriculum.js';
-import { t, setLang } from './i18n.js';
+import { t, pickT, setLang } from './i18n.js';
+import { playCorrect, playWrong, playStreak, playUnlock, unlockAudio } from './sfx.js';
 
 // Attach public API to window for non-module HTML
 window.LetterShooter = {
   startGame, handleKey, openSettings, closeSettings, applySettings,
   renderTouchKeys, speakLetter, shoot, flashSuccess, shakeLetter,
   showLetter, updateScore, drawRobot,
-  loadSettings, fallDuration, setLang,
+  loadSettings, fallDuration, setLang, unlockAudio,
   openProgressPanel, closeProgressPanel,
   highlightKey, clearHighlight,
 };
 
 // ── State ──────────────────────────────────────────────────────────────────
 let score = 0;
+let streak = 0;
 let currentLetter = null;
 let touchKeys = [];       // visible touch key letters
 let gameRunning = false;
@@ -57,6 +59,21 @@ export function updateScore() {
 export function updateUnit(unitKey) {
   const { unitEl } = getEls();
   if (unitEl) unitEl.textContent = unitKey;
+}
+
+// ── Streak display ──────────────────────────────────────────────────────────
+function updateStreak(n) {
+  const el = document.getElementById('js-streak');
+  if (!el) return;
+  el.textContent = '×' + n;
+  el.classList.toggle('zero', n === 0);
+  if (n > 0) {
+    el.classList.remove('pop');
+    void el.offsetWidth;
+    el.classList.add('pop');
+  } else {
+    el.classList.remove('pop');
+  }
 }
 
 // ── TTS ────────────────────────────────────────────────────────────────────
@@ -232,6 +249,7 @@ function startFall(onArrive) {
 export function startGame(unitKey = 'U1', level = 'L0') {
   gameRunning = true;
   score = 0;
+  streak = 0;
   touchKeys = activeLetters(unitKey);
 
   const prog = loadProgress();
@@ -239,6 +257,7 @@ export function startGame(unitKey = 'U1', level = 'L0') {
 
   updateUnit(unitKey);
   updateScore();
+  updateStreak(0);
   drawRobot(robotIdx);
   renderTouchKeys(); // full QWERTY keyboard, no args
   nextTurn(level, touchKeys);
@@ -289,6 +308,7 @@ function nextTurn(level, keys) {
 export function handleKey(pressed) {
   if (!gameRunning || !currentLetter) return;
   const expected = currentLetter.toUpperCase();
+  const settings = loadSettings();
 
   if (pressed === expected) {
     shoot();
@@ -296,6 +316,15 @@ export function handleKey(pressed) {
     score++;
     updateScore();
     clearHighlight();
+
+    // ── Streak + reward feedback ────────────────────────────────────────
+    streak++;
+    updateStreak(streak);
+    celebrateRobot();
+    if (settings.soundFx) playCorrect();
+    if (streak === 3 || streak === 5 || streak === 10) {
+      if (settings.soundFx) playStreak(streak);
+    }
 
     // Reset arrived state
     letterArrived = false;
@@ -306,16 +335,59 @@ export function handleKey(pressed) {
     const prevMastered = masteredCount(loadProgress()) - 1;
     const afterMastered = masteredCount(prog);
     if (afterMastered > prevMastered) {
+      if (settings.soundFx) playUnlock();
       showRobotUnlock(afterMastered);
+    }
+
+    // Praise TTS (only on streak >= 1 to avoid spamming every letter)
+    if (settings.voice && streak >= 1) {
+      speakPraise();
     }
 
     setTimeout(() => {
       if (gameRunning) nextTurn(loadSettings().level, touchKeys);
     }, 600);
   } else {
+    // Wrong: gentle — no fail language, no buzzer
+    streak = 0;
+    updateStreak(0);
     recordAttempt(currentLetter.toUpperCase(), false);
     shakeLetter();
+    if (settings.soundFx) playWrong();
+    if (settings.voice) speakNudge();
   }
+}
+
+// ── Praise / nudge TTS ──────────────────────────────────────────────────────
+function speakPraise() {
+  if (!('speechSynthesis' in window)) return;
+  const phrase = pickT('praise');
+  window.speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(phrase);
+  u.lang = loadSettings().lang === 'zh' ? 'zh-HK' : 'en-US';
+  u.rate = 1.05;
+  u.volume = 0.85;
+  window.speechSynthesis.speak(u);
+}
+
+function speakNudge() {
+  if (!('speechSynthesis' in window)) return;
+  const phrase = pickT('nudge');
+  window.speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(phrase);
+  u.lang = loadSettings().lang === 'zh' ? 'zh-HK' : 'en-US';
+  u.rate = 1.0;
+  u.volume = 0.7;
+  window.speechSynthesis.speak(u);
+}
+
+// ── Robot celebration: brief jump + spin ────────────────────────────────────
+function celebrateRobot() {
+  const wrap = document.getElementById('js-robot-wrap');
+  if (!wrap) return;
+  wrap.classList.remove('celebrate');
+  void wrap.offsetWidth;
+  wrap.classList.add('celebrate');
 }
 
 // ── Touch keys — virtual keyboard (full or compact) ──────────────────────────
@@ -470,6 +542,8 @@ export function openSettings() {
 
   const settings = loadSettings();
   panel.querySelector('#js-voice-toggle').checked = settings.voice;
+  panel.querySelector('#js-sfx-toggle').checked = settings.soundFx;
+  panel.querySelector('#js-bgm-toggle').checked = settings.bgm;
   panel.querySelector('#js-speed-select').value = settings.speed;
   panel.querySelector('#js-hc-toggle').checked = settings.highContrast;
   panel.querySelector('#js-motion-toggle').checked = settings.reduceMotion;
@@ -491,6 +565,8 @@ export function applySettings() {
   if (!panel) return;
 
   const voice  = panel.querySelector('#js-voice-toggle')?.checked ?? true;
+  const sfx    = panel.querySelector('#js-sfx-toggle')?.checked ?? true;
+  const bgm    = panel.querySelector('#js-bgm-toggle')?.checked ?? false;
   const speed  = panel.querySelector('#js-speed-select')?.value ?? 'slow';
   const hc     = panel.querySelector('#js-hc-toggle')?.checked ?? false;
   const motion = panel.querySelector('#js-motion-toggle')?.checked ?? false;
@@ -499,7 +575,7 @@ export function applySettings() {
   const level  = panel.querySelector('#js-level-select')?.value ?? 'L0';
   const kbMode = panel.querySelector('#js-kb-mode-select')?.value ?? 'compact';
 
-  const next = { voice, speed, highContrast: hc, reduceMotion: motion, lang, currentUnit: unit, level, kbMode };
+  const next = { voice, soundFx: sfx, bgm, speed, highContrast: hc, reduceMotion: motion, lang, currentUnit: unit, level, kbMode };
 
   document.body.classList.toggle('high-contrast', hc);
 

@@ -3,6 +3,10 @@
   var DEFAULTS = {
     voice: true,
     // TTS on/off
+    soundFx: true,
+    // SFX chime / streak / unlock sounds
+    bgm: false,
+    // Background music (default OFF — SEN overstimulation safety)
     speed: "slow",
     // 'verySlow' | 'slow' | 'medium'
     highContrast: false,
@@ -137,8 +141,152 @@
   }
 
   // js/i18n.js
+  var i18n = {
+    en: {
+      score: "Score",
+      settings: "Settings",
+      unit: "Unit",
+      voice: "Voice",
+      soundFx: "Sound Effects",
+      bgm: "Background Music",
+      on: "On",
+      off: "Off",
+      speed: "Speed",
+      verySlow: "Very Slow",
+      slow: "Slow",
+      medium: "Medium",
+      highContrast: "High Contrast",
+      reduceMotion: "Reduce Motion",
+      close: "Close",
+      start: "Start",
+      next: "Next",
+      mastered: "Mastered",
+      practice: "Practice",
+      newLetter: "New",
+      streak: "Streak",
+      robotUnlock: "New robot unlocked!",
+      // Praise phrases (random pick on correct)
+      praise: ["Great!", "Yes!", "Wonderful!", "Awesome!", "Nice!"],
+      // Wrong-answer gentle nudge (no fail language)
+      nudge: ["Try once more!", "Almost! Keep going!", "You can do it!"]
+    },
+    zh: {
+      score: "\u5206\u6578",
+      settings: "\u8A2D\u5B9A",
+      unit: "\u55AE\u5143",
+      voice: "\u8A9E\u97F3",
+      soundFx: "\u97F3\u6548",
+      bgm: "\u80CC\u666F\u97F3\u6A02",
+      on: "\u958B",
+      off: "\u95DC",
+      speed: "\u901F\u5EA6",
+      verySlow: "\u5F88\u6162",
+      slow: "\u6162",
+      medium: "\u4E2D",
+      highContrast: "\u9AD8\u5C0D\u6BD4",
+      reduceMotion: "\u6E1B\u52D5\u756B",
+      close: "\u95DC",
+      start: "\u958B\u59CB",
+      next: "\u4E0B\u4E00\u984C",
+      mastered: "\u5DF2\u638C\u63E1",
+      practice: "\u7DF4\u7FD2\u4E2D",
+      newLetter: "\u65B0\u5B78",
+      streak: "\u9023\u5C0D",
+      robotUnlock: "\u65B0\u6A5F\u68B0\u4EBA\u89E3\u9396\u4E86\uFF01",
+      praise: ["\u505A\u5F97\u597D\uFF01", "\u5F88\u597D\uFF01", "\u592A\u68D2\u4E86\uFF01", "\u597D\u53FB\uFF01", "\u7E7C\u7E8C\uFF01"],
+      nudge: ["\u518D\u8A66\u4E00\u6B21\uFF01", "\u5DEE\u5C11\u5C11\uFF01", "\u52A0\u6CB9\uFF01"]
+    }
+  };
+  function getLang() {
+    return localStorage.getItem("ls-lang") || "zh";
+  }
+  function pickT(key) {
+    const lang = getLang();
+    const arr = i18n[lang]?.[key] ?? i18n["zh"][key];
+    if (!Array.isArray(arr) || arr.length === 0) return key;
+    return arr[Math.floor(Math.random() * arr.length)];
+  }
   function setLang(lang) {
     localStorage.setItem("ls-lang", lang);
+  }
+
+  // js/sfx.js
+  var ctx = null;
+  var masterGain = null;
+  function ensureCtx() {
+    if (ctx) return ctx;
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return null;
+    ctx = new AC();
+    masterGain = ctx.createGain();
+    masterGain.gain.value = 0.35;
+    masterGain.connect(ctx.destination);
+    return ctx;
+  }
+  function unlockAudio() {
+    ensureCtx();
+    if (ctx && ctx.state === "suspended") ctx.resume();
+  }
+  function envelope(node, attack, decay, peak = 1) {
+    const t2 = ctx.currentTime;
+    node.gain.cancelScheduledValues(t2);
+    node.gain.setValueAtTime(0, t2);
+    node.gain.linearRampToValueAtTime(peak, t2 + attack);
+    node.gain.exponentialRampToValueAtTime(1e-4, t2 + attack + decay);
+  }
+  function tone(freq, duration, type = "sine", vol = 0.3) {
+    if (!ensureCtx()) return;
+    const osc = ctx.createOscillator();
+    const g = ctx.createGain();
+    osc.type = type;
+    osc.frequency.value = freq;
+    osc.connect(g);
+    g.connect(masterGain);
+    envelope(g, 0.01, duration, vol);
+    osc.start();
+    osc.stop(ctx.currentTime + duration + 0.05);
+  }
+  function playCorrect() {
+    if (!ensureCtx()) return;
+    const notes = [523.25, 659.25, 783.99];
+    notes.forEach((f, i) => {
+      setTimeout(() => tone(f, 0.18, "sine", 0.32), i * 70);
+    });
+  }
+  function playWrong() {
+    if (!ensureCtx()) return;
+    const osc = ctx.createOscillator();
+    const g = ctx.createGain();
+    osc.type = "triangle";
+    osc.frequency.setValueAtTime(330, ctx.currentTime);
+    osc.frequency.linearRampToValueAtTime(262, ctx.currentTime + 0.25);
+    osc.connect(g);
+    g.connect(masterGain);
+    envelope(g, 0.02, 0.3, 0.18);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.4);
+  }
+  function playStreak(n) {
+    if (!ensureCtx()) return;
+    const chords = {
+      3: [523.25, 659.25, 783.99, 1046.5],
+      // C major
+      5: [523.25, 659.25, 783.99, 1046.5, 1318.5],
+      // C major + high C
+      10: [523.25, 659.25, 783.99, 987.77, 1318.5, 1567.98]
+      // wide chord
+    };
+    const chord = chords[n] || chords[3];
+    chord.forEach((f, i) => {
+      setTimeout(() => tone(f, 0.4, i % 2 ? "triangle" : "sine", 0.18), i * 50);
+    });
+  }
+  function playUnlock() {
+    if (!ensureCtx()) return;
+    const seq = [392, 523.25, 659.25, 783.99, 1046.5];
+    seq.forEach((f, i) => {
+      setTimeout(() => tone(f, 0.25, "triangle", 0.28), i * 90);
+    });
   }
 
   // js/game.js
@@ -159,12 +307,14 @@
     loadSettings,
     fallDuration,
     setLang,
+    unlockAudio,
     openProgressPanel,
     closeProgressPanel,
     highlightKey,
     clearHighlight
   };
   var score = 0;
+  var streak = 0;
   var currentLetter = null;
   var touchKeys = [];
   var gameRunning = false;
@@ -197,6 +347,19 @@
   function updateUnit(unitKey) {
     const { unitEl } = getEls();
     if (unitEl) unitEl.textContent = unitKey;
+  }
+  function updateStreak(n) {
+    const el = document.getElementById("js-streak");
+    if (!el) return;
+    el.textContent = "\xD7" + n;
+    el.classList.toggle("zero", n === 0);
+    if (n > 0) {
+      el.classList.remove("pop");
+      void el.offsetWidth;
+      el.classList.add("pop");
+    } else {
+      el.classList.remove("pop");
+    }
   }
   function speakLetter(letter) {
     const settings = loadSettings();
@@ -339,11 +502,13 @@
   function startGame(unitKey = "U1", level = "L0") {
     gameRunning = true;
     score = 0;
+    streak = 0;
     touchKeys = activeLetters(unitKey);
     const prog = loadProgress();
     const robotIdx = currentRobotIndex(masteredCount(prog));
     updateUnit(unitKey);
     updateScore();
+    updateStreak(0);
     drawRobot(robotIdx);
     renderTouchKeys();
     nextTurn(level, touchKeys);
@@ -397,12 +562,20 @@
   function handleKey(pressed) {
     if (!gameRunning || !currentLetter) return;
     const expected = currentLetter.toUpperCase();
+    const settings = loadSettings();
     if (pressed === expected) {
       shoot();
       flashSuccess();
       score++;
       updateScore();
       clearHighlight();
+      streak++;
+      updateStreak(streak);
+      celebrateRobot();
+      if (settings.soundFx) playCorrect();
+      if (streak === 3 || streak === 5 || streak === 10) {
+        if (settings.soundFx) playStreak(streak);
+      }
       letterArrived = false;
       const { letter: letterEl } = getEls();
       if (letterEl) letterEl.style.filter = "";
@@ -410,15 +583,50 @@
       const prevMastered = masteredCount(loadProgress()) - 1;
       const afterMastered = masteredCount(prog);
       if (afterMastered > prevMastered) {
+        if (settings.soundFx) playUnlock();
         showRobotUnlock(afterMastered);
+      }
+      if (settings.voice && streak >= 1) {
+        speakPraise();
       }
       setTimeout(() => {
         if (gameRunning) nextTurn(loadSettings().level, touchKeys);
       }, 600);
     } else {
+      streak = 0;
+      updateStreak(0);
       recordAttempt(currentLetter.toUpperCase(), false);
       shakeLetter();
+      if (settings.soundFx) playWrong();
+      if (settings.voice) speakNudge();
     }
+  }
+  function speakPraise() {
+    if (!("speechSynthesis" in window)) return;
+    const phrase = pickT("praise");
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(phrase);
+    u.lang = loadSettings().lang === "zh" ? "zh-HK" : "en-US";
+    u.rate = 1.05;
+    u.volume = 0.85;
+    window.speechSynthesis.speak(u);
+  }
+  function speakNudge() {
+    if (!("speechSynthesis" in window)) return;
+    const phrase = pickT("nudge");
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(phrase);
+    u.lang = loadSettings().lang === "zh" ? "zh-HK" : "en-US";
+    u.rate = 1;
+    u.volume = 0.7;
+    window.speechSynthesis.speak(u);
+  }
+  function celebrateRobot() {
+    const wrap = document.getElementById("js-robot-wrap");
+    if (!wrap) return;
+    wrap.classList.remove("celebrate");
+    void wrap.offsetWidth;
+    wrap.classList.add("celebrate");
   }
   var QWERTY_ROWS = [
     ["Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"],
@@ -541,6 +749,8 @@
     if (!panel) return;
     const settings = loadSettings();
     panel.querySelector("#js-voice-toggle").checked = settings.voice;
+    panel.querySelector("#js-sfx-toggle").checked = settings.soundFx;
+    panel.querySelector("#js-bgm-toggle").checked = settings.bgm;
     panel.querySelector("#js-speed-select").value = settings.speed;
     panel.querySelector("#js-hc-toggle").checked = settings.highContrast;
     panel.querySelector("#js-motion-toggle").checked = settings.reduceMotion;
@@ -558,6 +768,8 @@
     const panel = document.getElementById("js-settings-panel");
     if (!panel) return;
     const voice = panel.querySelector("#js-voice-toggle")?.checked ?? true;
+    const sfx = panel.querySelector("#js-sfx-toggle")?.checked ?? true;
+    const bgm = panel.querySelector("#js-bgm-toggle")?.checked ?? false;
     const speed = panel.querySelector("#js-speed-select")?.value ?? "slow";
     const hc = panel.querySelector("#js-hc-toggle")?.checked ?? false;
     const motion = panel.querySelector("#js-motion-toggle")?.checked ?? false;
@@ -565,7 +777,7 @@
     const unit = panel.querySelector("#js-unit-select")?.value ?? "U1";
     const level = panel.querySelector("#js-level-select")?.value ?? "L0";
     const kbMode = panel.querySelector("#js-kb-mode-select")?.value ?? "compact";
-    const next = { voice, speed, highContrast: hc, reduceMotion: motion, lang, currentUnit: unit, level, kbMode };
+    const next = { voice, soundFx: sfx, bgm, speed, highContrast: hc, reduceMotion: motion, lang, currentUnit: unit, level, kbMode };
     document.body.classList.toggle("high-contrast", hc);
     saveSettings(next);
     closeSettings();
