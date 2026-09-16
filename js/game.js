@@ -4,7 +4,7 @@ import { loadProgress, recordAttempt, masteredCount } from './progress.js';
 import { activeLetters, currentRobotIndex } from './curriculum.js';
 import { t, pickT, setLang } from './i18n.js';
 import { playCorrect, playWrong, playStreak, playUnlock, unlockAudio } from './sfx.js';
-import { confettiBurst, streakFlash, startLetterTrail, stopLetterTrail } from './fx.js';
+import { confettiBurst, streakFlash, megaFireworks, startLetterTrail, stopLetterTrail } from './fx.js';
 import { startBgm, stopBgm, pauseBgm, resumeBgm, unlockBgm } from './bgm.js';
 
 // Attach public API to window for non-module HTML
@@ -20,6 +20,7 @@ window.LetterShooter = {
 // ── State ──────────────────────────────────────────────────────────────────
 let score = 0;
 let streak = 0;
+let stars = 0;            // cumulative stars (1 per correct)
 let currentLetter = null;
 let touchKeys = [];       // visible touch key letters
 let gameRunning = false;
@@ -75,6 +76,18 @@ function updateStreak(n) {
     el.classList.add('pop');
   } else {
     el.classList.remove('pop');
+  }
+}
+
+// ── Stars display + progress bar (Phase 6d) ────────────────────────────────
+function updateStars(total) {
+  const num = document.getElementById('js-stars-num');
+  const bar = document.getElementById('js-stars-bar-fill');
+  if (num) num.textContent = total;
+  if (bar) {
+    // progress toward next 10-star milestone (visualization only)
+    const pct = Math.min(100, (total % 10) * 10);
+    bar.style.width = pct + '%';
   }
 }
 
@@ -293,6 +306,7 @@ export function startGame(unitKey = 'U1', level = 'L0') {
   gameRunning = true;
   score = 0;
   streak = 0;
+  stars = 0;
   touchKeys = activeLetters(unitKey);
 
   const prog = loadProgress();
@@ -301,6 +315,7 @@ export function startGame(unitKey = 'U1', level = 'L0') {
   updateUnit(unitKey);
   updateScore();
   updateStreak(0);
+  updateStars(0);
   drawRobot(robotIdx);
   renderTouchKeys(); // full QWERTY keyboard, no args
   nextTurn(level, touchKeys);
@@ -364,19 +379,25 @@ export function handleKey(pressed) {
     shoot();
     flashSuccess();
     score++;
+    stars++;
     updateScore();
+    updateStars(stars);
     clearHighlight();
 
-    // ── Confetti burst at letter position ────────────────────────────────
+    // ── Themed confetti burst at letter position (Phase 6a) ─────────────
     const letterBox = document.getElementById('js-letter')?.getBoundingClientRect();
     if (letterBox) {
-      confettiBurst(letterBox.left + letterBox.width / 2, letterBox.top + letterBox.height / 2);
+      confettiBurst(
+        letterBox.left + letterBox.width / 2,
+        letterBox.top + letterBox.height / 2,
+        { theme: settings.theme || 'space' }
+      );
     }
 
     // ── Streak + reward feedback ────────────────────────────────────────
     streak++;
     updateStreak(streak);
-    celebrateRobot();
+    celebrateRobot(streak);
     if (settings.soundFx) playCorrect();
     if (streak === 3 || streak === 5 || streak === 10) {
       if (settings.soundFx) playStreak(streak);
@@ -396,7 +417,13 @@ export function handleKey(pressed) {
     if (afterMastered > prevMastered) {
       if (settings.soundFx) playUnlock();
       streakFlash('big');
+      megaFireworks({ theme: settings.theme || 'space' });
       showRobotUnlock(afterMastered);
+    }
+
+    // Mega fireworks at streak ≥10 — dramatic celebration
+    if (streak >= 10 && afterMastered === prevMastered) {
+      megaFireworks({ theme: settings.theme || 'space' });
     }
 
     // Praise TTS (only on streak >= 1 to avoid spamming every letter)
@@ -441,13 +468,15 @@ function speakNudge() {
   window.speechSynthesis.speak(u);
 }
 
-// ── Robot celebration: brief jump + spin ────────────────────────────────────
-function celebrateRobot() {
+// ── Robot celebration: brief jump + spin (Phase 6c — stronger per milestone)
+function celebrateRobot(streakN = 1) {
   const wrap = document.getElementById('js-robot-wrap');
   if (!wrap) return;
-  wrap.classList.remove('celebrate');
+  wrap.classList.remove('celebrate', 'celebrate-big', 'celebrate-mega');
   void wrap.offsetWidth;
-  wrap.classList.add('celebrate');
+  if (streakN >= 10) wrap.classList.add('celebrate-mega');
+  else if (streakN >= 5) wrap.classList.add('celebrate-big');
+  else wrap.classList.add('celebrate');
 }
 
 // ── Touch keys — virtual keyboard (full or compact) ──────────────────────────

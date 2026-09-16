@@ -315,31 +315,50 @@
   function confettiBurst(originX, originY, opts = {}) {
     const container = document.getElementById("js-confetti-layer");
     if (!container) return;
+    const theme = opts.theme || "space";
     const count = opts.count || 32;
-    const colors = opts.colors || [
-      "#4FC3F7",
-      "#FF6B9D",
-      "#FFD54F",
-      "#69F0AE",
-      "#CE93D8",
-      "#FF8A65",
-      "#80DEEA",
-      "#F48FB1"
-    ];
+    const palettes = {
+      space: ["#4FC3F7", "#FF6B9D", "#FFD54F", "#69F0AE", "#CE93D8", "#FF8A65", "#80DEEA", "#F48FB1"],
+      candy: ["#FF6B9D", "#FFD54F", "#B388FF", "#69F0AE", "#FF9D7A", "#F48FB1"],
+      ocean: ["#00BCD4", "#26C6DA", "#FFCA28", "#66BB6A", "#80DEEA", "#4FC3F7"]
+    };
+    const colors = opts.colors || palettes[theme] || palettes.space;
+    const shapeFamilies = {
+      space: ["star", "star", "circle", "square", "ribbon"],
+      candy: ["heart", "heart", "circle", "circle", "ribbon"],
+      ocean: ["wave", "bubble", "circle", "circle", "ribbon"]
+    };
+    const shapes = shapeFamilies[theme] || shapeFamilies.space;
     for (let i = 0; i < count; i++) {
       const piece = document.createElement("div");
       piece.className = "confetti-piece";
       piece.style.left = originX + "px";
       piece.style.top = originY + "px";
       piece.style.background = colors[i % colors.length];
-      const shape = i % 3;
-      if (shape === 0) {
-        piece.style.borderRadius = "50%";
-        piece.style.width = "8px";
-        piece.style.height = "8px";
-      } else if (shape === 1) {
-        piece.style.width = "6px";
+      const shape = shapes[i % shapes.length];
+      if (shape === "star") {
+        piece.classList.add("confetti-star");
+        piece.style.width = "14px";
+        piece.style.height = "14px";
+      } else if (shape === "heart") {
+        piece.classList.add("confetti-heart");
+        piece.style.width = "12px";
         piece.style.height = "12px";
+      } else if (shape === "wave") {
+        piece.classList.add("confetti-wave");
+        piece.style.width = "16px";
+        piece.style.height = "8px";
+      } else if (shape === "bubble") {
+        piece.classList.add("confetti-bubble");
+        piece.style.width = 8 + Math.random() * 6 + "px";
+        piece.style.height = piece.style.width;
+      } else if (shape === "circle") {
+        piece.style.borderRadius = "50%";
+        piece.style.width = 8 + Math.random() * 4 + "px";
+        piece.style.height = piece.style.width;
+      } else if (shape === "square") {
+        piece.style.width = "6px";
+        piece.style.height = "6px";
       } else {
         piece.style.width = "4px";
         piece.style.height = "14px";
@@ -357,6 +376,49 @@
       container.appendChild(piece);
       piece.addEventListener("animationend", () => piece.remove(), { once: true });
     }
+  }
+  function megaFireworks(opts = {}) {
+    const layer = document.getElementById("js-confetti-layer");
+    if (!layer) return;
+    const theme = opts.theme || "space";
+    const palettes = {
+      space: ["#4FC3F7", "#FF6B9D", "#FFD54F", "#69F0AE", "#CE93D8", "#FF8A65", "#80DEEA", "#F48FB1", "#FFFFFF"],
+      candy: ["#FF6B9D", "#FFD54F", "#B388FF", "#69F0AE", "#FF9D7A", "#F48FB1", "#FFFFFF"],
+      ocean: ["#00BCD4", "#26C6DA", "#FFCA28", "#66BB6A", "#80DEEA", "#4FC3F7", "#FFFFFF"]
+    };
+    const colors = palettes[theme] || palettes.space;
+    const bursts = [
+      { x: "50%", y: "50%", count: 30, dist: 220, delay: 0 },
+      { x: "50%", y: "50%", count: 25, dist: 160, delay: 120 },
+      { x: "50%", y: "50%", count: 35, dist: 280, delay: 240 }
+    ];
+    bursts.forEach((b) => {
+      setTimeout(() => {
+        for (let i = 0; i < b.count; i++) {
+          const piece = document.createElement("div");
+          piece.className = "confetti-piece mega";
+          piece.style.position = "absolute";
+          piece.style.left = b.x;
+          piece.style.top = b.y;
+          piece.style.background = colors[i % colors.length];
+          piece.style.borderRadius = "50%";
+          const size = 6 + Math.random() * 8;
+          piece.style.width = size + "px";
+          piece.style.height = size + "px";
+          piece.style.boxShadow = `0 0 8px ${colors[i % colors.length]}`;
+          const angle = Math.PI * 2 * i / b.count + (Math.random() - 0.5) * 0.3;
+          const dist = b.dist * (0.7 + Math.random() * 0.6);
+          const dx = Math.cos(angle) * dist;
+          const dy = Math.sin(angle) * dist;
+          piece.style.setProperty("--dx", dx + "px");
+          piece.style.setProperty("--dy", dy + "px");
+          piece.style.setProperty("--rot", (Math.random() - 0.5) * 1080 + "deg");
+          piece.style.animationDuration = 1.6 + Math.random() * 0.8 + "s";
+          layer.appendChild(piece);
+          piece.addEventListener("animationend", () => piece.remove(), { once: true });
+        }
+      }, b.delay);
+    });
   }
   function streakFlash(intensity = "normal") {
     const flash = document.getElementById("js-streak-flash");
@@ -598,6 +660,7 @@
   };
   var score = 0;
   var streak = 0;
+  var stars = 0;
   var currentLetter = null;
   var touchKeys = [];
   var gameRunning = false;
@@ -642,6 +705,15 @@
       el.classList.add("pop");
     } else {
       el.classList.remove("pop");
+    }
+  }
+  function updateStars(total) {
+    const num = document.getElementById("js-stars-num");
+    const bar = document.getElementById("js-stars-bar-fill");
+    if (num) num.textContent = total;
+    if (bar) {
+      const pct = Math.min(100, total % 10 * 10);
+      bar.style.width = pct + "%";
     }
   }
   function speakLetter(letter) {
@@ -820,12 +892,14 @@
     gameRunning = true;
     score = 0;
     streak = 0;
+    stars = 0;
     touchKeys = activeLetters(unitKey);
     const prog = loadProgress();
     const robotIdx = currentRobotIndex(masteredCount(prog));
     updateUnit(unitKey);
     updateScore();
     updateStreak(0);
+    updateStars(0);
     drawRobot(robotIdx);
     renderTouchKeys();
     nextTurn(level, touchKeys);
@@ -889,15 +963,21 @@
       shoot();
       flashSuccess();
       score++;
+      stars++;
       updateScore();
+      updateStars(stars);
       clearHighlight();
       const letterBox = document.getElementById("js-letter")?.getBoundingClientRect();
       if (letterBox) {
-        confettiBurst(letterBox.left + letterBox.width / 2, letterBox.top + letterBox.height / 2);
+        confettiBurst(
+          letterBox.left + letterBox.width / 2,
+          letterBox.top + letterBox.height / 2,
+          { theme: settings.theme || "space" }
+        );
       }
       streak++;
       updateStreak(streak);
-      celebrateRobot();
+      celebrateRobot(streak);
       if (settings.soundFx) playCorrect();
       if (streak === 3 || streak === 5 || streak === 10) {
         if (settings.soundFx) playStreak(streak);
@@ -913,7 +993,11 @@
       if (afterMastered > prevMastered) {
         if (settings.soundFx) playUnlock();
         streakFlash("big");
+        megaFireworks({ theme: settings.theme || "space" });
         showRobotUnlock(afterMastered);
+      }
+      if (streak >= 10 && afterMastered === prevMastered) {
+        megaFireworks({ theme: settings.theme || "space" });
       }
       if (settings.voice && streak >= 1) {
         speakPraise();
@@ -950,12 +1034,14 @@
     u.volume = 0.7;
     window.speechSynthesis.speak(u);
   }
-  function celebrateRobot() {
+  function celebrateRobot(streakN = 1) {
     const wrap = document.getElementById("js-robot-wrap");
     if (!wrap) return;
-    wrap.classList.remove("celebrate");
+    wrap.classList.remove("celebrate", "celebrate-big", "celebrate-mega");
     void wrap.offsetWidth;
-    wrap.classList.add("celebrate");
+    if (streakN >= 10) wrap.classList.add("celebrate-mega");
+    else if (streakN >= 5) wrap.classList.add("celebrate-big");
+    else wrap.classList.add("celebrate");
   }
   var QWERTY_ROWS = [
     ["Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"],

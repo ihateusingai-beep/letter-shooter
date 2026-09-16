@@ -224,6 +224,45 @@
     text-shadow: 0 0 30px rgba(0,212,255,0.9);
   }
 
+  .streak-num.zero { opacity: 0.35; }
+
+  /* ── Stars counter + progress bar (Phase 6d) ─────────────────────── */
+  .stars-block {
+    display: flex; align-items: center; gap: 4px;
+    margin-left: 12px;
+    position: relative;
+  }
+  .stars-icon {
+    font-size: 18px;
+    filter: drop-shadow(0 0 4px rgba(255,213,79,0.6));
+  }
+  .stars-num {
+    font-size: 16px; font-weight: 800;
+    color: var(--success);
+    text-shadow: 0 0 10px rgba(105,240,174,0.5);
+    min-width: 24px; text-align: left;
+  }
+  .stars-bar {
+    width: 60px; height: 6px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-left: 4px;
+  }
+  .stars-bar-fill {
+    height: 100%; width: 0%;
+    background: linear-gradient(90deg, #FFD54F, #69F0AE);
+    border-radius: 3px;
+    transition: width 0.4s ease-out;
+    box-shadow: 0 0 6px rgba(255,213,79,0.5);
+  }
+  body[data-theme="candy"] .stars-bar-fill {
+    background: linear-gradient(90deg, #FF6B9D, #FFD54F);
+  }
+  body[data-theme="ocean"] .stars-bar-fill {
+    background: linear-gradient(90deg, #00BCD4, #66BB6A);
+  }
+
   /* ── Streak counter (fire) ──────────────────────────────────── */
   .streak-block {
     display: flex; align-items: center; gap: 4px;
@@ -357,7 +396,32 @@
   #js-robot-wrap.celebrate {
     animation: robotCelebrate 0.55s ease-out;
   }
-  .no-motion #js-robot-wrap.celebrate { animation: none; }
+  /* Big celebration (streak 5+) — bigger jump + spin */
+  @keyframes robotCelebrateBig {
+    0%   { transform: translateX(-50%) translateY(0) rotate(0deg) scale(1); }
+    25%  { transform: translateX(-50%) translateY(-40px) rotate(-15deg) scale(1.1); }
+    50%  { transform: translateX(-50%) translateY(-20px) rotate(0deg) scale(1); }
+    75%  { transform: translateX(-50%) translateY(-40px) rotate(15deg) scale(1.1); }
+    100% { transform: translateX(-50%) translateY(0) rotate(0deg) scale(1); }
+  }
+  #js-robot-wrap.celebrate-big {
+    animation: robotCelebrateBig 0.8s ease-out;
+  }
+  /* Mega celebration (streak 10+) — full spin + jump + scale */
+  @keyframes robotCelebrateMega {
+    0%   { transform: translateX(-50%) translateY(0) rotate(0deg) scale(1); }
+    20%  { transform: translateX(-50%) translateY(-50px) rotate(-180deg) scale(1.2); }
+    40%  { transform: translateX(-50%) translateY(-30px) rotate(-360deg) scale(1.1); }
+    60%  { transform: translateX(-50%) translateY(-50px) rotate(-540deg) scale(1.2); }
+    80%  { transform: translateX(-50%) translateY(-20px) rotate(-720deg) scale(1); }
+    100% { transform: translateX(-50%) translateY(0) rotate(-720deg) scale(1); }
+  }
+  #js-robot-wrap.celebrate-mega {
+    animation: robotCelebrateMega 1.2s ease-out;
+  }
+  .no-motion #js-robot-wrap.celebrate,
+  .no-motion #js-robot-wrap.celebrate-big,
+  .no-motion #js-robot-wrap.celebrate-mega { animation: none; }
 
   /* ── Robot idle animations (Phase 3b) ────────────────────────────────── */
   @keyframes antennaBobble {
@@ -414,6 +478,28 @@
       transform: translate(var(--dx), var(--dy)) rotate(var(--rot));
       opacity: 0;
     }
+  }
+  /* Mega fireworks: longer animation */
+  .confetti-piece.mega {
+    animation: confettiFly 2.2s cubic-bezier(0.2, 0.6, 0.4, 1) forwards;
+  }
+  /* Star shape (space theme) */
+  .confetti-star {
+    clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+  }
+  /* Heart shape (candy theme) */
+  .confetti-heart {
+    clip-path: path('M12 21s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 11c0 5.5-7 10-7 10z');
+  }
+  /* Wave shape (ocean theme) */
+  .confetti-wave {
+    border-radius: 50% 50% 0 0 / 100% 100% 0 0;
+    transform-origin: center bottom;
+  }
+  /* Bubble (ocean theme) — outlined, lighter */
+  .confetti-bubble {
+    border: 1.5px solid currentColor;
+    background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.6) 0%, transparent 60%);
   }
   .no-motion .confetti-piece { animation-duration: 0.001ms !important; }
 
@@ -853,6 +939,14 @@
   <div class="score-block">
     <span class="score-label" id="js-score-label">分數</span>
     <span class="score-num" id="js-score">0</span>
+  </div>
+
+  <div class="stars-block" aria-label="Stars collected">
+    <span class="stars-icon">⭐</span>
+    <span class="stars-num" id="js-stars-num">0</span>
+    <div class="stars-bar">
+      <div class="stars-bar-fill" id="js-stars-bar-fill"></div>
+    </div>
   </div>
 
   <div class="streak-block" id="js-streak-wrap" aria-live="polite">

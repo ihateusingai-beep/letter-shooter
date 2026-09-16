@@ -5,15 +5,29 @@ let flashTimer = null;
 let trailTimer = null;
 
 // ── Confetti burst on correct answer ────────────────────────────────────────
+// opts.theme: 'space' | 'candy' | 'ocean' — picks shape family
 export function confettiBurst(originX, originY, opts = {}) {
   const container = document.getElementById('js-confetti-layer');
   if (!container) return;
 
+  const theme = opts.theme || 'space';
   const count = opts.count || 32;
-  const colors = opts.colors || [
-    '#4FC3F7', '#FF6B9D', '#FFD54F', '#69F0AE',
-    '#CE93D8', '#FF8A65', '#80DEEA', '#F48FB1'
-  ];
+
+  // Theme-specific palettes
+  const palettes = {
+    space: ['#4FC3F7', '#FF6B9D', '#FFD54F', '#69F0AE', '#CE93D8', '#FF8A65', '#80DEEA', '#F48FB1'],
+    candy: ['#FF6B9D', '#FFD54F', '#B388FF', '#69F0AE', '#FF9D7A', '#F48FB1'],
+    ocean: ['#00BCD4', '#26C6DA', '#FFCA28', '#66BB6A', '#80DEEA', '#4FC3F7'],
+  };
+  const colors = opts.colors || palettes[theme] || palettes.space;
+
+  // Theme-specific shape: 'mix' | 'stars' | 'hearts' | 'waves'
+  const shapeFamilies = {
+    space: ['star', 'star', 'circle', 'square', 'ribbon'],
+    candy: ['heart', 'heart', 'circle', 'circle', 'ribbon'],
+    ocean: ['wave', 'bubble', 'circle', 'circle', 'ribbon'],
+  };
+  const shapes = shapeFamilies[theme] || shapeFamilies.space;
 
   for (let i = 0; i < count; i++) {
     const piece = document.createElement('div');
@@ -22,26 +36,42 @@ export function confettiBurst(originX, originY, opts = {}) {
     piece.style.top  = originY + 'px';
     piece.style.background = colors[i % colors.length];
 
-    // Random shape: circle, square, or ribbon
-    const shape = i % 3;
-    if (shape === 0) {
-      piece.style.borderRadius = '50%';
-      piece.style.width = '8px';
-      piece.style.height = '8px';
-    } else if (shape === 1) {
-      piece.style.width = '6px';
+    const shape = shapes[i % shapes.length];
+
+    if (shape === 'star') {
+      // 5-pointed star via clip-path
+      piece.classList.add('confetti-star');
+      piece.style.width = '14px';
+      piece.style.height = '14px';
+    } else if (shape === 'heart') {
+      piece.classList.add('confetti-heart');
+      piece.style.width = '12px';
       piece.style.height = '12px';
-    } else {
+    } else if (shape === 'wave') {
+      piece.classList.add('confetti-wave');
+      piece.style.width = '16px';
+      piece.style.height = '8px';
+    } else if (shape === 'bubble') {
+      piece.classList.add('confetti-bubble');
+      piece.style.width = (8 + Math.random() * 6) + 'px';
+      piece.style.height = piece.style.width;
+    } else if (shape === 'circle') {
+      piece.style.borderRadius = '50%';
+      piece.style.width = (8 + Math.random() * 4) + 'px';
+      piece.style.height = piece.style.width;
+    } else if (shape === 'square') {
+      piece.style.width = '6px';
+      piece.style.height = '6px';
+    } else { // ribbon
       piece.style.width = '4px';
       piece.style.height = '14px';
       piece.style.borderRadius = '2px';
     }
 
-    // Random direction + distance
     const angle = (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.5;
     const dist = 80 + Math.random() * 140;
     const dx = Math.cos(angle) * dist;
-    const dy = Math.sin(angle) * dist - 60; // bias upward
+    const dy = Math.sin(angle) * dist - 60;
     const rot = (Math.random() - 0.5) * 720;
 
     piece.style.setProperty('--dx', dx + 'px');
@@ -52,6 +82,59 @@ export function confettiBurst(originX, originY, opts = {}) {
     container.appendChild(piece);
     piece.addEventListener('animationend', () => piece.remove(), { once: true });
   }
+}
+
+// ── Mega fireworks: dramatic burst for streak ≥10 / robot unlock ───────────
+// Multiple concentric bursts, 80+ particles, longer duration
+export function megaFireworks(opts = {}) {
+  const layer = document.getElementById('js-confetti-layer');
+  if (!layer) return;
+
+  const theme = opts.theme || 'space';
+  const palettes = {
+    space: ['#4FC3F7', '#FF6B9D', '#FFD54F', '#69F0AE', '#CE93D8', '#FF8A65', '#80DEEA', '#F48FB1', '#FFFFFF'],
+    candy: ['#FF6B9D', '#FFD54F', '#B388FF', '#69F0AE', '#FF9D7A', '#F48FB1', '#FFFFFF'],
+    ocean: ['#00BCD4', '#26C6DA', '#FFCA28', '#66BB6A', '#80DEEA', '#4FC3F7', '#FFFFFF'],
+  };
+  const colors = palettes[theme] || palettes.space;
+
+  // 3 concentric bursts with slight delay
+  const bursts = [
+    { x: '50%', y: '50%', count: 30, dist: 220, delay: 0 },
+    { x: '50%', y: '50%', count: 25, dist: 160, delay: 120 },
+    { x: '50%', y: '50%', count: 35, dist: 280, delay: 240 },
+  ];
+
+  bursts.forEach(b => {
+    setTimeout(() => {
+      for (let i = 0; i < b.count; i++) {
+        const piece = document.createElement('div');
+        piece.className = 'confetti-piece mega';
+        piece.style.position = 'absolute';
+        piece.style.left = b.x;
+        piece.style.top = b.y;
+        piece.style.background = colors[i % colors.length];
+        piece.style.borderRadius = '50%';
+        const size = 6 + Math.random() * 8;
+        piece.style.width = size + 'px';
+        piece.style.height = size + 'px';
+        piece.style.boxShadow = `0 0 8px ${colors[i % colors.length]}`;
+
+        const angle = (Math.PI * 2 * i) / b.count + (Math.random() - 0.5) * 0.3;
+        const dist = b.dist * (0.7 + Math.random() * 0.6);
+        const dx = Math.cos(angle) * dist;
+        const dy = Math.sin(angle) * dist;
+
+        piece.style.setProperty('--dx', dx + 'px');
+        piece.style.setProperty('--dy', dy + 'px');
+        piece.style.setProperty('--rot', (Math.random() - 0.5) * 1080 + 'deg');
+        piece.style.animationDuration = (1.6 + Math.random() * 0.8) + 's';
+
+        layer.appendChild(piece);
+        piece.addEventListener('animationend', () => piece.remove(), { once: true });
+      }
+    }, b.delay);
+  });
 }
 
 // ── Streak flash: brief radial pulse for milestones ────────────────────────
