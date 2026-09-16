@@ -158,7 +158,9 @@
     fallDuration,
     setLang,
     openProgressPanel,
-    closeProgressPanel
+    closeProgressPanel,
+    highlightKey,
+    clearHighlight
   };
   var score = 0;
   var currentLetter = null;
@@ -290,6 +292,7 @@
       el.style.transform = "scale(1)";
     });
     currentLetter = letter;
+    highlightKey(letter);
   }
   var fallPaused = false;
   var letterArrived = false;
@@ -338,7 +341,7 @@
     updateUnit(unitKey);
     updateScore();
     drawRobot(robotIdx);
-    renderTouchKeys(touchKeys);
+    renderTouchKeys();
     nextTurn(level, touchKeys);
   }
   function stopGame() {
@@ -368,6 +371,7 @@
       flashSuccess();
       score++;
       updateScore();
+      clearHighlight();
       letterArrived = false;
       const { letter: letterEl } = getEls();
       if (letterEl) letterEl.style.filter = "";
@@ -385,22 +389,64 @@
       shakeLetter();
     }
   }
-  function renderTouchKeys(keys) {
+  var QWERTY_ROWS = [
+    ["Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"],
+    ["A", "S", "D", "F", "G", "H", "J", "K", "L"],
+    ["Z", "X", "C", "V", "B", "N", "M"]
+  ];
+  function renderTouchKeys() {
     const container = document.getElementById("js-touch-keys");
     if (!container) return;
     container.innerHTML = "";
     const settings = loadSettings();
     const reduceMotion = settings.reduceMotion;
-    keys.forEach((letter) => {
-      const btn = document.createElement("button");
-      btn.className = "touch-key";
-      btn.textContent = letter.toUpperCase();
-      btn.setAttribute("data-letter", letter.toUpperCase());
-      btn.setAttribute("aria-label", `Letter ${letter.toUpperCase()}`);
-      if (reduceMotion) btn.classList.add("no-motion");
-      btn.addEventListener("click", () => handleKey(letter.toUpperCase()));
-      container.appendChild(btn);
+    const hint = document.createElement("div");
+    hint.className = "kb-hint";
+    hint.id = "js-kb-hint";
+    container.appendChild(hint);
+    QWERTY_ROWS.forEach((row) => {
+      const rowEl = document.createElement("div");
+      rowEl.className = "kb-row";
+      row.forEach((letter) => {
+        const btn = document.createElement("button");
+        btn.className = "kb-key";
+        btn.textContent = letter;
+        btn.setAttribute("data-letter", letter);
+        btn.setAttribute("aria-label", `Letter ${letter}`);
+        if (reduceMotion) btn.classList.add("no-motion");
+        btn.addEventListener("click", () => handleKey(letter));
+        rowEl.appendChild(btn);
+      });
+      container.appendChild(rowEl);
     });
+    if (currentLetter) highlightKey(currentLetter);
+  }
+  function highlightKey(letter) {
+    const hint = document.getElementById("js-kb-hint");
+    const settings = loadSettings();
+    const lang = settings.lang;
+    document.querySelectorAll(".kb-key").forEach((btn) => {
+      const isTarget = btn.getAttribute("data-letter") === letter.toUpperCase();
+      btn.classList.toggle("key-hint", isTarget);
+      if (!isTarget) {
+        btn.style.opacity = "1";
+      }
+    });
+    if (hint) {
+      const label = lang === "zh" ? `\u8ACB\u6309 ${letter.toUpperCase()}` : `Press ${letter.toUpperCase()}`;
+      hint.textContent = label;
+      hint.classList.add("has-hint");
+    }
+  }
+  function clearHighlight() {
+    document.querySelectorAll(".kb-key").forEach((btn) => {
+      btn.classList.remove("key-hint");
+    });
+    const hint = document.getElementById("js-kb-hint");
+    if (hint) {
+      hint.textContent = "";
+      hint.classList.remove("has-hint");
+    }
   }
   function showRobotUnlock(count) {
     const settings = loadSettings();

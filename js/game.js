@@ -11,6 +11,7 @@ window.LetterShooter = {
   showLetter, updateScore, drawRobot,
   loadSettings, fallDuration, setLang,
   openProgressPanel, closeProgressPanel,
+  highlightKey, clearHighlight,
 };
 
 // ── State ──────────────────────────────────────────────────────────────────
@@ -168,6 +169,7 @@ export function showLetter(letter) {
     el.style.transform = 'scale(1)';
   });
   currentLetter = letter;
+  highlightKey(letter); // highlight virtual key
 }
 
 // ── L1: fall animation ──────────────────────────────────────────────────────
@@ -234,7 +236,7 @@ export function startGame(unitKey = 'U1', level = 'L0') {
   updateUnit(unitKey);
   updateScore();
   drawRobot(robotIdx);
-  renderTouchKeys(touchKeys);
+  renderTouchKeys(); // full QWERTY keyboard, no args
   nextTurn(level, touchKeys);
 }
 
@@ -270,6 +272,7 @@ export function handleKey(pressed) {
     flashSuccess();
     score++;
     updateScore();
+    clearHighlight();
 
     // Reset arrived state
     letterArrived = false;
@@ -292,8 +295,14 @@ export function handleKey(pressed) {
   }
 }
 
-// ── Touch keys ───────────────────────────────────────────────────────────────
-export function renderTouchKeys(keys) {
+// ── Touch keys — full QWERTY virtual keyboard ───────────────────────────────
+const QWERTY_ROWS = [
+  ['Q','W','E','R','T','Y','U','I','O','P'],
+  ['A','S','D','F','G','H','J','K','L'],
+  ['Z','X','C','V','B','N','M'],
+];
+
+export function renderTouchKeys() {
   const container = document.getElementById('js-touch-keys');
   if (!container) return;
   container.innerHTML = '';
@@ -301,16 +310,64 @@ export function renderTouchKeys(keys) {
   const settings = loadSettings();
   const reduceMotion = settings.reduceMotion;
 
-  keys.forEach(letter => {
-    const btn = document.createElement('button');
-    btn.className = 'touch-key';
-    btn.textContent = letter.toUpperCase();
-    btn.setAttribute('data-letter', letter.toUpperCase());
-    btn.setAttribute('aria-label', `Letter ${letter.toUpperCase()}`);
-    if (reduceMotion) btn.classList.add('no-motion');
-    btn.addEventListener('click', () => handleKey(letter.toUpperCase()));
-    container.appendChild(btn);
+  // Hint label
+  const hint = document.createElement('div');
+  hint.className = 'kb-hint';
+  hint.id = 'js-kb-hint';
+  container.appendChild(hint);
+
+  QWERTY_ROWS.forEach(row => {
+    const rowEl = document.createElement('div');
+    rowEl.className = 'kb-row';
+    row.forEach(letter => {
+      const btn = document.createElement('button');
+      btn.className = 'kb-key';
+      btn.textContent = letter;
+      btn.setAttribute('data-letter', letter);
+      btn.setAttribute('aria-label', `Letter ${letter}`);
+      if (reduceMotion) btn.classList.add('no-motion');
+      btn.addEventListener('click', () => handleKey(letter));
+      rowEl.appendChild(btn);
+    });
+    container.appendChild(rowEl);
   });
+
+  // Apply hint if game already running with a current letter
+  if (currentLetter) highlightKey(currentLetter);
+}
+
+// Highlight the target key, dim all others
+export function highlightKey(letter) {
+  const hint = document.getElementById('js-kb-hint');
+  const settings = loadSettings();
+  const lang = settings.lang;
+
+  document.querySelectorAll('.kb-key').forEach(btn => {
+    const isTarget = btn.getAttribute('data-letter') === letter.toUpperCase();
+    btn.classList.toggle('key-hint', isTarget);
+
+    // Dim non-target keys (already dim by default, keep as-is)
+    if (!isTarget) {
+      btn.style.opacity = '1'; // reset any forced opacity
+    }
+  });
+
+  if (hint) {
+    const label = lang === 'zh'
+      ? `請按 ${letter.toUpperCase()}`
+      : `Press ${letter.toUpperCase()}`;
+    hint.textContent = label;
+    hint.classList.add('has-hint');
+  }
+}
+
+// Clear highlight
+export function clearHighlight() {
+  document.querySelectorAll('.kb-key').forEach(btn => {
+    btn.classList.remove('key-hint');
+  });
+  const hint = document.getElementById('js-kb-hint');
+  if (hint) { hint.textContent = ''; hint.classList.remove('has-hint'); }
 }
 
 // ── Toast queue ──────────────────────────────────────────────────────────────
