@@ -2,9 +2,9 @@
 import { loadSettings, saveSettings, fallDuration } from './settings.js';
 import { loadProgress, recordAttempt, masteredCount } from './progress.js';
 import { activeLetters, currentRobotIndex, isUnitComplete } from './curriculum.js';
-import { t, pickT, setLang } from './i18n.js';
+import { t, pickT, setLang, i18n } from './i18n.js';
 import { playCorrect, playWrong, playStreak, playUnlock, unlockAudio, haptic } from './sfx.js';
-import { confettiBurst, streakFlash, megaFireworks, startLetterTrail, stopLetterTrail, letterSparkle, floatCombo } from './fx.js';
+import { confettiBurst, streakFlash, megaFireworks, startLetterTrail, stopLetterTrail, letterSparkle, floatCombo, LETTER_SYMBOLS } from './fx.js';
 import { recordStar, getDailyProgress, dailyGoal, getWeeklyProgress, weeklyGoal } from './challenge.js';
 import { getLeaderboard, submitEntry, sanitizeName, clearLeaderboard, MAX_NAME } from './leaderboard.js';
 import { startBgm, stopBgm, pauseBgm, resumeBgm, unlockBgm } from './bgm.js';
@@ -30,6 +30,15 @@ let touchKeys = [];       // visible touch key letters
 let gameRunning = false;
 let animFrame = null;
 let currentUnit = 'U1';   // tracked for completion detection (Phase 14)
+let correctSinceSpeed = 0; // counter for speed round trigger (Phase 16a)
+let speedRoundActive = false;
+let speedRoundTimer = null;
+let speedRoundEnd = 0;     // timestamp
+let speedRoundHits = 0;
+let speedRoundStreak = 0;
+let bonusCatchActive = false; // bonus catch mode (Phase 16e)
+let bonusCatchTimer = null;
+let bonusCatchEnd = 0;
 
 // Toast queue — prevents overwrite on rapid unlocks
 let toastTimer = null;
@@ -174,7 +183,11 @@ const ROBOT_PALETTES = {
 export function drawMascot() {
   const wrap = document.getElementById('js-mascot-wrap');
   if (!wrap) return;
-  const theme = loadSettings().theme || 'space';
+  // Phase 16f — honor user-chosen mascot palette (or 'auto' = follow theme)
+  const settings = loadSettings();
+  const theme = (settings.mascotTheme && settings.mascotTheme !== 'auto')
+    ? settings.mascotTheme
+    : (settings.theme || 'space');
 
   const palettes = {
     space: { body: '#FFE4B5', accent: '#FF6B9D', cheek: '#FFB3C6', eye: '#1a1a3e' },
@@ -270,7 +283,12 @@ export function drawRobot(robotIdx = 0) {
 
   const theme = loadSettings().theme || 'space';
   const palettes = ROBOT_PALETTES[theme] || ROBOT_PALETTES.space;
-  const p = palettes[robotIdx % palettes.length];
+  // Phase 16f — honor user-chosen robot palette from settings.
+  // (Milestone unlocks still trigger showRobotUnlock notifications;
+  // palette index is purely cosmetic and always honors the user's pick.)
+  const settings = loadSettings();
+  const userPick = typeof settings.robotColor === 'number' ? settings.robotColor : 0;
+  const p = palettes[userPick % palettes.length];
 
   robotWrap.innerHTML = `
     <svg viewBox="0 0 160 180" width="160" height="180" aria-hidden="true"
@@ -551,7 +569,11 @@ function startFall(onArrive) {
     return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
   });
 
+  // Pick random fall pattern (Phase 16c): straight 60% / zigzag 25% / spiral 15%
+  const roll = Math.random();
+  const pattern = roll < 0.6 ? 'straight' : roll < 0.85 ? 'zigzag' : 'spiral';
   const startMs = performance.now();
+  const baseWidth = Math.min(window.innerWidth * 0.35, 200);
 
   function step(now) {
     if (!gameRunning) return;
@@ -564,7 +586,17 @@ function startFall(onArrive) {
     const progress = Math.min(elapsed / duration, 1);
     const dy = maxFall * progress;
 
-    letterEl.style.transform = `translateY(${dy}px)`;
+    // Apply pattern-specific x-offset
+    let dx = 0;
+    if (pattern === 'zigzag') {
+      // 2 oscillations across the fall
+      dx = Math.sin(progress * Math.PI * 4) * baseWidth * 0.15;
+    } else if (pattern === 'spiral') {
+      // Circle x-position slowly
+      dx = Math.cos(progress * Math.PI * 3) * baseWidth * 0.18;
+    }
+
+    letterEl.style.transform = `translate(${dx}px, ${dy}px)`;
 
     if (progress < 1) {
       animFrame = requestAnimationFrame(step);
@@ -685,6 +717,19 @@ export function handleKey(pressed) {
     // Daily challenge tracking (Phase 12b)
     const challenge = recordStar();
     updateDailyHint();  // refresh UI after recordStar increments
+
+    // Phase 16a — Speed round: every SPEED_ROUND_TRIGGER correct answers
+    if (speedRoundActive) {
+      speedRoundHits++;
+      speedRoundStreak++;
+      const hits = document.getElementById('js-speed-hits');
+      if (hits) hits.textContent = speedRoundHits;
+    } else {
+      correctSinceSpeed++;
+      if (correctSinceSpeed >= SPEED_ROUND_TRIGGER) {
+        startSpeedRound();
+      }
+    }
     if (challenge.dailyMilestone) {
       const pct = Math.round(challenge.dailyMilestone * 100);
       const lang = loadSettings().lang || 'zh';
@@ -771,6 +816,9 @@ export function handleKey(pressed) {
     // Praise TTS (only on streak >= 1 to avoid spamming every letter)
     if (settings.voice && streak >= 1) {
       speakPraise();
+      // Phase 16b — Contextual letter-symbol dialogue
+      // (Every 3rd correct to avoid TTS spam, alongside phonetic pron)
+      if (streak % 3 === 0) speakContextual(currentLetter);
       // Phonetic pronunciation (English only — bilingual stays clean)
       if (settings.lang === 'en') speakLetterSay(currentLetter);
     }
@@ -786,6 +834,7 @@ export function handleKey(pressed) {
     recordAttempt(currentLetter.toUpperCase(), false);
     shakeLetter();
     flashWrongKey(pressed);  // Phase 12c — per-key shake
+    spawnWrongGhost(pressed);  // Phase 16d — wrong-letter ghost effect
     mascotReact('sad');
     haptic('medium');
     if (settings.soundFx) playWrong();
@@ -817,6 +866,200 @@ function speakLetterSay(letter) {
     u.volume = 0.85;
     window.speechSynthesis.speak(u);
   }, 600);
+}
+
+// ── Speed round (Phase 16a) ─────────────────────────────────────────────────
+const SPEED_ROUND_DURATION_MS = 5000;
+const SPEED_ROUND_TRIGGER = 10;  // every N correct answers
+
+export function startSpeedRound() {
+  if (speedRoundActive) return;
+  speedRoundActive = true;
+  speedRoundHits = 0;
+  speedRoundStreak = 0;
+  speedRoundEnd = Date.now() + SPEED_ROUND_DURATION_MS;
+  correctSinceSpeed = 0;
+
+  // Banner UI
+  const banner = document.getElementById('js-speed-banner');
+  const timer = document.getElementById('js-speed-timer');
+  const hits = document.getElementById('js-speed-hits');
+  if (banner) {
+    banner.classList.add('visible');
+    const lang = loadSettings().lang;
+    const titleEl = banner.querySelector('.speed-title');
+    if (titleEl) titleEl.textContent = (lang === 'zh' ? '⚡ 限時挑戰 ⚡' : '⚡ SPEED ROUND ⚡');
+  }
+  if (timer) timer.textContent = '5.0';
+  if (hits) hits.textContent = '0';
+
+  // Countdown updater
+  if (speedRoundTimer) clearInterval(speedRoundTimer);
+  speedRoundTimer = setInterval(() => {
+    const remaining = Math.max(0, speedRoundEnd - Date.now()) / 1000;
+    if (timer) timer.textContent = remaining.toFixed(1);
+    if (Date.now() >= speedRoundEnd) {
+      endSpeedRound();
+    }
+  }, 100);
+}
+
+function endSpeedRound() {
+  if (speedRoundTimer) clearInterval(speedRoundTimer);
+  speedRoundTimer = null;
+  speedRoundActive = false;
+  const banner = document.getElementById('js-speed-banner');
+  if (banner) banner.classList.remove('visible');
+
+  // Award bonus stars
+  const bonus = speedRoundHits;
+  if (bonus > 0) {
+    stars += bonus;
+    updateStars(stars);
+    const lang = loadSettings().lang;
+    const phrase = lang === 'zh'
+      ? `獎勵 +${bonus} ⭐！`
+      : `Bonus +${bonus} ⭐!`;
+    const toast = document.getElementById('js-toast');
+    const title = document.getElementById('js-toast-title');
+    const body = document.getElementById('js-toast-body');
+    if (toast && title && body) {
+      title.textContent = lang === 'zh' ? '⚡ 限時完成！' : '⚡ Speed done!';
+      body.textContent = phrase;
+      toast.classList.remove('visible');
+      void toast.offsetWidth;
+      toast.classList.add('visible');
+      setTimeout(() => toast.classList.remove('visible'), 2500);
+    }
+    if (bonus >= 3) megaFireworks({ theme: loadSettings().theme || 'space' });
+  }
+
+  // Phase 16e — Bonus Catch: spawn a falling star for the student to tap
+  if (bonus >= 2 && !bonusCatchActive) {
+    setTimeout(() => startBonusCatch(), 600);
+  }
+}
+
+// ── Bonus Catch (Phase 16e) — falling star student taps to catch ───────────
+let bonusCatchKeyListener = null;
+const BONUS_CATCH_DURATION_MS = 3000;
+const BONUS_CATCH_STARS = 5;
+
+function startBonusCatch() {
+  if (bonusCatchActive) return;
+  if (loadSettings().reduceMotion) return; // a11y: skip motion-heavy mini-game
+
+  const star = document.getElementById('js-bonus-star');
+  if (!star) return;
+
+  bonusCatchActive = true;
+  bonusCatchEnd = Date.now() + BONUS_CATCH_DURATION_MS;
+
+  // Random horizontal lane (avoid edges so the star is reachable)
+  const lane = 0.15 + Math.random() * 0.7; // 15%–85%
+  const startLeft = window.innerWidth * lane;
+  const endTop = window.innerHeight - 120;
+
+  star.style.left = startLeft + 'px';
+  star.style.transition = 'none';
+  star.style.top = '-60px';
+  star.classList.remove('caught', 'missed');
+  // Force reflow before adding visible/falling so transitions take effect
+  void star.offsetWidth;
+
+  star.classList.add('visible', 'falling');
+  star.style.transition = `top ${BONUS_CATCH_DURATION_MS}ms cubic-bezier(0.55, 0.05, 0.85, 0.45)`;
+  star.style.top = endTop + 'px';
+
+  // Catch handler — one-shot pointerdown anywhere on screen
+  const onPointer = (e) => {
+    if (!bonusCatchActive) return;
+    // Ignore taps that originate on a settings/keyboard button (their own
+    // click handler will still fire — we only consume the *catch* state).
+    endBonusCatch(true);
+    document.removeEventListener('pointerdown', onPointer, true);
+  };
+  document.addEventListener('pointerdown', onPointer, true);
+  bonusCatchKeyListener = onPointer;
+
+  // Miss timer — fires if not caught in time
+  bonusCatchTimer = setTimeout(() => {
+    endBonusCatch(false);
+    document.removeEventListener('pointerdown', onPointer, true);
+  }, BONUS_CATCH_DURATION_MS + 100);
+}
+
+function endBonusCatch(caught) {
+  if (!bonusCatchActive) return;
+  bonusCatchActive = false;
+  if (bonusCatchTimer) { clearTimeout(bonusCatchTimer); bonusCatchTimer = null; }
+
+  const star = document.getElementById('js-bonus-star');
+  if (star) {
+    star.classList.remove('falling');
+    star.style.transition = 'none';
+    if (caught) {
+      star.classList.add('caught');
+      // After catch animation, clean up
+      setTimeout(() => {
+        star.classList.remove('visible', 'caught');
+      }, 600);
+    } else {
+      star.classList.add('missed');
+      setTimeout(() => {
+        star.classList.remove('visible', 'missed');
+      }, 500);
+    }
+  }
+
+  if (bonusCatchKeyListener) {
+    try { document.removeEventListener('pointerdown', bonusCatchKeyListener, true); } catch {}
+    bonusCatchKeyListener = null;
+  }
+
+  if (caught) {
+    stars += BONUS_CATCH_STARS;
+    updateStars(stars);
+
+    // Toast
+    const lang = loadSettings().lang || 'zh';
+    const title = lang === 'zh' ? '⭐ 接到星星！' : '⭐ Bonus caught!';
+    const body  = lang === 'zh'
+      ? `+${BONUS_CATCH_STARS} ⭐ 獎勵！`
+      : `+${BONUS_CATCH_STARS} ⭐ bonus!`;
+    const toast = document.getElementById('js-toast');
+    const titleEl = document.getElementById('js-toast-title');
+    const bodyEl  = document.getElementById('js-toast-body');
+    if (toast && titleEl && bodyEl) {
+      titleEl.textContent = title;
+      bodyEl.textContent  = body;
+      toast.classList.remove('visible');
+      void toast.offsetWidth;
+      toast.classList.add('visible');
+      setTimeout(() => toast.classList.remove('visible'), 2200);
+    }
+
+    megaFireworks({ theme: loadSettings().theme || 'space' });
+    haptic('streak');
+    if (loadSettings().soundFx) playStreak(5);
+  }
+}
+
+// ── Contextual robot dialogues (Phase 16b) ──────────────────────────────────
+// Uses LETTER_SYMBOLS from fx.js + per-letter phrases from i18n.js
+function speakContextual(letter) {
+  if (!('speechSynthesis' in window)) return;
+  const lang = loadSettings().lang;
+  // Prefer i18n letterPhrases, fall back to "X is for SYMBOL Word!"
+  const phrase = i18n[lang]?.letterPhrases?.[letter] ||
+                 `${letter} is for ${LETTER_SYMBOLS[letter] || ''} ${letter}!`;
+  const u = new SpeechSynthesisUtterance(phrase);
+  u.lang = lang === 'zh' ? 'zh-HK' : 'en-US';
+  u.rate = lang === 'zh' ? 0.95 : 0.85;
+  u.volume = 0.9;
+  // Cancel previous to avoid pile-up
+  setTimeout(() => window.speechSynthesis.cancel(), 50);
+  setTimeout(() => window.speechSynthesis.speak(u), 80);
 }
 
 // ── Praise / nudge TTS ──────────────────────────────────────────────────────
@@ -960,6 +1203,20 @@ function flashWrongKey(letter) {
   setTimeout(() => btn.classList.remove('wrong-shake'), 400);
 }
 
+// Wrong-letter ghost (Phase 16d) — spawn ghost of wrong letter floating up
+function spawnWrongGhost(letter) {
+  const btn = document.querySelector(`.kb-key[data-letter="${letter}"]`);
+  if (!btn) return;
+  const r = btn.getBoundingClientRect();
+  const ghost = document.createElement('div');
+  ghost.className = 'wrong-ghost';
+  ghost.textContent = letter;
+  ghost.style.left = (r.left + r.width / 2) + 'px';
+  ghost.style.top  = (r.top + r.height / 2) + 'px';
+  document.body.appendChild(ghost);
+  setTimeout(() => ghost.remove(), 1400);
+}
+
 // Highlight the target key, dim all others
 export function highlightKey(letter) {
   const hint = document.getElementById('js-kb-hint');
@@ -1077,6 +1334,8 @@ export function openSettings() {
   panel.querySelector('#js-level-select').value = settings.level;
   panel.querySelector('#js-kb-mode-select').value = settings.kbMode || 'compact';
   panel.querySelector('#js-theme-select').value = settings.theme || 'space';
+  panel.querySelector('#js-robot-color-select').value = String(settings.robotColor ?? 0);
+  panel.querySelector('#js-mascot-theme-select').value = settings.mascotTheme || 'auto';
 
   panel.classList.add('visible');
 }
@@ -1103,8 +1362,10 @@ export function applySettings() {
   const level  = panel.querySelector('#js-level-select')?.value ?? 'L0';
   const kbMode = panel.querySelector('#js-kb-mode-select')?.value ?? 'compact';
   const theme  = panel.querySelector('#js-theme-select')?.value ?? 'space';
+  const robotColor = parseInt(panel.querySelector('#js-robot-color-select')?.value ?? '0', 10);
+  const mascotTheme = panel.querySelector('#js-mascot-theme-select')?.value ?? 'auto';
 
-  const next = { voice, soundFx: sfx, bgm, bgmTrack, speed, highContrast: hc, reduceMotion: motion, lang, currentUnit: unit, level, kbMode, theme };
+  const next = { voice, soundFx: sfx, bgm, bgmTrack, speed, highContrast: hc, reduceMotion: motion, lang, currentUnit: unit, level, kbMode, theme, robotColor, mascotTheme };
 
   document.body.classList.toggle('high-contrast', hc);
   applyTheme(theme);

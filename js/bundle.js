@@ -1,28 +1,174 @@
 (() => {
-  // js/settings.js
-  var DEFAULTS = {
-    voice: true,
-    // TTS on/off
-    soundFx: true,
-    // SFX chime / streak / unlock sounds
-    bgm: false,
-    // Background music (default OFF — SEN overstimulation safety)
-    bgmTrack: "space",
-    // 'space' | 'xylophone' | 'rain' — only used when bgm=true
-    theme: "space",
-    // 'space' | 'candy'
-    speed: "slow",
-    // 'verySlow' | 'slow' | 'medium'
-    highContrast: false,
-    reduceMotion: false,
-    lang: "zh",
-    // UI language: 'zh' | 'en'
-    currentUnit: "U1",
-    level: "L0",
-    // 'L0' | 'L1'
-    kbMode: "full"
-    // 'full' | 'compact' — full shows 26 QWERTY, compact shows only target letter
+  var __getOwnPropNames = Object.getOwnPropertyNames;
+  var __esm = (fn, res) => function __init() {
+    return fn && (res = (0, fn[__getOwnPropNames(fn)[0]])(fn = 0)), res;
   };
+  var __commonJS = (cb, mod) => function __require() {
+    return mod || (0, cb[__getOwnPropNames(cb)[0]])((mod = { exports: {} }).exports, mod), mod.exports;
+  };
+
+  // js/i18n.js
+  function getLang() {
+    return localStorage.getItem("ls-lang") || "zh";
+  }
+  function pickT(key) {
+    const lang = getLang();
+    const arr = i18n[lang]?.[key] ?? i18n["zh"][key];
+    if (!Array.isArray(arr) || arr.length === 0) return key;
+    return arr[Math.floor(Math.random() * arr.length)];
+  }
+  function setLang(lang) {
+    localStorage.setItem("ls-lang", lang);
+  }
+  var i18n;
+  var init_i18n = __esm({
+    "js/i18n.js"() {
+      i18n = {
+        en: {
+          score: "Score",
+          settings: "Settings",
+          unit: "Unit",
+          voice: "Voice",
+          soundFx: "Sound Effects",
+          bgm: "Background Music",
+          bgmOff: "Off",
+          bgmSpace: "Space",
+          bgmXylophone: "Xylophone",
+          bgmRain: "Rain",
+          on: "On",
+          off: "Off",
+          speed: "Speed",
+          verySlow: "Very Slow",
+          slow: "Slow",
+          medium: "Medium",
+          highContrast: "High Contrast",
+          reduceMotion: "Reduce Motion",
+          close: "Close",
+          start: "Start",
+          next: "Next",
+          mastered: "Mastered",
+          practice: "Practice",
+          newLetter: "New",
+          streak: "Streak",
+          theme: "Theme",
+          themeSpace: "Space",
+          themeCandy: "Candy",
+          themeOcean: "Ocean",
+          themeForest: "Forest",
+          robotUnlock: "New robot unlocked!",
+          // Praise phrases (random pick on correct)
+          praise: ["Great!", "Yes!", "Wonderful!", "Awesome!", "Nice!"],
+          // Wrong-answer gentle nudge (no fail language)
+          nudge: ["Try once more!", "Almost! Keep going!", "You can do it!"],
+          // Speed round (Phase 16a)
+          speedRoundTitle: "\u26A1 SPEED ROUND \u26A1",
+          speedRoundStart: "5s to score!",
+          speedRoundEnd: "Time! Bonus",
+          speedRoundBonus: "Bonus +{n} \u2B50",
+          // Contextual letter-symbol phrases (Phase 16b)
+          letterPhrases: {
+            A: "A is for \u2708\uFE0F Airplane!",
+            B: "B is for \u{1F3C0} Ball!",
+            C: "C is for \u{1F319} Crescent!",
+            D: "D is for \u{1F48E} Diamond!",
+            E: "E is for \u2B50 Star!",
+            F: "F is for \u{1F41F} Fish!",
+            G: "G is for \u{1F347} Grapes!",
+            H: "H is for \u2764\uFE0F Heart!",
+            I: "I is for \u{1F366} Ice cream!",
+            J: "J is for \u{1F9C3} Juice!",
+            K: "K is for \u{1F511} Key!",
+            L: "L is for \u{1F34B} Lemon!",
+            M: "M is for \u{1F30A} Wave!",
+            N: "N is for \u{1F319} Night!",
+            O: "O is for \u{1F34A} Orange!",
+            P: "P is for \u{1F355} Pizza!",
+            Q: "Q is for \u{1F451} Queen!",
+            R: "R is for \u{1F308} Rainbow!",
+            S: "S is for \u2600\uFE0F Sun!",
+            T: "T is for \u{1F333} Tree!",
+            U: "U is for \u2602\uFE0F Umbrella!",
+            V: "V is for \u{1F3BB} Violin!",
+            W: "W is for \u{1F40B} Whale!",
+            X: "X marks the spot!",
+            Y: "Y is for \u{1FA80} Yo-Yo!",
+            Z: "Z is for \u26A1 Lightning!"
+          }
+        },
+        zh: {
+          score: "\u5206\u6578",
+          settings: "\u8A2D\u5B9A",
+          unit: "\u55AE\u5143",
+          voice: "\u8A9E\u97F3",
+          soundFx: "\u97F3\u6548",
+          bgm: "\u80CC\u666F\u97F3\u6A02",
+          bgmOff: "\u95DC",
+          bgmSpace: "\u592A\u7A7A",
+          bgmXylophone: "\u6728\u7434",
+          bgmRain: "\u96E8\u8072",
+          on: "\u958B",
+          off: "\u95DC",
+          speed: "\u901F\u5EA6",
+          verySlow: "\u5F88\u6162",
+          slow: "\u6162",
+          medium: "\u4E2D",
+          highContrast: "\u9AD8\u5C0D\u6BD4",
+          reduceMotion: "\u6E1B\u52D5\u756B",
+          close: "\u95DC",
+          start: "\u958B\u59CB",
+          next: "\u4E0B\u4E00\u984C",
+          mastered: "\u5DF2\u638C\u63E1",
+          practice: "\u7DF4\u7FD2\u4E2D",
+          newLetter: "\u65B0\u5B78",
+          streak: "\u9023\u5C0D",
+          theme: "\u4E3B\u984C",
+          themeSpace: "\u592A\u7A7A",
+          themeCandy: "\u7CD6\u679C",
+          themeOcean: "\u6D77\u6D0B",
+          themeForest: "\u68EE\u6797",
+          robotUnlock: "\u65B0\u6A5F\u68B0\u4EBA\u89E3\u9396\u4E86\uFF01",
+          praise: ["\u505A\u5F97\u597D\uFF01", "\u5F88\u597D\uFF01", "\u592A\u68D2\u4E86\uFF01", "\u597D\u53FB\uFF01", "\u7E7C\u7E8C\uFF01"],
+          nudge: ["\u518D\u8A66\u4E00\u6B21\uFF01", "\u5DEE\u5C11\u5C11\uFF01", "\u52A0\u6CB9\uFF01"],
+          // Speed round (Phase 16a)
+          speedRoundTitle: "\u26A1 \u9650\u6642\u6311\u6230 \u26A1",
+          speedRoundStart: "5 \u79D2\u5FEB\u7B54\uFF01",
+          speedRoundEnd: "\u6642\u9593\u5230\uFF01\u734E\u52F5",
+          speedRoundBonus: "\u734E\u52F5 +{n} \u2B50",
+          // Contextual letter-symbol phrases (Phase 16b)
+          letterPhrases: {
+            A: "A \u4FC2 \u2708\uFE0F \u98DB\u6A5F\uFF01",
+            B: "B \u4FC2 \u{1F3C0} \u6CE2\uFF01",
+            C: "C \u4FC2 \u{1F319} \u6708\u4EAE\uFF01",
+            D: "D \u4FC2 \u{1F48E} \u947D\u77F3\uFF01",
+            E: "E \u4FC2 \u2B50 \u661F\u661F\uFF01",
+            F: "F \u4FC2 \u{1F41F} \u9B5A\uFF01",
+            G: "G \u4FC2 \u{1F347} \u63D0\u5B50\uFF01",
+            H: "H \u4FC2 \u2764\uFE0F \u611B\u5FC3\uFF01",
+            I: "I \u4FC2 \u{1F366} \u96EA\u7CD5\uFF01",
+            J: "J \u4FC2 \u{1F9C3} \u679C\u6C41\uFF01",
+            K: "K \u4FC2 \u{1F511} \u9396\u5319\uFF01",
+            L: "L \u4FC2 \u{1F34B} \u6AB8\u6AAC\uFF01",
+            M: "M \u4FC2 \u{1F30A} \u6CE2\u6D6A\uFF01",
+            N: "N \u4FC2 \u{1F319} \u591C\u665A\uFF01",
+            O: "O \u4FC2 \u{1F34A} \u6A59\uFF01",
+            P: "P \u4FC2 \u{1F355} \u8584\u9905\uFF01",
+            Q: "Q \u4FC2 \u{1F451} \u7687\u540E\uFF01",
+            R: "R \u4FC2 \u{1F308} \u5F69\u8679\uFF01",
+            S: "S \u4FC2 \u2600\uFE0F \u592A\u967D\uFF01",
+            T: "T \u4FC2 \u{1F333} \u5927\u6A39\uFF01",
+            U: "U \u4FC2 \u2602\uFE0F \u96E8\u906E\uFF01",
+            V: "V \u4FC2 \u{1F3BB} \u5C0F\u63D0\u7434\uFF01",
+            W: "W \u4FC2 \u{1F40B} \u9BE8\u9B5A\uFF01",
+            X: "X \u6A19\u8A18\u500B\u4F4D\u7F6E\uFF01",
+            Y: "Y \u4FC2 \u{1FA80} \u6E9C\u6E9C\u7403\uFF01",
+            Z: "Z \u4FC2 \u26A1 \u9583\u96FB\uFF01"
+          }
+        }
+      };
+    }
+  });
+
+  // js/settings.js
   function loadSettings() {
     try {
       const raw = localStorage.getItem("ls-settings");
@@ -44,9 +190,87 @@
     const map = { verySlow: 12, slow: 8, medium: 5 };
     return map[getSetting("speed")] ?? 8;
   }
+  var DEFAULTS;
+  var init_settings = __esm({
+    "js/settings.js"() {
+      DEFAULTS = {
+        voice: true,
+        // TTS on/off
+        soundFx: true,
+        // SFX chime / streak / unlock sounds
+        bgm: false,
+        // Background music (default OFF — SEN overstimulation safety)
+        bgmTrack: "space",
+        // 'space' | 'xylophone' | 'rain' — only used when bgm=true
+        theme: "space",
+        // 'space' | 'candy' | 'ocean' | 'forest'
+        speed: "slow",
+        // 'verySlow' | 'slow' | 'medium'
+        highContrast: false,
+        reduceMotion: false,
+        lang: "zh",
+        // UI language: 'zh' | 'en'
+        currentUnit: "U1",
+        level: "L0",
+        // 'L0' | 'L1'
+        kbMode: "full",
+        // 'full' | 'compact' — full shows 26 QWERTY, compact shows only target letter
+        robotColor: 0,
+        // 0/1/2 — robot palette index (Phase 16f)
+        mascotTheme: "auto"
+        // 'auto' | 'space' | 'candy' | 'ocean' | 'forest' (Phase 16f)
+      };
+    }
+  });
+
+  // js/curriculum.js
+  function currentRobotIndex(masteredCount2) {
+    let idx = 0;
+    for (const m of ROBOT_MILESTONES) {
+      if (masteredCount2 >= m) idx++;
+    }
+    return idx;
+  }
+  function activeLetters(unitKey) {
+    const unit = UNITS[unitKey];
+    if (!unit) return ["A", "B", "C"];
+    if (unit.allMastered) {
+      return "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+    }
+    const all = [...unit.newLetters];
+    if (unit.reviewLetters.length && all.length < 3) {
+      all.push(...unit.reviewLetters.slice(0, 3 - all.length));
+    }
+    return all.slice(0, 6);
+  }
+  function isUnitComplete(prog, unitKey) {
+    const unit = UNITS[unitKey];
+    if (!unit) return false;
+    const letters = [...unit.newLetters];
+    return letters.length > 0 && letters.every((l) => prog[l]?.status === "mastered");
+  }
+  var UNITS, ROBOT_MILESTONES, TOTAL_ROBOTS;
+  var init_curriculum = __esm({
+    "js/curriculum.js"() {
+      UNITS = {
+        U1: { newLetters: ["A", "B", "C"], reviewLetters: [], step: 1 },
+        U2: { newLetters: ["E", "F", "S"], reviewLetters: ["A"], step: 1 },
+        U3: { newLetters: ["I", "O", "T"], reviewLetters: ["B"], step: 1 },
+        U4: { newLetters: ["M", "P", "H"], reviewLetters: ["E"], step: 1 },
+        U5: { newLetters: ["D", "G", "U"], reviewLetters: ["A"], step: 1 },
+        U6: { newLetters: ["L", "R", "N"], reviewLetters: ["T"], step: 1 },
+        U7: { newLetters: ["J", "K", "W"], reviewLetters: ["S"], step: 1 },
+        U8: { newLetters: ["V", "X", "Q"], reviewLetters: ["P"], step: 1 },
+        U9: { newLetters: ["Y", "Z"], reviewLetters: [], step: 1 },
+        U10: { newLetters: [], reviewLetters: [], step: 1, allMastered: true }
+        // mixed review of all 26
+      };
+      ROBOT_MILESTONES = [9, 18, 26];
+      TOTAL_ROBOTS = ROBOT_MILESTONES.length + 1;
+    }
+  });
 
   // js/progress.js
-  var STORAGE_KEY = "ls-progress";
   function freshProgress() {
     return {
       A: { status: "new", seen: 0, firstTryOk: 0, recent: [] },
@@ -110,140 +334,14 @@
   function masteredCount(prog) {
     return Object.values(prog).filter((e) => e.status === "mastered").length;
   }
-
-  // js/curriculum.js
-  var UNITS = {
-    U1: { newLetters: ["A", "B", "C"], reviewLetters: [], step: 1 },
-    U2: { newLetters: ["E", "F", "S"], reviewLetters: ["A"], step: 1 },
-    U3: { newLetters: ["I", "O", "T"], reviewLetters: ["B"], step: 1 },
-    U4: { newLetters: ["M", "P", "H"], reviewLetters: ["E"], step: 1 },
-    U5: { newLetters: ["D", "G", "U"], reviewLetters: ["A"], step: 1 },
-    U6: { newLetters: ["L", "R", "N"], reviewLetters: ["T"], step: 1 },
-    U7: { newLetters: ["J", "K", "W"], reviewLetters: ["S"], step: 1 },
-    U8: { newLetters: ["V", "X", "Q"], reviewLetters: ["P"], step: 1 },
-    U9: { newLetters: ["Y", "Z"], reviewLetters: [], step: 1 },
-    U10: { newLetters: [], reviewLetters: [], step: 1, allMastered: true }
-    // mixed review of all 26
-  };
-  var ROBOT_MILESTONES = [9, 18, 26];
-  var TOTAL_ROBOTS = ROBOT_MILESTONES.length + 1;
-  function currentRobotIndex(masteredCount2) {
-    let idx = 0;
-    for (const m of ROBOT_MILESTONES) {
-      if (masteredCount2 >= m) idx++;
+  var STORAGE_KEY;
+  var init_progress = __esm({
+    "js/progress.js"() {
+      STORAGE_KEY = "ls-progress";
     }
-    return idx;
-  }
-  function activeLetters(unitKey) {
-    const unit = UNITS[unitKey];
-    if (!unit) return ["A", "B", "C"];
-    if (unit.allMastered) {
-      return "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
-    }
-    const all = [...unit.newLetters];
-    if (unit.reviewLetters.length && all.length < 3) {
-      all.push(...unit.reviewLetters.slice(0, 3 - all.length));
-    }
-    return all.slice(0, 6);
-  }
-  function isUnitComplete(prog, unitKey) {
-    const unit = UNITS[unitKey];
-    if (!unit) return false;
-    const letters = [...unit.newLetters];
-    return letters.length > 0 && letters.every((l) => prog[l]?.status === "mastered");
-  }
-
-  // js/i18n.js
-  var i18n = {
-    en: {
-      score: "Score",
-      settings: "Settings",
-      unit: "Unit",
-      voice: "Voice",
-      soundFx: "Sound Effects",
-      bgm: "Background Music",
-      bgmOff: "Off",
-      bgmSpace: "Space",
-      bgmXylophone: "Xylophone",
-      bgmRain: "Rain",
-      on: "On",
-      off: "Off",
-      speed: "Speed",
-      verySlow: "Very Slow",
-      slow: "Slow",
-      medium: "Medium",
-      highContrast: "High Contrast",
-      reduceMotion: "Reduce Motion",
-      close: "Close",
-      start: "Start",
-      next: "Next",
-      mastered: "Mastered",
-      practice: "Practice",
-      newLetter: "New",
-      streak: "Streak",
-      theme: "Theme",
-      themeSpace: "Space",
-      themeCandy: "Candy",
-      themeOcean: "Ocean",
-      themeForest: "Forest",
-      robotUnlock: "New robot unlocked!",
-      // Praise phrases (random pick on correct)
-      praise: ["Great!", "Yes!", "Wonderful!", "Awesome!", "Nice!"],
-      // Wrong-answer gentle nudge (no fail language)
-      nudge: ["Try once more!", "Almost! Keep going!", "You can do it!"]
-    },
-    zh: {
-      score: "\u5206\u6578",
-      settings: "\u8A2D\u5B9A",
-      unit: "\u55AE\u5143",
-      voice: "\u8A9E\u97F3",
-      soundFx: "\u97F3\u6548",
-      bgm: "\u80CC\u666F\u97F3\u6A02",
-      bgmOff: "\u95DC",
-      bgmSpace: "\u592A\u7A7A",
-      bgmXylophone: "\u6728\u7434",
-      bgmRain: "\u96E8\u8072",
-      on: "\u958B",
-      off: "\u95DC",
-      speed: "\u901F\u5EA6",
-      verySlow: "\u5F88\u6162",
-      slow: "\u6162",
-      medium: "\u4E2D",
-      highContrast: "\u9AD8\u5C0D\u6BD4",
-      reduceMotion: "\u6E1B\u52D5\u756B",
-      close: "\u95DC",
-      start: "\u958B\u59CB",
-      next: "\u4E0B\u4E00\u984C",
-      mastered: "\u5DF2\u638C\u63E1",
-      practice: "\u7DF4\u7FD2\u4E2D",
-      newLetter: "\u65B0\u5B78",
-      streak: "\u9023\u5C0D",
-      theme: "\u4E3B\u984C",
-      themeSpace: "\u592A\u7A7A",
-      themeCandy: "\u7CD6\u679C",
-      themeOcean: "\u6D77\u6D0B",
-      themeForest: "\u68EE\u6797",
-      robotUnlock: "\u65B0\u6A5F\u68B0\u4EBA\u89E3\u9396\u4E86\uFF01",
-      praise: ["\u505A\u5F97\u597D\uFF01", "\u5F88\u597D\uFF01", "\u592A\u68D2\u4E86\uFF01", "\u597D\u53FB\uFF01", "\u7E7C\u7E8C\uFF01"],
-      nudge: ["\u518D\u8A66\u4E00\u6B21\uFF01", "\u5DEE\u5C11\u5C11\uFF01", "\u52A0\u6CB9\uFF01"]
-    }
-  };
-  function getLang() {
-    return localStorage.getItem("ls-lang") || "zh";
-  }
-  function pickT(key) {
-    const lang = getLang();
-    const arr = i18n[lang]?.[key] ?? i18n["zh"][key];
-    if (!Array.isArray(arr) || arr.length === 0) return key;
-    return arr[Math.floor(Math.random() * arr.length)];
-  }
-  function setLang(lang) {
-    localStorage.setItem("ls-lang", lang);
-  }
+  });
 
   // js/sfx.js
-  var ctx = null;
-  var masterGain = null;
   function ensureCtx() {
     if (ctx) return ctx;
     const AC = window.AudioContext || window.webkitAudioContext;
@@ -330,64 +428,15 @@
     } catch {
     }
   }
+  var ctx, masterGain;
+  var init_sfx = __esm({
+    "js/sfx.js"() {
+      ctx = null;
+      masterGain = null;
+    }
+  });
 
   // js/fx.js
-  var flashTimer = null;
-  var trailTimer = null;
-  var LETTER_SYMBOLS = {
-    A: "\u2708\uFE0F",
-    // Airplane
-    B: "\u{1F3C0}",
-    // Ball
-    C: "\u{1F319}",
-    // Crescent moon
-    D: "\u{1F48E}",
-    // Diamond
-    E: "\u2B50",
-    // Star
-    F: "\u{1F41F}",
-    // Fish
-    G: "\u{1F347}",
-    // Grapes
-    H: "\u2764\uFE0F",
-    // Heart
-    I: "\u{1F366}",
-    // Ice cream
-    J: "\u{1F9C3}",
-    // Juice
-    K: "\u{1F511}",
-    // Key
-    L: "\u{1F34B}",
-    // Lemon
-    M: "\u{1F30A}",
-    // Wave
-    N: "\u{1F319}",
-    // Night
-    O: "\u{1F34A}",
-    // Orange
-    P: "\u{1F355}",
-    // Pizza
-    Q: "\u{1F451}",
-    // Queen
-    R: "\u{1F308}",
-    // Rainbow
-    S: "\u2600\uFE0F",
-    // Sun
-    T: "\u{1F333}",
-    // Tree
-    U: "\u2602\uFE0F",
-    // Umbrella
-    V: "\u{1F3BB}",
-    // Violin
-    W: "\u{1F40B}",
-    // Whale
-    X: "\u274C",
-    // X mark
-    Y: "\u{1FA80}",
-    // Yo-yo
-    Z: "\u26A1"
-    // Lightning (zap)
-  };
   function confettiBurst(originX, originY, opts = {}) {
     const container = document.getElementById("js-confetti-layer");
     if (!container) return;
@@ -605,117 +654,69 @@
       trailTimer = null;
     }
   }
-
-  // js/challenge.js
-  var DAILY_GOAL = 20;
-  function todayKey() {
-    const d = /* @__PURE__ */ new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-  }
-  function weekKey() {
-    const d = /* @__PURE__ */ new Date();
-    const target = new Date(d.valueOf());
-    const dayNr = (d.getDay() + 6) % 7;
-    target.setDate(target.getDate() - dayNr + 3);
-    const firstThursday = target.valueOf();
-    target.setMonth(0, 1);
-    if (target.getDay() !== 4) {
-      target.setMonth(0, 1 + (4 - target.getDay() + 7) % 7);
+  var flashTimer, trailTimer, LETTER_SYMBOLS;
+  var init_fx = __esm({
+    "js/fx.js"() {
+      flashTimer = null;
+      trailTimer = null;
+      LETTER_SYMBOLS = {
+        A: "\u2708\uFE0F",
+        // Airplane
+        B: "\u{1F3C0}",
+        // Ball
+        C: "\u{1F319}",
+        // Crescent moon
+        D: "\u{1F48E}",
+        // Diamond
+        E: "\u2B50",
+        // Star
+        F: "\u{1F41F}",
+        // Fish
+        G: "\u{1F347}",
+        // Grapes
+        H: "\u2764\uFE0F",
+        // Heart
+        I: "\u{1F366}",
+        // Ice cream
+        J: "\u{1F9C3}",
+        // Juice
+        K: "\u{1F511}",
+        // Key
+        L: "\u{1F34B}",
+        // Lemon
+        M: "\u{1F30A}",
+        // Wave
+        N: "\u{1F319}",
+        // Night
+        O: "\u{1F34A}",
+        // Orange
+        P: "\u{1F355}",
+        // Pizza
+        Q: "\u{1F451}",
+        // Queen
+        R: "\u{1F308}",
+        // Rainbow
+        S: "\u2600\uFE0F",
+        // Sun
+        T: "\u{1F333}",
+        // Tree
+        U: "\u2602\uFE0F",
+        // Umbrella
+        V: "\u{1F3BB}",
+        // Violin
+        W: "\u{1F40B}",
+        // Whale
+        X: "\u274C",
+        // X mark
+        Y: "\u{1FA80}",
+        // Yo-yo
+        Z: "\u26A1"
+        // Lightning (zap)
+      };
     }
-    const weekNum = 1 + Math.ceil((firstThursday - target) / 6048e5);
-    return `${d.getFullYear()}-W${String(weekNum).padStart(2, "0")}`;
-  }
-  function readBucket(key) {
-    try {
-      const raw = localStorage.getItem(key);
-      return raw ? JSON.parse(raw) : { stars: 0, milestonesFired: [] };
-    } catch {
-      return { stars: 0, milestonesFired: [] };
-    }
-  }
-  function writeBucket(key, bucket) {
-    try {
-      localStorage.setItem(key, JSON.stringify(bucket));
-    } catch {
-    }
-  }
-  function getDailyProgress() {
-    return readBucket("ls-daily-" + todayKey());
-  }
-  function getWeeklyProgress() {
-    return readBucket("ls-weekly-" + weekKey());
-  }
-  function recordStar() {
-    const daily = getDailyProgress();
-    daily.stars++;
-    writeBucket("ls-daily-" + todayKey(), daily);
-    const weekly = getWeeklyProgress();
-    weekly.stars++;
-    writeBucket("ls-weekly-" + weekKey(), weekly);
-    const milestones = [0.25, 0.5, 0.75, 1];
-    const prevRatio = (daily.stars - 1) / DAILY_GOAL;
-    const newRatio = daily.stars / DAILY_GOAL;
-    for (const m of milestones) {
-      if (prevRatio < m && newRatio >= m && !daily.milestonesFired.includes(m)) {
-        daily.milestonesFired.push(m);
-        writeBucket("ls-daily-" + todayKey(), daily);
-        return { dailyMilestone: m, daily: daily.stars, weekly: weekly.stars };
-      }
-    }
-    return { daily: daily.stars, weekly: weekly.stars };
-  }
-  function dailyGoal() {
-    return DAILY_GOAL;
-  }
-
-  // js/leaderboard.js
-  var STORAGE_KEY2 = "ls-leaderboard";
-  var MAX_ENTRIES = 10;
-  var MAX_NAME_LEN = 12;
-  function readAll() {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY2);
-      return raw ? JSON.parse(raw) : [];
-    } catch {
-      return [];
-    }
-  }
-  function writeAll(list) {
-    try {
-      localStorage.setItem(STORAGE_KEY2, JSON.stringify(list));
-    } catch {
-    }
-  }
-  function getLeaderboard() {
-    return readAll().slice().sort((a, b) => b.score - a.score || a.completedAt - b.completedAt).slice(0, MAX_ENTRIES);
-  }
-  function submitEntry({ name, score: score2, unit }) {
-    const cleanName = String(name || "").trim().slice(0, MAX_NAME_LEN);
-    if (!cleanName) return null;
-    const all = readAll();
-    const entry = {
-      name: cleanName,
-      score: Math.max(0, Number(score2) || 0),
-      unit: String(unit || ""),
-      completedAt: Date.now()
-    };
-    all.push(entry);
-    writeAll(all.slice(-50));
-    return entry;
-  }
-  function sanitizeName(raw) {
-    return String(raw || "").trim().replace(/[^\p{L}\p{N}\s]/gu, "").slice(0, MAX_NAME_LEN);
-  }
-  var MAX_NAME = MAX_NAME_LEN;
+  });
 
   // js/bgm.js
-  var bgmCtx = null;
-  var bgmMaster = null;
-  var activeNodes = [];
-  var loopTimers = [];
-  var isPlaying = false;
-  var currentTrack = null;
-  var BASE_VOL = 0.18;
   function ensureCtx2() {
     if (bgmCtx) return bgmCtx;
     const AC = window.AudioContext || window.webkitAudioContext;
@@ -770,19 +771,6 @@
     isPlaying = false;
     currentTrack = null;
     setTimeout(tearDown, 500);
-  }
-  function pauseBgm() {
-    if (!bgmCtx || !bgmMaster || !isPlaying) return;
-    bgmMaster.gain.cancelScheduledValues(bgmCtx.currentTime);
-    bgmMaster.gain.setValueAtTime(bgmMaster.gain.value, bgmCtx.currentTime);
-    bgmMaster.gain.linearRampToValueAtTime(0, bgmCtx.currentTime + 0.25);
-  }
-  function resumeBgm() {
-    if (!bgmCtx || !bgmMaster || !isPlaying || !currentTrack) return;
-    if (bgmCtx.state === "suspended") bgmCtx.resume();
-    bgmMaster.gain.cancelScheduledValues(bgmCtx.currentTime);
-    bgmMaster.gain.setValueAtTime(bgmMaster.gain.value, bgmCtx.currentTime);
-    bgmMaster.gain.linearRampToValueAtTime(BASE_VOL, bgmCtx.currentTime + 0.4);
   }
   function startSpace() {
     const t2 = bgmCtx.currentTime;
@@ -880,48 +868,132 @@
     lfo.start(t2);
     activeNodes.push(source, bandpass, g, lfo, lfoGain);
   }
+  var bgmCtx, bgmMaster, activeNodes, loopTimers, isPlaying, currentTrack, BASE_VOL;
+  var init_bgm = __esm({
+    "js/bgm.js"() {
+      bgmCtx = null;
+      bgmMaster = null;
+      activeNodes = [];
+      loopTimers = [];
+      isPlaying = false;
+      currentTrack = null;
+      BASE_VOL = 0.18;
+    }
+  });
+
+  // js/challenge.js
+  function todayKey() {
+    const d = /* @__PURE__ */ new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  }
+  function weekKey() {
+    const d = /* @__PURE__ */ new Date();
+    const target = new Date(d.valueOf());
+    const dayNr = (d.getDay() + 6) % 7;
+    target.setDate(target.getDate() - dayNr + 3);
+    const firstThursday = target.valueOf();
+    target.setMonth(0, 1);
+    if (target.getDay() !== 4) {
+      target.setMonth(0, 1 + (4 - target.getDay() + 7) % 7);
+    }
+    const weekNum = 1 + Math.ceil((firstThursday - target) / 6048e5);
+    return `${d.getFullYear()}-W${String(weekNum).padStart(2, "0")}`;
+  }
+  function readBucket(key) {
+    try {
+      const raw = localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : { stars: 0, milestonesFired: [] };
+    } catch {
+      return { stars: 0, milestonesFired: [] };
+    }
+  }
+  function writeBucket(key, bucket) {
+    try {
+      localStorage.setItem(key, JSON.stringify(bucket));
+    } catch {
+    }
+  }
+  function getDailyProgress() {
+    return readBucket("ls-daily-" + todayKey());
+  }
+  function getWeeklyProgress() {
+    return readBucket("ls-weekly-" + weekKey());
+  }
+  function recordStar() {
+    const daily = getDailyProgress();
+    daily.stars++;
+    writeBucket("ls-daily-" + todayKey(), daily);
+    const weekly = getWeeklyProgress();
+    weekly.stars++;
+    writeBucket("ls-weekly-" + weekKey(), weekly);
+    const milestones = [0.25, 0.5, 0.75, 1];
+    const prevRatio = (daily.stars - 1) / DAILY_GOAL;
+    const newRatio = daily.stars / DAILY_GOAL;
+    for (const m of milestones) {
+      if (prevRatio < m && newRatio >= m && !daily.milestonesFired.includes(m)) {
+        daily.milestonesFired.push(m);
+        writeBucket("ls-daily-" + todayKey(), daily);
+        return { dailyMilestone: m, daily: daily.stars, weekly: weekly.stars };
+      }
+    }
+    return { daily: daily.stars, weekly: weekly.stars };
+  }
+  function dailyGoal() {
+    return DAILY_GOAL;
+  }
+  var DAILY_GOAL;
+  var init_challenge = __esm({
+    "js/challenge.js"() {
+      DAILY_GOAL = 20;
+    }
+  });
+
+  // js/leaderboard.js
+  function readAll() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY2);
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  }
+  function writeAll(list) {
+    try {
+      localStorage.setItem(STORAGE_KEY2, JSON.stringify(list));
+    } catch {
+    }
+  }
+  function getLeaderboard() {
+    return readAll().slice().sort((a, b) => b.score - a.score || a.completedAt - b.completedAt).slice(0, MAX_ENTRIES);
+  }
+  function submitEntry({ name, score: score2, unit }) {
+    const cleanName = String(name || "").trim().slice(0, MAX_NAME_LEN);
+    if (!cleanName) return null;
+    const all = readAll();
+    const entry = {
+      name: cleanName,
+      score: Math.max(0, Number(score2) || 0),
+      unit: String(unit || ""),
+      completedAt: Date.now()
+    };
+    all.push(entry);
+    writeAll(all.slice(-50));
+    return entry;
+  }
+  function sanitizeName(raw) {
+    return String(raw || "").trim().replace(/[^\p{L}\p{N}\s]/gu, "").slice(0, MAX_NAME_LEN);
+  }
+  var STORAGE_KEY2, MAX_ENTRIES, MAX_NAME_LEN, MAX_NAME;
+  var init_leaderboard = __esm({
+    "js/leaderboard.js"() {
+      STORAGE_KEY2 = "ls-leaderboard";
+      MAX_ENTRIES = 10;
+      MAX_NAME_LEN = 12;
+      MAX_NAME = MAX_NAME_LEN;
+    }
+  });
 
   // js/game.js
-  window.LetterShooter = {
-    startGame,
-    handleKey,
-    openSettings,
-    closeSettings,
-    applySettings,
-    renderTouchKeys,
-    speakLetter,
-    shoot,
-    flashSuccess,
-    shakeLetter,
-    showLetter,
-    updateScore,
-    drawRobot,
-    loadSettings,
-    fallDuration,
-    setLang,
-    unlockAudio,
-    unlockBgm,
-    openProgressPanel,
-    closeProgressPanel,
-    openLeaderboardPanel,
-    closeLeaderboardPanel,
-    renderLeaderboard,
-    openNameModal,
-    closeNameModal,
-    submitName,
-    highlightKey,
-    clearHighlight
-  };
-  var score = 0;
-  var streak = 0;
-  var stars = 0;
-  var currentLetter = null;
-  var touchKeys = [];
-  var gameRunning = false;
-  var animFrame = null;
-  var currentUnit = "U1";
-  var toastTimer = null;
-  var toastQueue = [];
   function getEls() {
     return {
       letter: document.getElementById("js-letter"),
@@ -1015,32 +1087,11 @@
     u.rate = 0.9;
     window.speechSynthesis.speak(u);
   }
-  var ROBOT_PALETTES = {
-    space: [
-      { body: "#1e3a5f", eye: "#4FC3F7", accent: "#4FC3F7", glow: "rgba(79,195,247,0.6)" },
-      { body: "#3d1f2f", eye: "#FF6B9D", accent: "#FF6B9D", glow: "rgba(255,107,157,0.6)" },
-      { body: "#1f3d2f", eye: "#69F0AE", accent: "#69F0AE", glow: "rgba(105,240,174,0.6)" }
-    ],
-    candy: [
-      { body: "#FFFFFF", eye: "#FF6B9D", accent: "#FF6B9D", glow: "rgba(255,107,157,0.5)" },
-      { body: "#FFFFFF", eye: "#FFD54F", accent: "#FFD54F", glow: "rgba(255,213,79,0.5)" },
-      { body: "#FFFFFF", eye: "#B388FF", accent: "#B388FF", glow: "rgba(179,136,255,0.5)" }
-    ],
-    ocean: [
-      { body: "#FFFFFF", eye: "#00BCD4", accent: "#00BCD4", glow: "rgba(0,188,212,0.5)" },
-      { body: "#FFFFFF", eye: "#FFCA28", accent: "#FFCA28", glow: "rgba(255,202,40,0.5)" },
-      { body: "#FFFFFF", eye: "#66BB6A", accent: "#66BB6A", glow: "rgba(102,187,106,0.5)" }
-    ],
-    forest: [
-      { body: "#FFFFFF", eye: "#43A047", accent: "#43A047", glow: "rgba(67,160,71,0.5)" },
-      { body: "#FFFFFF", eye: "#FFCA28", accent: "#FFCA28", glow: "rgba(255,202,40,0.5)" },
-      { body: "#FFFFFF", eye: "#AB47BC", accent: "#AB47BC", glow: "rgba(171,71,188,0.5)" }
-    ]
-  };
   function drawMascot() {
     const wrap = document.getElementById("js-mascot-wrap");
     if (!wrap) return;
-    const theme = loadSettings().theme || "space";
+    const settings = loadSettings();
+    const theme = settings.mascotTheme && settings.mascotTheme !== "auto" ? settings.mascotTheme : settings.theme || "space";
     const palettes = {
       space: { body: "#FFE4B5", accent: "#FF6B9D", cheek: "#FFB3C6", eye: "#1a1a3e" },
       candy: { body: "#FFD9E8", accent: "#FF6B9D", cheek: "#FF8FB1", eye: "#4A2C5A" },
@@ -1096,12 +1147,6 @@
       }, kind === "cheer" ? 1300 : kind === "happy" ? 950 : 650);
     }
   }
-  var FLOOR_EMOJIS = {
-    space: ["\u2B50", "\u{1F31F}", "\u{1FA90}", "\u{1F680}", "\u2B50", "\u{1F31F}", "\u2B50", "\u{1F319}"],
-    candy: ["\u{1F36D}", "\u{1F369}", "\u{1F338}", "\u{1F36C}", "\u{1F338}", "\u{1F369}", "\u{1F36D}", "\u{1F33C}"],
-    ocean: ["\u{1FAB8}", "\u{1F41A}", "\u{1FAB8}", "\u{1F420}", "\u{1FAB8}", "\u{1F41A}", "\u{1FAB8}", "\u{1F33F}"],
-    forest: ["\u{1F333}", "\u{1F332}", "\u{1F344}", "\u{1F337}", "\u{1F332}", "\u{1F333}", "\u{1F344}", "\u{1F337}"]
-  };
   function populateFloor(theme) {
     const floor = document.getElementById("js-floor-decor");
     if (!floor) return;
@@ -1122,7 +1167,9 @@
     if (!robotWrap) return;
     const theme = loadSettings().theme || "space";
     const palettes = ROBOT_PALETTES[theme] || ROBOT_PALETTES.space;
-    const p = palettes[robotIdx % palettes.length];
+    const settings = loadSettings();
+    const userPick = typeof settings.robotColor === "number" ? settings.robotColor : 0;
+    const p = palettes[userPick % palettes.length];
     robotWrap.innerHTML = `
     <svg viewBox="0 0 160 180" width="160" height="180" aria-hidden="true"
          style="filter:drop-shadow(0 0 16px ${p.glow})">
@@ -1169,13 +1216,6 @@
       <rect x="86" y="160" width="20" height="14" rx="5" fill="${p.body}" stroke="${p.accent}" stroke-width="2.5" opacity="0.95"/>
     </svg>`;
   }
-  var BULLET_SHAPES = ["star", "heart", "circle", "square", "ribbon"];
-  var BULLET_PALETTES = {
-    space: ["#4FC3F7", "#FF6B9D", "#FFD54F", "#69F0AE", "#CE93D8", "#80DEEA"],
-    candy: ["#FF6B9D", "#FFD54F", "#B388FF", "#69F0AE", "#FF9D7A", "#F48FB1"],
-    ocean: ["#00BCD4", "#26C6DA", "#FFCA28", "#66BB6A", "#80DEEA", "#4FC3F7"],
-    forest: ["#43A047", "#66BB6A", "#FFCA28", "#AB47BC", "#A5D6A7", "#FFB74D"]
-  };
   function bulletStyle(shape, color) {
     switch (shape) {
       case "star":
@@ -1253,7 +1293,6 @@
     }, 220);
     spawnImpactRings(letterBoxAt());
   }
-  var lastLetterPos = null;
   function letterBoxAt() {
     return lastLetterPos;
   }
@@ -1330,8 +1369,6 @@
     renderTouchKeys();
     highlightKey(letter);
   }
-  var fallPaused = false;
-  var letterArrived = false;
   function startFall(onArrive) {
     const settings = loadSettings();
     if (settings.level !== "L1") return;
@@ -1351,7 +1388,10 @@
       const r = letterEl.getBoundingClientRect();
       return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
     });
+    const roll = Math.random();
+    const pattern = roll < 0.6 ? "straight" : roll < 0.85 ? "zigzag" : "spiral";
     const startMs = performance.now();
+    const baseWidth = Math.min(window.innerWidth * 0.35, 200);
     function step(now) {
       if (!gameRunning) return;
       if (fallPaused) {
@@ -1361,7 +1401,13 @@
       const elapsed = now - startMs;
       const progress = Math.min(elapsed / duration, 1);
       const dy = maxFall * progress;
-      letterEl.style.transform = `translateY(${dy}px)`;
+      let dx = 0;
+      if (pattern === "zigzag") {
+        dx = Math.sin(progress * Math.PI * 4) * baseWidth * 0.15;
+      } else if (pattern === "spiral") {
+        dx = Math.cos(progress * Math.PI * 3) * baseWidth * 0.18;
+      }
+      letterEl.style.transform = `translate(${dx}px, ${dy}px)`;
       if (progress < 1) {
         animFrame = requestAnimationFrame(step);
       } else {
@@ -1394,43 +1440,6 @@
     nextTurn(level, touchKeys);
     const settings = loadSettings();
     if (settings.bgm) startBgm(settings.bgmTrack || "space");
-  }
-  function stopGame() {
-    gameRunning = false;
-    if (animFrame) {
-      cancelAnimationFrame(animFrame);
-      animFrame = null;
-    }
-    stopBgm();
-  }
-  var paused = false;
-  function togglePause() {
-    if (!gameRunning) return;
-    paused = !paused;
-    const btn = document.getElementById("js-pause-btn");
-    if (btn) btn.textContent = paused ? "\u25B6" : "\u23F8";
-    const bottomBar = document.querySelector(".bottom-bar");
-    const hint = document.getElementById("js-kb-hint");
-    if (paused) {
-      if (animFrame) {
-        cancelAnimationFrame(animFrame);
-        animFrame = null;
-      }
-      bottomBar?.classList.add("paused");
-      pauseBgm();
-      if (hint) {
-        hint.textContent = "\u23F8 \u5DF2\u66AB\u505C";
-        hint.classList.add("has-hint");
-      }
-    } else {
-      bottomBar?.classList.remove("paused");
-      resumeBgm();
-      if (hint && currentLetter) {
-        hint.textContent = "";
-        hint.classList.remove("has-hint");
-        highlightKey(currentLetter);
-      }
-    }
   }
   function nextTurn(level, keys) {
     if (!gameRunning) return;
@@ -1469,6 +1478,17 @@
       }
       const challenge = recordStar();
       updateDailyHint();
+      if (speedRoundActive) {
+        speedRoundHits++;
+        speedRoundStreak++;
+        const hits = document.getElementById("js-speed-hits");
+        if (hits) hits.textContent = speedRoundHits;
+      } else {
+        correctSinceSpeed++;
+        if (correctSinceSpeed >= SPEED_ROUND_TRIGGER) {
+          startSpeedRound();
+        }
+      }
       if (challenge.dailyMilestone) {
         const pct = Math.round(challenge.dailyMilestone * 100);
         const lang = loadSettings().lang || "zh";
@@ -1534,6 +1554,7 @@
       }
       if (settings.voice && streak >= 1) {
         speakPraise();
+        if (streak % 3 === 0) speakContextual(currentLetter);
         if (settings.lang === "en") speakLetterSay(currentLetter);
       }
       setTimeout(() => {
@@ -1546,40 +1567,13 @@
       recordAttempt(currentLetter.toUpperCase(), false);
       shakeLetter();
       flashWrongKey(pressed);
+      spawnWrongGhost(pressed);
       mascotReact("sad");
       haptic("medium");
       if (settings.soundFx) playWrong();
       if (settings.voice) speakNudge();
     }
   }
-  var LETTER_SAY = {
-    A: "ah",
-    B: "buh",
-    C: "see",
-    D: "dee",
-    E: "eh",
-    F: "fff",
-    G: "gee",
-    H: "aitch",
-    I: "eye",
-    J: "jay",
-    K: "kay",
-    L: "el",
-    M: "em",
-    N: "en",
-    O: "oh",
-    P: "pee",
-    Q: "cue",
-    R: "ar",
-    S: "ess",
-    T: "tee",
-    U: "you",
-    V: "vee",
-    W: "double-you",
-    X: "ex",
-    Y: "why",
-    Z: "zee"
-  };
   function speakLetterSay(letter) {
     if (!("speechSynthesis" in window)) return;
     const say = LETTER_SAY[letter];
@@ -1593,6 +1587,155 @@
       u.volume = 0.85;
       window.speechSynthesis.speak(u);
     }, 600);
+  }
+  function startSpeedRound() {
+    if (speedRoundActive) return;
+    speedRoundActive = true;
+    speedRoundHits = 0;
+    speedRoundStreak = 0;
+    speedRoundEnd = Date.now() + SPEED_ROUND_DURATION_MS;
+    correctSinceSpeed = 0;
+    const banner = document.getElementById("js-speed-banner");
+    const timer = document.getElementById("js-speed-timer");
+    const hits = document.getElementById("js-speed-hits");
+    if (banner) {
+      banner.classList.add("visible");
+      const lang = loadSettings().lang;
+      const titleEl = banner.querySelector(".speed-title");
+      if (titleEl) titleEl.textContent = lang === "zh" ? "\u26A1 \u9650\u6642\u6311\u6230 \u26A1" : "\u26A1 SPEED ROUND \u26A1";
+    }
+    if (timer) timer.textContent = "5.0";
+    if (hits) hits.textContent = "0";
+    if (speedRoundTimer) clearInterval(speedRoundTimer);
+    speedRoundTimer = setInterval(() => {
+      const remaining = Math.max(0, speedRoundEnd - Date.now()) / 1e3;
+      if (timer) timer.textContent = remaining.toFixed(1);
+      if (Date.now() >= speedRoundEnd) {
+        endSpeedRound();
+      }
+    }, 100);
+  }
+  function endSpeedRound() {
+    if (speedRoundTimer) clearInterval(speedRoundTimer);
+    speedRoundTimer = null;
+    speedRoundActive = false;
+    const banner = document.getElementById("js-speed-banner");
+    if (banner) banner.classList.remove("visible");
+    const bonus = speedRoundHits;
+    if (bonus > 0) {
+      stars += bonus;
+      updateStars(stars);
+      const lang = loadSettings().lang;
+      const phrase = lang === "zh" ? `\u734E\u52F5 +${bonus} \u2B50\uFF01` : `Bonus +${bonus} \u2B50!`;
+      const toast = document.getElementById("js-toast");
+      const title = document.getElementById("js-toast-title");
+      const body = document.getElementById("js-toast-body");
+      if (toast && title && body) {
+        title.textContent = lang === "zh" ? "\u26A1 \u9650\u6642\u5B8C\u6210\uFF01" : "\u26A1 Speed done!";
+        body.textContent = phrase;
+        toast.classList.remove("visible");
+        void toast.offsetWidth;
+        toast.classList.add("visible");
+        setTimeout(() => toast.classList.remove("visible"), 2500);
+      }
+      if (bonus >= 3) megaFireworks({ theme: loadSettings().theme || "space" });
+    }
+    if (bonus >= 2 && !bonusCatchActive) {
+      setTimeout(() => startBonusCatch(), 600);
+    }
+  }
+  function startBonusCatch() {
+    if (bonusCatchActive) return;
+    if (loadSettings().reduceMotion) return;
+    const star = document.getElementById("js-bonus-star");
+    if (!star) return;
+    bonusCatchActive = true;
+    bonusCatchEnd = Date.now() + BONUS_CATCH_DURATION_MS;
+    const lane = 0.15 + Math.random() * 0.7;
+    const startLeft = window.innerWidth * lane;
+    const endTop = window.innerHeight - 120;
+    star.style.left = startLeft + "px";
+    star.style.transition = "none";
+    star.style.top = "-60px";
+    star.classList.remove("caught", "missed");
+    void star.offsetWidth;
+    star.classList.add("visible", "falling");
+    star.style.transition = `top ${BONUS_CATCH_DURATION_MS}ms cubic-bezier(0.55, 0.05, 0.85, 0.45)`;
+    star.style.top = endTop + "px";
+    const onPointer = (e) => {
+      if (!bonusCatchActive) return;
+      endBonusCatch(true);
+      document.removeEventListener("pointerdown", onPointer, true);
+    };
+    document.addEventListener("pointerdown", onPointer, true);
+    bonusCatchKeyListener = onPointer;
+    bonusCatchTimer = setTimeout(() => {
+      endBonusCatch(false);
+      document.removeEventListener("pointerdown", onPointer, true);
+    }, BONUS_CATCH_DURATION_MS + 100);
+  }
+  function endBonusCatch(caught) {
+    if (!bonusCatchActive) return;
+    bonusCatchActive = false;
+    if (bonusCatchTimer) {
+      clearTimeout(bonusCatchTimer);
+      bonusCatchTimer = null;
+    }
+    const star = document.getElementById("js-bonus-star");
+    if (star) {
+      star.classList.remove("falling");
+      star.style.transition = "none";
+      if (caught) {
+        star.classList.add("caught");
+        setTimeout(() => {
+          star.classList.remove("visible", "caught");
+        }, 600);
+      } else {
+        star.classList.add("missed");
+        setTimeout(() => {
+          star.classList.remove("visible", "missed");
+        }, 500);
+      }
+    }
+    if (bonusCatchKeyListener) {
+      try {
+        document.removeEventListener("pointerdown", bonusCatchKeyListener, true);
+      } catch {
+      }
+      bonusCatchKeyListener = null;
+    }
+    if (caught) {
+      stars += BONUS_CATCH_STARS;
+      updateStars(stars);
+      const lang = loadSettings().lang || "zh";
+      const title = lang === "zh" ? "\u2B50 \u63A5\u5230\u661F\u661F\uFF01" : "\u2B50 Bonus caught!";
+      const body = lang === "zh" ? `+${BONUS_CATCH_STARS} \u2B50 \u734E\u52F5\uFF01` : `+${BONUS_CATCH_STARS} \u2B50 bonus!`;
+      const toast = document.getElementById("js-toast");
+      const titleEl = document.getElementById("js-toast-title");
+      const bodyEl = document.getElementById("js-toast-body");
+      if (toast && titleEl && bodyEl) {
+        titleEl.textContent = title;
+        bodyEl.textContent = body;
+        toast.classList.remove("visible");
+        void toast.offsetWidth;
+        toast.classList.add("visible");
+        setTimeout(() => toast.classList.remove("visible"), 2200);
+      }
+      megaFireworks({ theme: loadSettings().theme || "space" });
+      haptic("streak");
+      if (loadSettings().soundFx) playStreak(5);
+    }
+  }
+  function speakContextual(letter) {
+    if (!("speechSynthesis" in window)) return;
+    const lang = loadSettings().lang;
+    const phrase = i18n[lang]?.letterPhrases?.[letter] || `${letter} is for ${LETTER_SYMBOLS[letter] || ""} ${letter}!`;
+    const u = new SpeechSynthesisUtterance(phrase);
+    u.lang = lang === "zh" ? "zh-HK" : "en-US";
+    u.rate = lang === "zh" ? 0.95 : 0.85;
+    u.volume = 0.9;
+    setTimeout(() => window.speechSynthesis.cancel(), 50);
+    setTimeout(() => window.speechSynthesis.speak(u), 80);
   }
   function speakPraise() {
     if (!("speechSynthesis" in window)) return;
@@ -1630,13 +1773,6 @@
     void wrap.offsetWidth;
     wrap.classList.add("reach");
   }
-  var QWERTY_ROWS = [
-    ["Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"],
-    ["A", "S", "D", "F", "G", "H", "J", "K", "L"],
-    ["Z", "X", "C", "V", "B", "N", "M"]
-  ];
-  var currentKbMode = "compact";
-  var compactKeys = [];
   function getCompactKeys(targetLetter) {
     const all = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
     const target = targetLetter.toUpperCase();
@@ -1710,6 +1846,18 @@
     btn.classList.add("wrong-shake");
     setTimeout(() => btn.classList.remove("wrong-shake"), 400);
   }
+  function spawnWrongGhost(letter) {
+    const btn = document.querySelector(`.kb-key[data-letter="${letter}"]`);
+    if (!btn) return;
+    const r = btn.getBoundingClientRect();
+    const ghost = document.createElement("div");
+    ghost.className = "wrong-ghost";
+    ghost.textContent = letter;
+    ghost.style.left = r.left + r.width / 2 + "px";
+    ghost.style.top = r.top + r.height / 2 + "px";
+    document.body.appendChild(ghost);
+    setTimeout(() => ghost.remove(), 1400);
+  }
   function highlightKey(letter) {
     const hint = document.getElementById("js-kb-hint");
     const settings = loadSettings();
@@ -1761,12 +1909,6 @@
     toast.classList.add("visible");
     setTimeout(() => toast.classList.remove("visible"), 3e3);
   }
-  var ACHIEVEMENT_MILESTONES = [
-    { stars: 10, icon: "\u{1F31F}", title_zh: "\u7372\u5F97 10 \u7C92\u661F\uFF01", title_en: "10 Stars!", body_zh: "\u7E7C\u7E8C\u52AA\u529B\uFF01", body_en: "Keep going!" },
-    { stars: 25, icon: "\u{1F3C6}", title_zh: "\u7372\u5F97 25 \u7C92\u661F\uFF01", title_en: "25 Stars!", body_zh: "\u592A\u53B2\u5BB3\u4E86\uFF01", body_en: "Amazing!" },
-    { stars: 50, icon: "\u{1F48E}", title_zh: "\u7372\u5F97 50 \u7C92\u661F\uFF01", title_en: "50 Stars!", body_zh: "\u8D85\u7D1A\u53FB\uFF01", body_en: "Superstar!" },
-    { stars: 100, icon: "\u{1F451}", title_zh: "100 \u7C92\u661F\uFF01", title_en: "100 Stars!", body_zh: "\u5B8C\u7F8E\uFF01", body_en: "Perfect!" }
-  ];
   function showAchievement(stars2) {
     const ms = ACHIEVEMENT_MILESTONES.find((m) => m.stars === stars2);
     if (!ms) return;
@@ -1788,7 +1930,6 @@
   function applyTheme(theme) {
     document.body.setAttribute("data-theme", theme || "space");
   }
-  applyTheme(loadSettings().theme);
   function openSettings() {
     const panel = document.getElementById("js-settings-panel");
     if (!panel) return;
@@ -1804,6 +1945,8 @@
     panel.querySelector("#js-level-select").value = settings.level;
     panel.querySelector("#js-kb-mode-select").value = settings.kbMode || "compact";
     panel.querySelector("#js-theme-select").value = settings.theme || "space";
+    panel.querySelector("#js-robot-color-select").value = String(settings.robotColor ?? 0);
+    panel.querySelector("#js-mascot-theme-select").value = settings.mascotTheme || "auto";
     panel.classList.add("visible");
   }
   function closeSettings() {
@@ -1826,7 +1969,9 @@
     const level = panel.querySelector("#js-level-select")?.value ?? "L0";
     const kbMode = panel.querySelector("#js-kb-mode-select")?.value ?? "compact";
     const theme = panel.querySelector("#js-theme-select")?.value ?? "space";
-    const next = { voice, soundFx: sfx, bgm, bgmTrack, speed, highContrast: hc, reduceMotion: motion, lang, currentUnit: unit, level, kbMode, theme };
+    const robotColor = parseInt(panel.querySelector("#js-robot-color-select")?.value ?? "0", 10);
+    const mascotTheme = panel.querySelector("#js-mascot-theme-select")?.value ?? "auto";
+    const next = { voice, soundFx: sfx, bgm, bgmTrack, speed, highContrast: hc, reduceMotion: motion, lang, currentUnit: unit, level, kbMode, theme, robotColor, mascotTheme };
     document.body.classList.toggle("high-contrast", hc);
     applyTheme(theme);
     if (bgm) startBgm(bgmTrack);
@@ -1895,7 +2040,6 @@
       "'": "&#39;"
     })[c]);
   }
-  var pendingCompletion = null;
   function openNameModal(unit, score2) {
     const modal = document.getElementById("js-name-modal");
     const titleEl = document.getElementById("js-name-modal-title");
@@ -1972,4 +2116,170 @@
       grid.appendChild(cell);
     });
   }
+  var score, streak, stars, currentLetter, touchKeys, gameRunning, animFrame, currentUnit, correctSinceSpeed, speedRoundActive, speedRoundTimer, speedRoundEnd, speedRoundHits, speedRoundStreak, bonusCatchActive, bonusCatchTimer, bonusCatchEnd, toastTimer, toastQueue, ROBOT_PALETTES, FLOOR_EMOJIS, BULLET_SHAPES, BULLET_PALETTES, lastLetterPos, fallPaused, letterArrived, LETTER_SAY, SPEED_ROUND_DURATION_MS, SPEED_ROUND_TRIGGER, bonusCatchKeyListener, BONUS_CATCH_DURATION_MS, BONUS_CATCH_STARS, QWERTY_ROWS, currentKbMode, compactKeys, ACHIEVEMENT_MILESTONES, pendingCompletion;
+  var init_game = __esm({
+    "js/game.js"() {
+      init_settings();
+      init_progress();
+      init_curriculum();
+      init_i18n();
+      init_sfx();
+      init_fx();
+      init_challenge();
+      init_leaderboard();
+      init_bgm();
+      window.LetterShooter = {
+        startGame,
+        handleKey,
+        openSettings,
+        closeSettings,
+        applySettings,
+        renderTouchKeys,
+        speakLetter,
+        shoot,
+        flashSuccess,
+        shakeLetter,
+        showLetter,
+        updateScore,
+        drawRobot,
+        loadSettings,
+        fallDuration,
+        setLang,
+        unlockAudio,
+        unlockBgm,
+        openProgressPanel,
+        closeProgressPanel,
+        openLeaderboardPanel,
+        closeLeaderboardPanel,
+        renderLeaderboard,
+        openNameModal,
+        closeNameModal,
+        submitName,
+        highlightKey,
+        clearHighlight
+      };
+      score = 0;
+      streak = 0;
+      stars = 0;
+      currentLetter = null;
+      touchKeys = [];
+      gameRunning = false;
+      animFrame = null;
+      currentUnit = "U1";
+      correctSinceSpeed = 0;
+      speedRoundActive = false;
+      speedRoundTimer = null;
+      speedRoundEnd = 0;
+      speedRoundHits = 0;
+      speedRoundStreak = 0;
+      bonusCatchActive = false;
+      bonusCatchTimer = null;
+      bonusCatchEnd = 0;
+      toastTimer = null;
+      toastQueue = [];
+      ROBOT_PALETTES = {
+        space: [
+          { body: "#1e3a5f", eye: "#4FC3F7", accent: "#4FC3F7", glow: "rgba(79,195,247,0.6)" },
+          { body: "#3d1f2f", eye: "#FF6B9D", accent: "#FF6B9D", glow: "rgba(255,107,157,0.6)" },
+          { body: "#1f3d2f", eye: "#69F0AE", accent: "#69F0AE", glow: "rgba(105,240,174,0.6)" }
+        ],
+        candy: [
+          { body: "#FFFFFF", eye: "#FF6B9D", accent: "#FF6B9D", glow: "rgba(255,107,157,0.5)" },
+          { body: "#FFFFFF", eye: "#FFD54F", accent: "#FFD54F", glow: "rgba(255,213,79,0.5)" },
+          { body: "#FFFFFF", eye: "#B388FF", accent: "#B388FF", glow: "rgba(179,136,255,0.5)" }
+        ],
+        ocean: [
+          { body: "#FFFFFF", eye: "#00BCD4", accent: "#00BCD4", glow: "rgba(0,188,212,0.5)" },
+          { body: "#FFFFFF", eye: "#FFCA28", accent: "#FFCA28", glow: "rgba(255,202,40,0.5)" },
+          { body: "#FFFFFF", eye: "#66BB6A", accent: "#66BB6A", glow: "rgba(102,187,106,0.5)" }
+        ],
+        forest: [
+          { body: "#FFFFFF", eye: "#43A047", accent: "#43A047", glow: "rgba(67,160,71,0.5)" },
+          { body: "#FFFFFF", eye: "#FFCA28", accent: "#FFCA28", glow: "rgba(255,202,40,0.5)" },
+          { body: "#FFFFFF", eye: "#AB47BC", accent: "#AB47BC", glow: "rgba(171,71,188,0.5)" }
+        ]
+      };
+      FLOOR_EMOJIS = {
+        space: ["\u2B50", "\u{1F31F}", "\u{1FA90}", "\u{1F680}", "\u2B50", "\u{1F31F}", "\u2B50", "\u{1F319}"],
+        candy: ["\u{1F36D}", "\u{1F369}", "\u{1F338}", "\u{1F36C}", "\u{1F338}", "\u{1F369}", "\u{1F36D}", "\u{1F33C}"],
+        ocean: ["\u{1FAB8}", "\u{1F41A}", "\u{1FAB8}", "\u{1F420}", "\u{1FAB8}", "\u{1F41A}", "\u{1FAB8}", "\u{1F33F}"],
+        forest: ["\u{1F333}", "\u{1F332}", "\u{1F344}", "\u{1F337}", "\u{1F332}", "\u{1F333}", "\u{1F344}", "\u{1F337}"]
+      };
+      BULLET_SHAPES = ["star", "heart", "circle", "square", "ribbon"];
+      BULLET_PALETTES = {
+        space: ["#4FC3F7", "#FF6B9D", "#FFD54F", "#69F0AE", "#CE93D8", "#80DEEA"],
+        candy: ["#FF6B9D", "#FFD54F", "#B388FF", "#69F0AE", "#FF9D7A", "#F48FB1"],
+        ocean: ["#00BCD4", "#26C6DA", "#FFCA28", "#66BB6A", "#80DEEA", "#4FC3F7"],
+        forest: ["#43A047", "#66BB6A", "#FFCA28", "#AB47BC", "#A5D6A7", "#FFB74D"]
+      };
+      lastLetterPos = null;
+      fallPaused = false;
+      letterArrived = false;
+      LETTER_SAY = {
+        A: "ah",
+        B: "buh",
+        C: "see",
+        D: "dee",
+        E: "eh",
+        F: "fff",
+        G: "gee",
+        H: "aitch",
+        I: "eye",
+        J: "jay",
+        K: "kay",
+        L: "el",
+        M: "em",
+        N: "en",
+        O: "oh",
+        P: "pee",
+        Q: "cue",
+        R: "ar",
+        S: "ess",
+        T: "tee",
+        U: "you",
+        V: "vee",
+        W: "double-you",
+        X: "ex",
+        Y: "why",
+        Z: "zee"
+      };
+      SPEED_ROUND_DURATION_MS = 5e3;
+      SPEED_ROUND_TRIGGER = 10;
+      bonusCatchKeyListener = null;
+      BONUS_CATCH_DURATION_MS = 3e3;
+      BONUS_CATCH_STARS = 5;
+      QWERTY_ROWS = [
+        ["Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"],
+        ["A", "S", "D", "F", "G", "H", "J", "K", "L"],
+        ["Z", "X", "C", "V", "B", "N", "M"]
+      ];
+      currentKbMode = "compact";
+      compactKeys = [];
+      ACHIEVEMENT_MILESTONES = [
+        { stars: 10, icon: "\u{1F31F}", title_zh: "\u7372\u5F97 10 \u7C92\u661F\uFF01", title_en: "10 Stars!", body_zh: "\u7E7C\u7E8C\u52AA\u529B\uFF01", body_en: "Keep going!" },
+        { stars: 25, icon: "\u{1F3C6}", title_zh: "\u7372\u5F97 25 \u7C92\u661F\uFF01", title_en: "25 Stars!", body_zh: "\u592A\u53B2\u5BB3\u4E86\uFF01", body_en: "Amazing!" },
+        { stars: 50, icon: "\u{1F48E}", title_zh: "\u7372\u5F97 50 \u7C92\u661F\uFF01", title_en: "50 Stars!", body_zh: "\u8D85\u7D1A\u53FB\uFF01", body_en: "Superstar!" },
+        { stars: 100, icon: "\u{1F451}", title_zh: "100 \u7C92\u661F\uFF01", title_en: "100 Stars!", body_zh: "\u5B8C\u7F8E\uFF01", body_en: "Perfect!" }
+      ];
+      applyTheme(loadSettings().theme);
+      pendingCompletion = null;
+    }
+  });
+
+  // js/main.js
+  var require_main = __commonJS({
+    "js/main.js"() {
+      init_i18n();
+      init_settings();
+      init_curriculum();
+      init_progress();
+      init_sfx();
+      init_fx();
+      init_bgm();
+      init_challenge();
+      init_leaderboard();
+      init_game();
+    }
+  });
+  require_main();
 })();

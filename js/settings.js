@@ -4,7 +4,7 @@ const DEFAULTS = {
   soundFx: true,     // SFX chime / streak / unlock sounds
   bgm: false,        // Background music (default OFF — SEN overstimulation safety)
   bgmTrack: 'space', // 'space' | 'xylophone' | 'rain' — only used when bgm=true
-  theme: 'space',    // 'space' | 'candy'
+  theme: 'space',    // 'space' | 'candy' | 'ocean' | 'forest'
   speed: 'slow',      // 'verySlow' | 'slow' | 'medium'
   highContrast: false,
   reduceMotion: false,
@@ -12,6 +12,8 @@ const DEFAULTS = {
   currentUnit: 'U1',
   level: 'L0',        // 'L0' | 'L1'
   kbMode: 'full',     // 'full' | 'compact' — full shows 26 QWERTY, compact shows only target letter
+  robotColor: 0,      // 0/1/2 — robot palette index (Phase 16f)
+  mascotTheme: 'auto', // 'auto' | 'space' | 'candy' | 'ocean' | 'forest' (Phase 16f)
 };
 
 export function loadSettings() {

@@ -928,6 +928,130 @@
   .no-motion .bullet-trail,
   .no-motion .impact-ring { animation-duration: 0.001ms !important; }
 
+  /* ── Phase 16 — Speed round banner (16a) ────────────────────────────── */
+  #js-speed-banner {
+    position: fixed;
+    top: 12px;
+    left: 50%;
+    transform: translate(-50%, -120%);
+    z-index: 110;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 10px 22px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, rgba(255,213,79,0.95), rgba(255,107,157,0.95));
+    color: #1a1a3e;
+    font-family: 'Fredoka', sans-serif;
+    font-weight: 700;
+    box-shadow: 0 6px 18px rgba(255,107,157,0.45), 0 0 0 3px rgba(255,255,255,0.6) inset;
+    transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+    pointer-events: none;
+  }
+  #js-speed-banner.visible {
+    transform: translate(-50%, 0);
+    animation: speedBannerPulse 0.6s ease-in-out infinite alternate;
+  }
+  @keyframes speedBannerPulse {
+    from { box-shadow: 0 6px 18px rgba(255,107,157,0.45), 0 0 0 3px rgba(255,255,255,0.6) inset; }
+    to   { box-shadow: 0 8px 24px rgba(255,213,79,0.7), 0 0 0 3px rgba(255,255,255,0.8) inset; }
+  }
+  #js-speed-banner .speed-title {
+    font-size: 18px;
+    letter-spacing: 0.04em;
+  }
+  #js-speed-banner .speed-timer {
+    background: rgba(26,26,62,0.85);
+    color: #FFD54F;
+    padding: 4px 10px;
+    border-radius: 8px;
+    font-size: 20px;
+    font-weight: 900;
+    font-variant-numeric: tabular-nums;
+    min-width: 56px;
+    text-align: center;
+  }
+  #js-speed-banner .speed-hits {
+    background: rgba(255,255,255,0.85);
+    color: #1a1a3e;
+    padding: 4px 10px;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 700;
+  }
+  .no-motion #js-speed-banner { animation: none !important; }
+
+  /* ── Phase 16 — Wrong-letter ghost (16d) ────────────────────────────── */
+  .wrong-ghost {
+    position: fixed;
+    z-index: 105;
+    pointer-events: none;
+    font-family: 'Fredoka', sans-serif;
+    font-size: 64px;
+    font-weight: 900;
+    color: rgba(255,107,157,0.7);
+    text-shadow: 0 0 14px rgba(255,107,157,0.5);
+    transform: translate(-50%, -50%);
+    animation: wrongGhostFloat 1.4s ease-out forwards;
+  }
+  @keyframes wrongGhostFloat {
+    0%   { opacity: 0;   transform: translate(-50%, -50%) scale(0.6) rotate(-8deg); }
+    15%  { opacity: 0.85; transform: translate(-50%, -90%) scale(1.1) rotate(-4deg); }
+    100% { opacity: 0;   transform: translate(-50%, -260%) scale(0.7) rotate(8deg); }
+  }
+  .no-motion .wrong-ghost { animation-duration: 0.001ms !important; opacity: 0 !important; }
+
+  /* ── Phase 16 — Bonus Catch star (16e) ──────────────────────────────── */
+  #js-bonus-star {
+    position: fixed;
+    top: -60px;
+    z-index: 108;
+    width: 56px;
+    height: 56px;
+    margin-left: -28px;
+    pointer-events: none;
+    opacity: 0;
+    transform: scale(0.4) rotate(0deg);
+    transition: opacity 0.2s;
+    will-change: top, transform, opacity;
+  }
+  #js-bonus-star.visible {
+    opacity: 1;
+    animation: bonusStarBob 0.45s ease-in-out infinite alternate,
+               bonusStarSpin 1.2s linear infinite;
+  }
+  #js-bonus-star.falling {
+    /* top is set inline to animate the descent over 3s */
+    transition: top 3s cubic-bezier(0.55, 0.05, 0.85, 0.45),
+                transform 0.3s, opacity 0.3s;
+  }
+  #js-bonus-star.caught {
+    top: auto !important;
+    bottom: 24px !important;
+    transform: scale(2.2) rotate(360deg) !important;
+    opacity: 1 !important;
+    animation: bonusStarCaught 0.5s ease-out forwards;
+  }
+  #js-bonus-star.missed {
+    opacity: 0;
+    transform: scale(0.5) rotate(-30deg);
+    transition: opacity 0.4s, transform 0.4s;
+  }
+  @keyframes bonusStarBob {
+    from { margin-top: 0; }
+    to   { margin-top: -6px; }
+  }
+  @keyframes bonusStarSpin {
+    from { filter: hue-rotate(0deg) drop-shadow(0 0 12px #FFD54F); }
+    to   { filter: hue-rotate(360deg) drop-shadow(0 0 16px #FFD54F); }
+  }
+  @keyframes bonusStarCaught {
+    0%   { transform: scale(1) rotate(0deg); }
+    60%  { transform: scale(2.4) rotate(180deg); filter: drop-shadow(0 0 24px #FFD54F); }
+    100% { transform: scale(0) rotate(360deg); opacity: 0; }
+  }
+  .no-motion #js-bonus-star { animation: none !important; }
+
   /* ── Streak flash overlay (Phase 3a) ───────────────────────────────── */
   #js-streak-flash {
     position: fixed; inset: 0;
@@ -1640,6 +1764,28 @@
 <!-- ── Streak flash overlay (Phase 3a) ──────────────────────────────────── -->
 <div id="js-streak-flash" aria-hidden="true"></div>
 
+<!-- ── Speed round banner (Phase 16a) ──────────────────────────────────── -->
+<div id="js-speed-banner" aria-hidden="true">
+  <span class="speed-title">⚡ SPEED ROUND</span>
+  <span class="speed-timer" id="js-speed-timer">5.0</span>
+  <span class="speed-hits" id="js-speed-hits">0</span>
+</div>
+
+<!-- ── Bonus catch star (Phase 16e) — falls + tap anywhere to catch ────── -->
+<div id="js-bonus-star" aria-hidden="true">
+  <svg viewBox="0 0 56 56" width="56" height="56">
+    <defs>
+      <radialGradient id="bonusGlow" cx="50%" cy="50%" r="50%">
+        <stop offset="0%"  stop-color="#FFF59D"/>
+        <stop offset="60%" stop-color="#FFD54F"/>
+        <stop offset="100%" stop-color="#FFA000"/>
+      </radialGradient>
+    </defs>
+    <polygon fill="url(#bonusGlow)" stroke="#FF6F00" stroke-width="2" stroke-linejoin="round"
+      points="28,4 34.5,21.5 53,22 38.5,34 43.5,52 28,42 12.5,52 17.5,34 3,22 21.5,21.5"/>
+  </svg>
+</div>
+
 <!-- ── Letter trail layer (Phase 3a) ────────────────────────────────────── -->
 <div id="js-trail-layer" aria-hidden="true"></div>
 
@@ -1766,13 +1912,39 @@
     <div class="setting-row">
       <label>
         主題 Theme
-        <span class="sublabel">太空 / 糖果 / 海洋</span>
+        <span class="sublabel">太空 / 糖果 / 海洋 / 森林</span>
       </label>
       <select id="js-theme-select">
         <option value="space" selected>🌌 太空 Space</option>
         <option value="candy">🍬 糖果 Candy</option>
         <option value="ocean">🌊 海洋 Ocean</option>
         <option value="forest">🌳 森林 Forest</option>
+      </select>
+    </div>
+
+    <div class="setting-row">
+      <label>
+        機械人顏色 Robot Color
+        <span class="sublabel">3 種配色</span>
+      </label>
+      <select id="js-robot-color-select">
+        <option value="0" selected>🤖 藍綠 Blue (default)</option>
+        <option value="1">🤖 粉紅 Pink</option>
+        <option value="2">🤖 薄荷綠 Mint</option>
+      </select>
+    </div>
+
+    <div class="setting-row">
+      <label>
+        吉祥物 Mascot
+        <span class="sublabel">跟主題 / 自選</span>
+      </label>
+      <select id="js-mascot-theme-select">
+        <option value="auto" selected>🐱 跟主題 Auto</option>
+        <option value="space">🌌 太空風 Space</option>
+        <option value="candy">🍬 糖果風 Candy</option>
+        <option value="ocean">🌊 海洋風 Ocean</option>
+        <option value="forest">🌳 森林風 Forest</option>
       </select>
     </div>
 
