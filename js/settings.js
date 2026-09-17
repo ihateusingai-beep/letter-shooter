@@ -11,7 +11,7 @@ const DEFAULTS = {
   lang: 'zh',         // UI language: 'zh' | 'en'
   currentUnit: 'U1',
   level: 'L0',        // 'L0' | 'L1'
-  kbMode: 'compact',  // 'full' | 'compact' — compact shows only target letter
+  kbMode: 'full',     // 'full' | 'compact' — full shows 26 QWERTY, compact shows only target letter
 };
 
 export function loadSettings() {
