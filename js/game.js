@@ -1,11 +1,12 @@
 // js/game.js — core game loop: L0 / L1, shooting, scoring
 import { loadSettings, saveSettings, fallDuration } from './settings.js';
 import { loadProgress, recordAttempt, masteredCount } from './progress.js';
-import { activeLetters, currentRobotIndex } from './curriculum.js';
+import { activeLetters, currentRobotIndex, isUnitComplete } from './curriculum.js';
 import { t, pickT, setLang } from './i18n.js';
 import { playCorrect, playWrong, playStreak, playUnlock, unlockAudio, haptic } from './sfx.js';
 import { confettiBurst, streakFlash, megaFireworks, startLetterTrail, stopLetterTrail, letterSparkle, floatCombo } from './fx.js';
 import { recordStar, getDailyProgress, dailyGoal, getWeeklyProgress, weeklyGoal } from './challenge.js';
+import { getLeaderboard, submitEntry, sanitizeName, clearLeaderboard, MAX_NAME } from './leaderboard.js';
 import { startBgm, stopBgm, pauseBgm, resumeBgm, unlockBgm } from './bgm.js';
 
 // Attach public API to window for non-module HTML
@@ -15,6 +16,8 @@ window.LetterShooter = {
   showLetter, updateScore, drawRobot,
   loadSettings, fallDuration, setLang, unlockAudio, unlockBgm,
   openProgressPanel, closeProgressPanel,
+  openLeaderboardPanel, closeLeaderboardPanel, renderLeaderboard,
+  openNameModal, closeNameModal, submitName,
   highlightKey, clearHighlight,
 };
 
@@ -26,6 +29,7 @@ let currentLetter = null;
 let touchKeys = [];       // visible touch key letters
 let gameRunning = false;
 let animFrame = null;
+let currentUnit = 'U1';   // tracked for completion detection (Phase 14)
 
 // Toast queue — prevents overwrite on rapid unlocks
 let toastTimer = null;
@@ -479,6 +483,7 @@ export function startGame(unitKey = 'U1', level = 'L0') {
   score = 0;
   streak = 0;
   stars = 0;
+  currentUnit = unitKey;     // Phase 14: track for completion detection
   touchKeys = activeLetters(unitKey);
 
   const prog = loadProgress();
@@ -640,6 +645,12 @@ export function handleKey(pressed) {
       streakFlash('big');
       megaFireworks({ theme: settings.theme || 'space' });
       showRobotUnlock(afterMastered);
+    }
+
+    // Phase 14d — Unit completion: open name-entry modal when all letters
+    // in current unit are mastered (only triggers once per unit completion).
+    if (currentUnit && currentUnit !== 'U10' && !pendingCompletion && isUnitComplete(prog, currentUnit)) {
+      setTimeout(() => openNameModal(currentUnit, score), 700);
     }
 
     // Mega fireworks at streak ≥10 — dramatic celebration
@@ -1018,6 +1029,95 @@ export function openProgressPanel() {
 export function closeProgressPanel() {
   const panel = document.getElementById('js-progress-panel');
   if (panel) panel.setAttribute('hidden', '');
+}
+
+// ── Leaderboard panel (Phase 14) ───────────────────────────────────────────
+export function openLeaderboardPanel() {
+  const panel = document.getElementById('js-leaderboard-panel');
+  if (!panel) return;
+  renderLeaderboard();
+  panel.removeAttribute('hidden');
+}
+
+export function closeLeaderboardPanel() {
+  const panel = document.getElementById('js-leaderboard-panel');
+  if (panel) panel.setAttribute('hidden', '');
+}
+
+export function renderLeaderboard() {
+  const list = document.getElementById('js-leaderboard-list');
+  if (!list) return;
+  const entries = getLeaderboard();
+  if (entries.length === 0) {
+    list.innerHTML = '<p style="text-align:center;color:var(--text-dim);padding:24px">未有紀錄<br>完成第一個單元就上榜！</p>';
+    return;
+  }
+  const lang = loadSettings().lang;
+  const rankClass = ['gold', 'silver', 'bronze'];
+  list.innerHTML = entries.map((e, i) => {
+    const rc = rankClass[i] ? `class="leaderboard-rank ${rankClass[i]}"` : 'class="leaderboard-rank"';
+    const trophy = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : '';
+    const unitLabel = lang === 'zh' ? `完成 ${e.unit}` : `Done ${e.unit}`;
+    return `
+      <div class="leaderboard-row">
+        <div ${rc}>${trophy || (i + 1)}</div>
+        <div class="leaderboard-name">${escapeHtml(e.name)}</div>
+        <div class="leaderboard-unit">${escapeHtml(unitLabel)}</div>
+        <div class="leaderboard-score">⭐ ${e.score}</div>
+      </div>`;
+  }).join('');
+}
+
+function escapeHtml(s) {
+  return String(s || '').replace(/[&<>"']/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  })[c]);
+}
+
+// ── Name entry modal (Phase 14) ────────────────────────────────────────────
+let pendingCompletion = null;  // { unit, score } waiting for name entry
+
+export function openNameModal(unit, score) {
+  const modal = document.getElementById('js-name-modal');
+  const titleEl = document.getElementById('js-name-modal-title');
+  const bodyEl = document.getElementById('js-name-modal-body');
+  const input = document.getElementById('js-name-input');
+  if (!modal || !titleEl || !bodyEl || !input) return;
+
+  const lang = loadSettings().lang;
+  titleEl.textContent = lang === 'zh' ? `🎉 完成 ${unit}！` : `🎉 ${unit} cleared!`;
+  bodyEl.textContent  = lang === 'zh' ? '輸入你嘅名，登上排行榜！' : 'Enter your name for the leaderboard!';
+  input.value = '';
+  input.maxLength = MAX_NAME;
+
+  pendingCompletion = { unit, score };
+  modal.removeAttribute('hidden');
+  setTimeout(() => input.focus(), 100);
+}
+
+export function closeNameModal() {
+  const modal = document.getElementById('js-name-modal');
+  if (modal) modal.setAttribute('hidden', '');
+  pendingCompletion = null;
+}
+
+export function submitName() {
+  const input = document.getElementById('js-name-input');
+  if (!input || !pendingCompletion) return;
+  const raw = sanitizeName(input.value);
+  if (!raw) {
+    // Empty after sanitize — just skip
+    closeNameModal();
+    return;
+  }
+  submitEntry({
+    name: raw,
+    score: pendingCompletion.score,
+    unit: pendingCompletion.unit,
+  });
+  closeNameModal();
+  // Briefly show leaderboard so student sees their entry
+  setTimeout(() => openLeaderboardPanel(), 250);
 }
 
 export function renderProgressGrid() {

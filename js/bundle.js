@@ -122,8 +122,8 @@
     U7: { newLetters: ["J", "K", "W"], reviewLetters: ["S"], step: 1 },
     U8: { newLetters: ["V", "X", "Q"], reviewLetters: ["P"], step: 1 },
     U9: { newLetters: ["Y", "Z"], reviewLetters: [], step: 1 },
-    U10: { newLetters: [], reviewLetters: [], step: 1 }
-    // mixed review
+    U10: { newLetters: [], reviewLetters: [], step: 1, allMastered: true }
+    // mixed review of all 26
   };
   var ROBOT_MILESTONES = [9, 18, 26];
   var TOTAL_ROBOTS = ROBOT_MILESTONES.length + 1;
@@ -137,11 +137,20 @@
   function activeLetters(unitKey) {
     const unit = UNITS[unitKey];
     if (!unit) return ["A", "B", "C"];
+    if (unit.allMastered) {
+      return "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+    }
     const all = [...unit.newLetters];
     if (unit.reviewLetters.length && all.length < 3) {
       all.push(...unit.reviewLetters.slice(0, 3 - all.length));
     }
     return all.slice(0, 6);
+  }
+  function isUnitComplete(prog, unitKey) {
+    const unit = UNITS[unitKey];
+    if (!unit) return false;
+    const letters = [...unit.newLetters];
+    return letters.length > 0 && letters.every((l) => prog[l]?.status === "mastered");
   }
 
   // js/i18n.js
@@ -659,6 +668,46 @@
     return DAILY_GOAL;
   }
 
+  // js/leaderboard.js
+  var STORAGE_KEY2 = "ls-leaderboard";
+  var MAX_ENTRIES = 10;
+  var MAX_NAME_LEN = 12;
+  function readAll() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY2);
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  }
+  function writeAll(list) {
+    try {
+      localStorage.setItem(STORAGE_KEY2, JSON.stringify(list));
+    } catch {
+    }
+  }
+  function getLeaderboard() {
+    return readAll().slice().sort((a, b) => b.score - a.score || a.completedAt - b.completedAt).slice(0, MAX_ENTRIES);
+  }
+  function submitEntry({ name, score: score2, unit }) {
+    const cleanName = String(name || "").trim().slice(0, MAX_NAME_LEN);
+    if (!cleanName) return null;
+    const all = readAll();
+    const entry = {
+      name: cleanName,
+      score: Math.max(0, Number(score2) || 0),
+      unit: String(unit || ""),
+      completedAt: Date.now()
+    };
+    all.push(entry);
+    writeAll(all.slice(-50));
+    return entry;
+  }
+  function sanitizeName(raw) {
+    return String(raw || "").trim().replace(/[^\p{L}\p{N}\s]/gu, "").slice(0, MAX_NAME_LEN);
+  }
+  var MAX_NAME = MAX_NAME_LEN;
+
   // js/bgm.js
   var bgmCtx = null;
   var bgmMaster = null;
@@ -854,6 +903,12 @@
     unlockBgm,
     openProgressPanel,
     closeProgressPanel,
+    openLeaderboardPanel,
+    closeLeaderboardPanel,
+    renderLeaderboard,
+    openNameModal,
+    closeNameModal,
+    submitName,
     highlightKey,
     clearHighlight
   };
@@ -864,6 +919,7 @@
   var touchKeys = [];
   var gameRunning = false;
   var animFrame = null;
+  var currentUnit = "U1";
   var toastTimer = null;
   var toastQueue = [];
   function getEls() {
@@ -1240,6 +1296,7 @@
     score = 0;
     streak = 0;
     stars = 0;
+    currentUnit = unitKey;
     touchKeys = activeLetters(unitKey);
     const prog = loadProgress();
     const robotIdx = currentRobotIndex(masteredCount(prog));
@@ -1381,6 +1438,9 @@
         streakFlash("big");
         megaFireworks({ theme: settings.theme || "space" });
         showRobotUnlock(afterMastered);
+      }
+      if (currentUnit && currentUnit !== "U10" && !pendingCompletion && isUnitComplete(prog, currentUnit)) {
+        setTimeout(() => openNameModal(currentUnit, score), 700);
       }
       if (streak >= 10 && afterMastered === prevMastered) {
         megaFireworks({ theme: settings.theme || "space" });
@@ -1705,6 +1765,85 @@
   function closeProgressPanel() {
     const panel = document.getElementById("js-progress-panel");
     if (panel) panel.setAttribute("hidden", "");
+  }
+  function openLeaderboardPanel() {
+    const panel = document.getElementById("js-leaderboard-panel");
+    if (!panel) return;
+    renderLeaderboard();
+    panel.removeAttribute("hidden");
+  }
+  function closeLeaderboardPanel() {
+    const panel = document.getElementById("js-leaderboard-panel");
+    if (panel) panel.setAttribute("hidden", "");
+  }
+  function renderLeaderboard() {
+    const list = document.getElementById("js-leaderboard-list");
+    if (!list) return;
+    const entries = getLeaderboard();
+    if (entries.length === 0) {
+      list.innerHTML = '<p style="text-align:center;color:var(--text-dim);padding:24px">\u672A\u6709\u7D00\u9304<br>\u5B8C\u6210\u7B2C\u4E00\u500B\u55AE\u5143\u5C31\u4E0A\u699C\uFF01</p>';
+      return;
+    }
+    const lang = loadSettings().lang;
+    const rankClass = ["gold", "silver", "bronze"];
+    list.innerHTML = entries.map((e, i) => {
+      const rc = rankClass[i] ? `class="leaderboard-rank ${rankClass[i]}"` : 'class="leaderboard-rank"';
+      const trophy = i === 0 ? "\u{1F947}" : i === 1 ? "\u{1F948}" : i === 2 ? "\u{1F949}" : "";
+      const unitLabel = lang === "zh" ? `\u5B8C\u6210 ${e.unit}` : `Done ${e.unit}`;
+      return `
+      <div class="leaderboard-row">
+        <div ${rc}>${trophy || i + 1}</div>
+        <div class="leaderboard-name">${escapeHtml(e.name)}</div>
+        <div class="leaderboard-unit">${escapeHtml(unitLabel)}</div>
+        <div class="leaderboard-score">\u2B50 ${e.score}</div>
+      </div>`;
+    }).join("");
+  }
+  function escapeHtml(s) {
+    return String(s || "").replace(/[&<>"']/g, (c) => ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;"
+    })[c]);
+  }
+  var pendingCompletion = null;
+  function openNameModal(unit, score2) {
+    const modal = document.getElementById("js-name-modal");
+    const titleEl = document.getElementById("js-name-modal-title");
+    const bodyEl = document.getElementById("js-name-modal-body");
+    const input = document.getElementById("js-name-input");
+    if (!modal || !titleEl || !bodyEl || !input) return;
+    const lang = loadSettings().lang;
+    titleEl.textContent = lang === "zh" ? `\u{1F389} \u5B8C\u6210 ${unit}\uFF01` : `\u{1F389} ${unit} cleared!`;
+    bodyEl.textContent = lang === "zh" ? "\u8F38\u5165\u4F60\u5605\u540D\uFF0C\u767B\u4E0A\u6392\u884C\u699C\uFF01" : "Enter your name for the leaderboard!";
+    input.value = "";
+    input.maxLength = MAX_NAME;
+    pendingCompletion = { unit, score: score2 };
+    modal.removeAttribute("hidden");
+    setTimeout(() => input.focus(), 100);
+  }
+  function closeNameModal() {
+    const modal = document.getElementById("js-name-modal");
+    if (modal) modal.setAttribute("hidden", "");
+    pendingCompletion = null;
+  }
+  function submitName() {
+    const input = document.getElementById("js-name-input");
+    if (!input || !pendingCompletion) return;
+    const raw = sanitizeName(input.value);
+    if (!raw) {
+      closeNameModal();
+      return;
+    }
+    submitEntry({
+      name: raw,
+      score: pendingCompletion.score,
+      unit: pendingCompletion.unit
+    });
+    closeNameModal();
+    setTimeout(() => openLeaderboardPanel(), 250);
   }
   function renderProgressGrid() {
     const grid = document.getElementById("js-progress-grid");

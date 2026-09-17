@@ -10,7 +10,7 @@ export const UNITS = {
   U7:  { newLetters: ['J', 'K', 'W'],   reviewLetters: ['S'],    step: 1 },
   U8:  { newLetters: ['V', 'X', 'Q'],   reviewLetters: ['P'],    step: 1 },
   U9:  { newLetters: ['Y', 'Z'],        reviewLetters: [],       step: 1 },
-  U10: { newLetters: [],                reviewLetters: [],       step: 1 }, // mixed review
+  U10: { newLetters: [],                reviewLetters: [],       step: 1, allMastered: true }, // mixed review of all 26
 };
 
 // Robot unlock milestones: [9, 18, 26] → 3 total robots
@@ -33,11 +33,23 @@ export function unlockedRobot(masteredCount) {
 export function activeLetters(unitKey) {
   const unit = UNITS[unitKey];
   if (!unit) return ['A', 'B', 'C'];
+  // U10: mixed review — all 26 letters
+  if (unit.allMastered) {
+    return 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+  }
   const all = [...unit.newLetters];
   if (unit.reviewLetters.length && all.length < 3) {
     all.push(...unit.reviewLetters.slice(0, 3 - all.length));
   }
   return all.slice(0, 6);
+}
+
+// ── Unit completion check (Phase 14d) ────────────────────────────────────────
+export function isUnitComplete(prog, unitKey) {
+  const unit = UNITS[unitKey];
+  if (!unit) return false;
+  const letters = [...unit.newLetters];
+  return letters.length > 0 && letters.every(l => prog[l]?.status === 'mastered');
 }
 
 // Mastery threshold: 6/10
