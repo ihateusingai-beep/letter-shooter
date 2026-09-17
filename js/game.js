@@ -319,7 +319,31 @@ export function drawRobot(robotIdx = 0) {
     </svg>`;
 }
 
-// ── Shoot animation ──────────────────────────────────────────────────────────
+// ── Shoot animation (Phase 15a — variable bullet) ───────────────────────────
+// Random shape / color / rotation per shot for variety.
+const BULLET_SHAPES = ['star', 'heart', 'circle', 'square', 'ribbon'];
+const BULLET_PALETTES = {
+  space:   ['#4FC3F7', '#FF6B9D', '#FFD54F', '#69F0AE', '#CE93D8', '#80DEEA'],
+  candy:   ['#FF6B9D', '#FFD54F', '#B388FF', '#69F0AE', '#FF9D7A', '#F48FB1'],
+  ocean:   ['#00BCD4', '#26C6DA', '#FFCA28', '#66BB6A', '#80DEEA', '#4FC3F7'],
+  forest:  ['#43A047', '#66BB6A', '#FFCA28', '#AB47BC', '#A5D6A7', '#FFB74D'],
+};
+
+function bulletStyle(shape, color) {
+  switch (shape) {
+    case 'star':
+      return `width:14px;height:14px;clip-path:polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);`;
+    case 'heart':
+      return `width:14px;height:14px;clip-path:path('M7 14s-7-4.5-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 14 4c0 5.5-7 10-7 10z');`;
+    case 'circle':
+      return `width:12px;height:12px;border-radius:50%;`;
+    case 'square':
+      return `width:10px;height:10px;`;
+    default: // ribbon
+      return `width:5px;height:14px;border-radius:2px;`;
+  }
+}
+
 export function shoot() {
   const { letter, bullet } = getEls();
   if (!letter || !bullet) return;
@@ -330,27 +354,107 @@ export function shoot() {
   const bx = (lv.left + lv.width / 2) - bv.left;
   const by = (lv.top  + lv.height / 2) - bv.top;
 
+  // Pick random shape + color from current theme palette
+  const theme = loadSettings().theme || 'space';
+  const palette = BULLET_PALETTES[theme] || BULLET_PALETTES.space;
+  const shape = BULLET_SHAPES[Math.floor(Math.random() * BULLET_SHAPES.length)];
+  const color = palette[Math.floor(Math.random() * palette.length)];
+
+  // Apply style + color (reset previous transforms)
+  bullet.removeAttribute('class');
+  bullet.setAttribute('style', bulletStyle(shape, color) + `background:${color};`);
+
+  // Reset position + animate flight with random spin
+  const spin = (Math.random() - 0.5) * 720;  // ±360° rotation
   bullet.style.transition = 'none';
   bullet.style.opacity = '1';
-  bullet.style.transform = 'translate(0, 0)';
+  bullet.style.transform = 'translate(0, 0) rotate(0deg)';
   void bullet.offsetWidth;
 
-  bullet.style.transition = 'transform 0.25s ease-in, opacity 0.25s ease-in';
-  bullet.style.transform = `translate(${bx}px, ${by}px)`;
+  bullet.style.transition = 'transform 0.28s ease-in, opacity 0.28s ease-in';
+  bullet.style.transform = `translate(${bx}px, ${by}px) rotate(${spin}deg)`;
+
+  // Trail particles behind bullet
+  spawnBulletTrail(bx, by, color);
 
   setTimeout(() => {
     bullet.style.opacity = '0';
     bullet.style.transition = 'none';
-    bullet.style.transform = 'translate(0, 0)';
-  }, 300);
+    bullet.style.transform = 'translate(0, 0) rotate(0deg)';
+    // Restore default bullet style for next shot
+    bullet.removeAttribute('style');
+  }, 350);
 }
 
-// ── Success flash ────────────────────────────────────────────────────────────
+// Tiny trail particles following the bullet path
+function spawnBulletTrail(targetX, targetY, color) {
+  const layer = document.getElementById('js-confetti-layer');
+  if (!layer) return;
+  const startX = window.innerWidth / 2;
+  const startY = window.innerHeight - 160;
+  const dx = targetX - startX;
+  const dy = targetY - startY;
+  for (let i = 0; i < 4; i++) {
+    setTimeout(() => {
+      const p = document.createElement('div');
+      p.className = 'bullet-trail';
+      p.style.left = startX + 'px';
+      p.style.top  = startY + 'px';
+      p.style.background = color;
+      p.style.boxShadow = `0 0 6px ${color}`;
+      p.style.setProperty('--dx', (dx * (0.3 + i * 0.2)) + 'px');
+      p.style.setProperty('--dy', (dy * (0.3 + i * 0.2)) + 'px');
+      layer.appendChild(p);
+      p.addEventListener('animationend', () => p.remove(), { once: true });
+    }, i * 40);
+  }
+}
+
+// ── Success flash (Phase 15b — variable impact) ─────────────────────────────
+// Random color from theme palette + concentric impact rings
 export function flashSuccess() {
   const { flashEl } = getEls();
   if (!flashEl) return;
+
+  // Pick random flash color (themed palette)
+  const theme = loadSettings().theme || 'space';
+  const palette = BULLET_PALETTES[theme] || BULLET_PALETTES.space;
+  const color = palette[Math.floor(Math.random() * palette.length)];
+  flashEl.style.background = `radial-gradient(circle at center, ${color}66 0%, transparent 65%)`;
+
   flashEl.style.opacity = '1';
-  setTimeout(() => { flashEl.style.opacity = '0'; }, 200);
+  setTimeout(() => { flashEl.style.opacity = '0'; }, 220);
+
+  // Impact rings (1-2 concentric circles expanding from letter)
+  spawnImpactRings(letterBoxAt());
+}
+
+// Cache last letter position for impact rings (set right before flashSuccess)
+let lastLetterPos = null;
+function letterBoxAt() {
+  return lastLetterPos;
+}
+
+function spawnImpactRings(origin) {
+  if (!origin) return;
+  const layer = document.getElementById('js-confetti-layer');
+  if (!layer) return;
+  const ringCount = Math.random() < 0.5 ? 1 : 2;
+  for (let i = 0; i < ringCount; i++) {
+    setTimeout(() => {
+      const ring = document.createElement('div');
+      ring.className = 'impact-ring';
+      ring.style.left = origin.x + 'px';
+      ring.style.top  = origin.y + 'px';
+      const theme = loadSettings().theme || 'space';
+      const palette = BULLET_PALETTES[theme] || BULLET_PALETTES.space;
+      const color = palette[Math.floor(Math.random() * palette.length)];
+      ring.style.borderColor = color;
+      ring.style.boxShadow = `0 0 12px ${color}`;
+      layer.appendChild(ring);
+      ring.addEventListener('animationend', () => ring.remove(), { once: true });
+    }, i * 80);
+  }
 }
 
 // ── Wrong shake ──────────────────────────────────────────────────────────────
@@ -557,6 +661,12 @@ export function handleKey(pressed) {
   const settings = loadSettings();
 
   if (pressed === expected) {
+    // Capture letter position BEFORE bullet flies (for impact rings)
+    const letterHitEl = document.getElementById('js-letter');
+    if (letterHitEl) {
+      const r = letterHitEl.getBoundingClientRect();
+      lastLetterPos = { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+    }
     shoot();
     flashSuccess();
     score++;
