@@ -51,6 +51,7 @@ export function confettiBurst(originX, originY, opts = {}) {
     space: ['#4FC3F7', '#FF6B9D', '#FFD54F', '#69F0AE', '#CE93D8', '#FF8A65', '#80DEEA', '#F48FB1'],
     candy: ['#FF6B9D', '#FFD54F', '#B388FF', '#69F0AE', '#FF9D7A', '#F48FB1'],
     ocean: ['#00BCD4', '#26C6DA', '#FFCA28', '#66BB6A', '#80DEEA', '#4FC3F7'],
+    forest: ['#43A047', '#66BB6A', '#FFCA28', '#AB47BC', '#A5D6A7', '#FFB74D'],
   };
   const colors = opts.colors || palettes[theme] || palettes.space;
 
@@ -59,6 +60,7 @@ export function confettiBurst(originX, originY, opts = {}) {
     space: ['star', 'star', 'circle', 'square', 'ribbon'],
     candy: ['heart', 'heart', 'circle', 'circle', 'ribbon'],
     ocean: ['wave', 'bubble', 'circle', 'circle', 'ribbon'],
+    forest: ['leaf', 'flower', 'circle', 'circle', 'ribbon'],
   };
   const shapes = shapeFamilies[theme] || shapeFamilies.space;
 
@@ -84,6 +86,14 @@ export function confettiBurst(originX, originY, opts = {}) {
       piece.classList.add('confetti-wave');
       piece.style.width = '16px';
       piece.style.height = '8px';
+    } else if (shape === 'leaf') {
+      piece.classList.add('confetti-leaf');
+      piece.style.width = '14px';
+      piece.style.height = '10px';
+    } else if (shape === 'flower') {
+      piece.classList.add('confetti-flower');
+      piece.style.width = '14px';
+      piece.style.height = '14px';
     } else if (shape === 'bubble') {
       piece.classList.add('confetti-bubble');
       piece.style.width = (8 + Math.random() * 6) + 'px';

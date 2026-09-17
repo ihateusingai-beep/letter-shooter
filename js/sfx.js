@@ -98,3 +98,16 @@ export function playUnlock() {
 export function setMasterVolume(v) {
   if (masterGain) masterGain.gain.value = Math.max(0, Math.min(1, v));
 }
+
+// ── Haptic feedback (Phase 13b) — navigator.vibrate, best-effort ───────────
+// iOS Safari does not support navigator.vibrate, but Android / Chrome do.
+export function haptic(kind = 'light') {
+  if (typeof navigator === 'undefined' || !navigator.vibrate) return;
+  try {
+    if (kind === 'light')        navigator.vibrate(15);
+    else if (kind === 'medium')  navigator.vibrate(40);
+    else if (kind === 'heavy')   navigator.vibrate(80);
+    else if (kind === 'success') navigator.vibrate([20, 30, 40]);
+    else if (kind === 'streak')  navigator.vibrate([30, 50, 30, 50, 60]);
+  } catch {}
+}

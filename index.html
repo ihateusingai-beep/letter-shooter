@@ -101,6 +101,37 @@
     opacity: 0.35;
   }
 
+  /* ── Theme: Forest (Phase 13a) — green, butterflies/fireflies ──────────── */
+  body[data-theme="forest"] {
+    --bg:        #E8F5E9;
+    --bg2:       #C8E6C9;
+    --primary:   #43A047;
+    --primary2:  #66BB6A;
+    --accent:    #FFCA28;
+    --accent2:   #AB47BC;
+    --text:      #1B5E20;
+    --text-dim:  #66BB6A;
+    --key-bg:    rgba(67,160,71,0.15);
+    --key-border: rgba(67,160,71,0.5);
+    --key-active: rgba(67,160,71,0.35);
+    --success:   #69F0AE;
+    --success2:  #26A69A;
+    --panel-bg:  rgba(255,255,255,0.92);
+    --panel-border: rgba(67,160,71,0.3);
+    --shadow:    0 8px 32px rgba(67,160,71,0.25);
+  }
+  body[data-theme="forest"]::before {
+    background:
+      radial-gradient(ellipse 80% 50% at 50% 0%, rgba(255,202,40,0.2) 0%, transparent 70%),
+      radial-gradient(ellipse 60% 40% at 80% 80%, rgba(171,71,188,0.18) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 35% at 20% 70%, rgba(102,187,106,0.18) 0%, transparent 65%),
+      linear-gradient(180deg, var(--bg2) 0%, var(--bg) 100%);
+  }
+  body[data-theme="forest"] .star {
+    background: #43A047;
+    opacity: 0.35;
+  }
+
   body {
     font-family: 'Fredoka', system-ui, -apple-system, sans-serif;
     background: var(--bg);
@@ -184,7 +215,8 @@
     display: none;
   }
   body[data-theme="space"] .float-layer,
-  body[data-theme="candy"] .float-layer { display: block; }
+  body[data-theme="candy"] .float-layer,
+  body[data-theme="forest"] .float-layer { display: block; }
   .float-emoji {
     position: absolute;
     font-size: 24px;
@@ -228,6 +260,33 @@
     100% { transform: translateY(110vh) translateX(-10px); opacity: 0; }
   }
   .no-motion .sparkle-fall { animation-duration: 0.001ms !important; }
+
+  /* ── Letter trace (Phase 13d) — SVG outline draws in over 0.6s ────────── */
+  .letter-trace {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 3;
+    animation: traceFade 0.9s ease-out forwards;
+  }
+  .letter-trace svg { overflow: visible; }
+  .letter-trace .trace-path {
+    stroke-dasharray: 600;
+    stroke-dashoffset: 600;
+    animation: traceDraw 0.6s ease-out forwards;
+  }
+  @keyframes traceDraw {
+    to { stroke-dashoffset: 0; }
+  }
+  @keyframes traceFade {
+    0%   { opacity: 1; }
+    60%  { opacity: 1; }
+    100% { opacity: 0; }
+  }
+  .no-motion .letter-trace .trace-path { animation: none; stroke-dashoffset: 0; }
 
   /* ── Floating combo text (Phase 9b) ─────────────────────────────────── */
   #js-combo-layer {
@@ -735,9 +794,10 @@
   }
   /* Per-theme floor emoji */
   .floor-decor { display: none; }
-  body[data-theme="space"] .floor-decor { display: flex; }
-  body[data-theme="candy"] .floor-decor { display: flex; }
-  body[data-theme="ocean"] .floor-decor { display: flex; }
+  body[data-theme="space"] .floor-decor,
+  body[data-theme="candy"] .floor-decor,
+  body[data-theme="ocean"] .floor-decor,
+  body[data-theme="forest"] .floor-decor { display: flex; }
   .floor-emoji {
     display: inline-block;
     will-change: transform;
@@ -820,6 +880,16 @@
   .confetti-wave {
     border-radius: 50% 50% 0 0 / 100% 100% 0 0;
     transform-origin: center bottom;
+  }
+  /* Leaf shape (forest theme) */
+  .confetti-leaf {
+    clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+  }
+  /* Flower shape (forest theme) */
+  .confetti-flower {
+    clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+    /* Same 5-petal star-like as star but slightly different — works for "flower" */
+    background: #FF66BB;
   }
   /* Bubble (ocean theme) — outlined, lighter */
   .confetti-bubble {
@@ -1553,6 +1623,7 @@
         <option value="space" selected>🌌 太空 Space</option>
         <option value="candy">🍬 糖果 Candy</option>
         <option value="ocean">🌊 海洋 Ocean</option>
+        <option value="forest">🌳 森林 Forest</option>
       </select>
     </div>
 
@@ -1695,6 +1766,7 @@ const FLOAT_EMOJIS = {
   space: ['⭐', '🌟', '💫', '✨'],
   candy: ['🍬', '🍭', '💗', '🍩', '🌸'],
   ocean: [], // ocean uses bubbles instead
+  forest: ['🦋', '🌸', '🐝', '🌼', '🍃'],
 };
 function populateFloatLayer(theme) {
   const layer = document.getElementById('js-float-layer');

@@ -176,6 +176,7 @@
       themeSpace: "Space",
       themeCandy: "Candy",
       themeOcean: "Ocean",
+      themeForest: "Forest",
       robotUnlock: "New robot unlocked!",
       // Praise phrases (random pick on correct)
       praise: ["Great!", "Yes!", "Wonderful!", "Awesome!", "Nice!"],
@@ -212,6 +213,7 @@
       themeSpace: "\u592A\u7A7A",
       themeCandy: "\u7CD6\u679C",
       themeOcean: "\u6D77\u6D0B",
+      themeForest: "\u68EE\u6797",
       robotUnlock: "\u65B0\u6A5F\u68B0\u4EBA\u89E3\u9396\u4E86\uFF01",
       praise: ["\u505A\u5F97\u597D\uFF01", "\u5F88\u597D\uFF01", "\u592A\u68D2\u4E86\uFF01", "\u597D\u53FB\uFF01", "\u7E7C\u7E8C\uFF01"],
       nudge: ["\u518D\u8A66\u4E00\u6B21\uFF01", "\u5DEE\u5C11\u5C11\uFF01", "\u52A0\u6CB9\uFF01"]
@@ -308,6 +310,17 @@
       setTimeout(() => tone(f, 0.25, "triangle", 0.28), i * 90);
     });
   }
+  function haptic(kind = "light") {
+    if (typeof navigator === "undefined" || !navigator.vibrate) return;
+    try {
+      if (kind === "light") navigator.vibrate(15);
+      else if (kind === "medium") navigator.vibrate(40);
+      else if (kind === "heavy") navigator.vibrate(80);
+      else if (kind === "success") navigator.vibrate([20, 30, 40]);
+      else if (kind === "streak") navigator.vibrate([30, 50, 30, 50, 60]);
+    } catch {
+    }
+  }
 
   // js/fx.js
   var flashTimer = null;
@@ -375,13 +388,15 @@
     const palettes = {
       space: ["#4FC3F7", "#FF6B9D", "#FFD54F", "#69F0AE", "#CE93D8", "#FF8A65", "#80DEEA", "#F48FB1"],
       candy: ["#FF6B9D", "#FFD54F", "#B388FF", "#69F0AE", "#FF9D7A", "#F48FB1"],
-      ocean: ["#00BCD4", "#26C6DA", "#FFCA28", "#66BB6A", "#80DEEA", "#4FC3F7"]
+      ocean: ["#00BCD4", "#26C6DA", "#FFCA28", "#66BB6A", "#80DEEA", "#4FC3F7"],
+      forest: ["#43A047", "#66BB6A", "#FFCA28", "#AB47BC", "#A5D6A7", "#FFB74D"]
     };
     const colors = opts.colors || palettes[theme] || palettes.space;
     const shapeFamilies = {
       space: ["star", "star", "circle", "square", "ribbon"],
       candy: ["heart", "heart", "circle", "circle", "ribbon"],
-      ocean: ["wave", "bubble", "circle", "circle", "ribbon"]
+      ocean: ["wave", "bubble", "circle", "circle", "ribbon"],
+      forest: ["leaf", "flower", "circle", "circle", "ribbon"]
     };
     const shapes = shapeFamilies[theme] || shapeFamilies.space;
     for (let i = 0; i < count; i++) {
@@ -403,6 +418,14 @@
         piece.classList.add("confetti-wave");
         piece.style.width = "16px";
         piece.style.height = "8px";
+      } else if (shape === "leaf") {
+        piece.classList.add("confetti-leaf");
+        piece.style.width = "14px";
+        piece.style.height = "10px";
+      } else if (shape === "flower") {
+        piece.classList.add("confetti-flower");
+        piece.style.width = "14px";
+        piece.style.height = "14px";
       } else if (shape === "bubble") {
         piece.classList.add("confetti-bubble");
         piece.style.width = 8 + Math.random() * 6 + "px";
@@ -951,6 +974,11 @@
       { body: "#FFFFFF", eye: "#00BCD4", accent: "#00BCD4", glow: "rgba(0,188,212,0.5)" },
       { body: "#FFFFFF", eye: "#FFCA28", accent: "#FFCA28", glow: "rgba(255,202,40,0.5)" },
       { body: "#FFFFFF", eye: "#66BB6A", accent: "#66BB6A", glow: "rgba(102,187,106,0.5)" }
+    ],
+    forest: [
+      { body: "#FFFFFF", eye: "#43A047", accent: "#43A047", glow: "rgba(67,160,71,0.5)" },
+      { body: "#FFFFFF", eye: "#FFCA28", accent: "#FFCA28", glow: "rgba(255,202,40,0.5)" },
+      { body: "#FFFFFF", eye: "#AB47BC", accent: "#AB47BC", glow: "rgba(171,71,188,0.5)" }
     ]
   };
   function drawMascot() {
@@ -960,7 +988,8 @@
     const palettes = {
       space: { body: "#FFE4B5", accent: "#FF6B9D", cheek: "#FFB3C6", eye: "#1a1a3e" },
       candy: { body: "#FFD9E8", accent: "#FF6B9D", cheek: "#FF8FB1", eye: "#4A2C5A" },
-      ocean: { body: "#B2EBF2", accent: "#00BCD4", cheek: "#80DEEA", eye: "#004D40" }
+      ocean: { body: "#B2EBF2", accent: "#00BCD4", cheek: "#80DEEA", eye: "#004D40" },
+      forest: { body: "#C8E6C9", accent: "#43A047", cheek: "#A5D6A7", eye: "#1B5E20" }
     };
     const p = palettes[theme] || palettes.space;
     wrap.innerHTML = `
@@ -1014,7 +1043,8 @@
   var FLOOR_EMOJIS = {
     space: ["\u2B50", "\u{1F31F}", "\u{1FA90}", "\u{1F680}", "\u2B50", "\u{1F31F}", "\u2B50", "\u{1F319}"],
     candy: ["\u{1F36D}", "\u{1F369}", "\u{1F338}", "\u{1F36C}", "\u{1F338}", "\u{1F369}", "\u{1F36D}", "\u{1F33C}"],
-    ocean: ["\u{1FAB8}", "\u{1F41A}", "\u{1FAB8}", "\u{1F420}", "\u{1FAB8}", "\u{1F41A}", "\u{1FAB8}", "\u{1F33F}"]
+    ocean: ["\u{1FAB8}", "\u{1F41A}", "\u{1FAB8}", "\u{1F420}", "\u{1FAB8}", "\u{1F41A}", "\u{1FAB8}", "\u{1F33F}"],
+    forest: ["\u{1F333}", "\u{1F332}", "\u{1F344}", "\u{1F337}", "\u{1F332}", "\u{1F333}", "\u{1F344}", "\u{1F337}"]
   };
   function populateFloor(theme) {
     const floor = document.getElementById("js-floor-decor");
@@ -1025,6 +1055,7 @@
       const span = document.createElement("span");
       span.className = "floor-emoji";
       if (theme === "ocean") span.classList.add("sway");
+      if (theme === "forest") span.classList.add("sway");
       if (theme === "space" && i % 2 === 0) span.classList.add("twinkle");
       span.textContent = emo;
       floor.appendChild(span);
@@ -1129,6 +1160,28 @@
       el.style.transform = "scale(1)";
     });
     currentLetter = letter;
+    const gameArea = document.getElementById("js-game-area");
+    if (gameArea) {
+      const prev = document.getElementById("js-letter-trace");
+      if (prev) prev.remove();
+      const trace = document.createElement("div");
+      trace.id = "js-letter-trace";
+      trace.className = "letter-trace";
+      trace.setAttribute("aria-hidden", "true");
+      const settings = loadSettings();
+      const color = getComputedStyle(document.documentElement).getPropertyValue("--primary2").trim() || "#4FC3F7";
+      trace.innerHTML = `
+      <svg viewBox="0 0 200 200" width="200" height="200" aria-hidden="true">
+        <text x="100" y="140" text-anchor="middle"
+              font-family="Fredoka, sans-serif"
+              font-weight="900" font-size="180"
+              fill="none" stroke="${color}" stroke-width="3"
+              stroke-linecap="round" stroke-linejoin="round"
+              class="trace-path">${letter.toUpperCase()}</text>
+      </svg>`;
+      gameArea.appendChild(trace);
+      setTimeout(() => trace.remove(), 900);
+    }
     setTimeout(() => {
       const r = el.getBoundingClientRect();
       letterSparkle(r.left + r.width / 2, r.top + r.height / 2, {
@@ -1310,6 +1363,7 @@
       }
       celebrateRobot(streak);
       mascotReact(streak >= 5 ? "cheer" : "happy");
+      haptic(streak >= 5 ? "streak" : "light");
       if (settings.soundFx) playCorrect();
       if (streak === 3 || streak === 5 || streak === 10) {
         if (settings.soundFx) playStreak(streak);
@@ -1333,6 +1387,7 @@
       }
       if (settings.voice && streak >= 1) {
         speakPraise();
+        if (settings.lang === "en") speakLetterSay(currentLetter);
       }
       setTimeout(() => {
         if (gameRunning) nextTurn(loadSettings().level, touchKeys);
@@ -1345,9 +1400,52 @@
       shakeLetter();
       flashWrongKey(pressed);
       mascotReact("sad");
+      haptic("medium");
       if (settings.soundFx) playWrong();
       if (settings.voice) speakNudge();
     }
+  }
+  var LETTER_SAY = {
+    A: "ah",
+    B: "buh",
+    C: "see",
+    D: "dee",
+    E: "eh",
+    F: "fff",
+    G: "gee",
+    H: "aitch",
+    I: "eye",
+    J: "jay",
+    K: "kay",
+    L: "el",
+    M: "em",
+    N: "en",
+    O: "oh",
+    P: "pee",
+    Q: "cue",
+    R: "ar",
+    S: "ess",
+    T: "tee",
+    U: "you",
+    V: "vee",
+    W: "double-you",
+    X: "ex",
+    Y: "why",
+    Z: "zee"
+  };
+  function speakLetterSay(letter) {
+    if (!("speechSynthesis" in window)) return;
+    const say = LETTER_SAY[letter];
+    if (!say) return;
+    setTimeout(() => {
+      window.speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(say);
+      u.lang = "en-US";
+      u.rate = 0.7;
+      u.pitch = 1.1;
+      u.volume = 0.85;
+      window.speechSynthesis.speak(u);
+    }, 600);
   }
   function speakPraise() {
     if (!("speechSynthesis" in window)) return;

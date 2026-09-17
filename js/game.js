@@ -3,7 +3,7 @@ import { loadSettings, saveSettings, fallDuration } from './settings.js';
 import { loadProgress, recordAttempt, masteredCount } from './progress.js';
 import { activeLetters, currentRobotIndex } from './curriculum.js';
 import { t, pickT, setLang } from './i18n.js';
-import { playCorrect, playWrong, playStreak, playUnlock, unlockAudio } from './sfx.js';
+import { playCorrect, playWrong, playStreak, playUnlock, unlockAudio, haptic } from './sfx.js';
 import { confettiBurst, streakFlash, megaFireworks, startLetterTrail, stopLetterTrail, letterSparkle, floatCombo } from './fx.js';
 import { recordStar, getDailyProgress, dailyGoal, getWeeklyProgress, weeklyGoal } from './challenge.js';
 import { startBgm, stopBgm, pauseBgm, resumeBgm, unlockBgm } from './bgm.js';
@@ -159,6 +159,11 @@ const ROBOT_PALETTES = {
     { body: '#FFFFFF', eye: '#FFCA28', accent: '#FFCA28', glow: 'rgba(255,202,40,0.5)' },
     { body: '#FFFFFF', eye: '#66BB6A', accent: '#66BB6A', glow: 'rgba(102,187,106,0.5)' },
   ],
+  forest: [
+    { body: '#FFFFFF', eye: '#43A047', accent: '#43A047', glow: 'rgba(67,160,71,0.5)' },
+    { body: '#FFFFFF', eye: '#FFCA28', accent: '#FFCA28', glow: 'rgba(255,202,40,0.5)' },
+    { body: '#FFFFFF', eye: '#AB47BC', accent: '#AB47BC', glow: 'rgba(171,71,188,0.5)' },
+  ],
 };
 
 // ── Mascot companion (Phase 10c) — friendly cat, theme-aware ──────────────
@@ -171,6 +176,7 @@ export function drawMascot() {
     space: { body: '#FFE4B5', accent: '#FF6B9D', cheek: '#FFB3C6', eye: '#1a1a3e' },
     candy: { body: '#FFD9E8', accent: '#FF6B9D', cheek: '#FF8FB1', eye: '#4A2C5A' },
     ocean: { body: '#B2EBF2', accent: '#00BCD4', cheek: '#80DEEA', eye: '#004D40' },
+    forest: { body: '#C8E6C9', accent: '#43A047', cheek: '#A5D6A7', eye: '#1B5E20' },
   };
   const p = palettes[theme] || palettes.space;
 
@@ -233,6 +239,7 @@ const FLOOR_EMOJIS = {
   space: ['⭐', '🌟', '🪐', '🚀', '⭐', '🌟', '⭐', '🌙'],
   candy: ['🍭', '🍩', '🌸', '🍬', '🌸', '🍩', '🍭', '🌼'],
   ocean: ['🪸', '🐚', '🪸', '🐠', '🪸', '🐚', '🪸', '🌿'],
+  forest: ['🌳', '🌲', '🍄', '🌷', '🌲', '🌳', '🍄', '🌷'],
 };
 
 export function populateFloor(theme) {
@@ -244,6 +251,7 @@ export function populateFloor(theme) {
     const span = document.createElement('span');
     span.className = 'floor-emoji';
     if (theme === 'ocean') span.classList.add('sway');
+    if (theme === 'forest') span.classList.add('sway');
     if (theme === 'space' && i % 2 === 0) span.classList.add('twinkle');
     span.textContent = emo;
     floor.appendChild(span);
@@ -364,6 +372,33 @@ export function showLetter(letter) {
     el.style.transform = 'scale(1)';
   });
   currentLetter = letter;
+
+  // Phase 13d — Letter trace: draw the letter outline first via SVG stroke,
+  // then fade out as the main letter becomes fully visible.
+  const gameArea = document.getElementById('js-game-area');
+  if (gameArea) {
+    // Remove any previous trace
+    const prev = document.getElementById('js-letter-trace');
+    if (prev) prev.remove();
+    const trace = document.createElement('div');
+    trace.id = 'js-letter-trace';
+    trace.className = 'letter-trace';
+    trace.setAttribute('aria-hidden', 'true');
+    const settings = loadSettings();
+    const color = getComputedStyle(document.documentElement).getPropertyValue('--primary2').trim() || '#4FC3F7';
+    trace.innerHTML = `
+      <svg viewBox="0 0 200 200" width="200" height="200" aria-hidden="true">
+        <text x="100" y="140" text-anchor="middle"
+              font-family="Fredoka, sans-serif"
+              font-weight="900" font-size="180"
+              fill="none" stroke="${color}" stroke-width="3"
+              stroke-linecap="round" stroke-linejoin="round"
+              class="trace-path">${letter.toUpperCase()}</text>
+      </svg>`;
+    gameArea.appendChild(trace);
+    // Auto-remove after animation
+    setTimeout(() => trace.remove(), 900);
+  }
 
   // Sparkle burst around letter on appear (Phase 9c)
   setTimeout(() => {
@@ -583,6 +618,7 @@ export function handleKey(pressed) {
     // ── Reward feedback ─────────────────────────────────────────────────
     celebrateRobot(streak);
     mascotReact(streak >= 5 ? 'cheer' : 'happy');
+    haptic(streak >= 5 ? 'streak' : 'light');
     if (settings.soundFx) playCorrect();
     if (streak === 3 || streak === 5 || streak === 10) {
       if (settings.soundFx) playStreak(streak);
@@ -614,6 +650,8 @@ export function handleKey(pressed) {
     // Praise TTS (only on streak >= 1 to avoid spamming every letter)
     if (settings.voice && streak >= 1) {
       speakPraise();
+      // Phonetic pronunciation (English only — bilingual stays clean)
+      if (settings.lang === 'en') speakLetterSay(currentLetter);
     }
 
     setTimeout(() => {
@@ -628,9 +666,36 @@ export function handleKey(pressed) {
     shakeLetter();
     flashWrongKey(pressed);  // Phase 12c — per-key shake
     mascotReact('sad');
+    haptic('medium');
     if (settings.soundFx) playWrong();
     if (settings.voice) speakNudge();
   }
+}
+
+// ── Per-letter phonetic pronunciation (Phase 13c) ────────────────────────────
+// "B" → "buh", "S" → "ess" — reinforces sound-symbol association for SEN
+const LETTER_SAY = {
+  A: 'ah', B: 'buh', C: 'see', D: 'dee', E: 'eh', F: 'fff',
+  G: 'gee', H: 'aitch', I: 'eye', J: 'jay', K: 'kay', L: 'el',
+  M: 'em', N: 'en', O: 'oh', P: 'pee', Q: 'cue', R: 'ar',
+  S: 'ess', T: 'tee', U: 'you', V: 'vee', W: 'double-you',
+  X: 'ex', Y: 'why', Z: 'zee',
+};
+
+function speakLetterSay(letter) {
+  if (!('speechSynthesis' in window)) return;
+  const say = LETTER_SAY[letter];
+  if (!say) return;
+  // Slight delay so it doesn't overlap with praise
+  setTimeout(() => {
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(say);
+    u.lang = 'en-US';
+    u.rate = 0.7;
+    u.pitch = 1.1;
+    u.volume = 0.85;
+    window.speechSynthesis.speak(u);
+  }, 600);
 }
 
 // ── Praise / nudge TTS ──────────────────────────────────────────────────────
