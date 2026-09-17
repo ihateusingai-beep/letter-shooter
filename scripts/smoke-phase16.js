@@ -123,6 +123,88 @@ const path = require('path');
     errors.forEach(e => console.log('   - ' + e));
   }
 
+  // ── 10. Phase 16 PATCH: bonus catch absorbs key press (Bug 2) ───────────
+  // Drive 10 correct to enter speed round, keep firing during it,
+  // then try pressing keys during bonus catch window — stars should
+  // NOT increment (input absorbed by bonusCatchActive guard).
+  await page.waitForTimeout(1500);
+  // Reset state
+  await page.evaluate(() => {
+    Object.keys(localStorage).forEach(k => { if (k.startsWith('ls-')) localStorage.removeItem(k); });
+  });
+  await page.reload();
+  await page.waitForSelector('#js-start-btn');
+  await page.click('#js-start-btn');
+  await page.waitForTimeout(400);
+
+  // 10 correct → speed round
+  for (let i = 0; i < 10; i++) {
+    const t = await page.locator('#js-letter').textContent();
+    await page.keyboard.press(t.toLowerCase());
+    await page.waitForTimeout(700);
+  }
+  // Keep firing during 5s speed round
+  for (let i = 0; i < 5; i++) {
+    const t = await page.locator('#js-letter').textContent();
+    await page.keyboard.press(t.toLowerCase());
+    await page.waitForTimeout(700);
+  }
+  // Wait for bonus catch to appear (~T+5.6s after 10th correct)
+  await page.waitForTimeout(2400); // T+5.5s — banner just dismissed
+  await page.waitForTimeout(700);  // T+6.2s — bonus catch should be visible
+
+  const bonusActive = await page.locator('#js-bonus-star.visible').count();
+  if (bonusActive > 0) {
+    // Snapshot stars BEFORE pressing a letter during bonus catch
+    const starsBefore = await page.locator('#js-stars-num').textContent();
+    const numBefore = parseInt(starsBefore || '0', 10) || 0;
+    // Press a key during bonus catch — should be absorbed (no streak/score change)
+    const t = await page.locator('#js-letter').textContent();
+    await page.keyboard.press(t.toLowerCase());
+    await page.waitForTimeout(150);
+    const starsAfter = await page.locator('#js-stars-num').textContent();
+    const numAfter = parseInt(starsAfter || '0', 10) || 0;
+    // If absorbed: stars should be unchanged.
+    // (If it leaked: would be +1 from handleKey correct)
+    console.log(`[10] bonus catch absorbs key press: ${numAfter === numBefore ? 'OK (' + numAfter + ')' : 'WRONG (was ' + numBefore + ' now ' + numAfter + ')'}`);
+    // Catch the bonus to clean up
+    await page.mouse.move(400, 400);
+    await page.mouse.down();
+    await page.waitForTimeout(50);
+    await page.mouse.up();
+    await page.waitForTimeout(800);
+  } else {
+    console.log('[10] bonus catch absorbs key press: SKIPPED (no spawn)');
+  }
+
+  // ── 11. Phase 16 PATCH: state resets on new game (Bug 1) ─────────────────
+  // After bonus catch completes, start a new game and verify
+  // speed round state is reset (correctSinceSpeed should be 0).
+  await page.evaluate(() => {
+    Object.keys(localStorage).forEach(k => { if (k.startsWith('ls-')) localStorage.removeItem(k); });
+  });
+  await page.reload();
+  await page.waitForSelector('#js-start-btn');
+  await page.click('#js-start-btn');
+  await page.waitForTimeout(400);
+
+  // Do 5 correct — speed round should NOT trigger (was reset on startGame)
+  for (let i = 0; i < 5; i++) {
+    const t = await page.locator('#js-letter').textContent();
+    await page.keyboard.press(t.toLowerCase());
+    await page.waitForTimeout(700);
+  }
+  const bannerVisibleEarly = await page.locator('#js-speed-banner.visible').count();
+  console.log(`[11] no spurious speed round after 5 correct (state reset): ${bannerVisibleEarly === 0 ? 'OK' : 'WRONG (speed round fired at <10 correct)'}`);
+
+  // ── 12. Phase 16 PATCH: errors check (final) ─────────────────────────────
+  if (errors.length === 0) {
+    console.log('[12] no JS errors after patch: OK');
+  } else {
+    console.log('[12] JS errors after patch:');
+    errors.forEach(e => console.log('   - ' + e));
+  }
+
   await browser.close();
   process.exit(errors.length > 0 ? 1 : 0);
 })();

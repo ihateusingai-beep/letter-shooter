@@ -994,6 +994,34 @@
   });
 
   // js/game.js
+  function resetPhase16State() {
+    speedRoundActive = false;
+    if (speedRoundTimer) {
+      clearInterval(speedRoundTimer);
+      speedRoundTimer = null;
+    }
+    speedRoundHits = 0;
+    correctSinceSpeed = 0;
+    bonusCatchActive = false;
+    if (bonusCatchTimer) {
+      clearTimeout(bonusCatchTimer);
+      bonusCatchTimer = null;
+    }
+    if (bonusCatchKeyListener) {
+      try {
+        document.removeEventListener("pointerdown", bonusCatchKeyListener, true);
+      } catch {
+      }
+      bonusCatchKeyListener = null;
+    }
+    const banner = document.getElementById("js-speed-banner");
+    if (banner) banner.classList.remove("visible");
+    const star = document.getElementById("js-bonus-star");
+    if (star) {
+      star.classList.remove("visible", "falling", "caught", "missed");
+      star.style.transition = "none";
+    }
+  }
   function getEls() {
     return {
       letter: document.getElementById("js-letter"),
@@ -1168,7 +1196,7 @@
     const theme = loadSettings().theme || "space";
     const palettes = ROBOT_PALETTES[theme] || ROBOT_PALETTES.space;
     const settings = loadSettings();
-    const userPick = typeof settings.robotColor === "number" ? settings.robotColor : 0;
+    const userPick = Number(settings.robotColor) || 0;
     const p = palettes[userPick % palettes.length];
     robotWrap.innerHTML = `
     <svg viewBox="0 0 160 180" width="160" height="180" aria-hidden="true"
@@ -1420,6 +1448,7 @@
     animFrame = requestAnimationFrame(step);
   }
   function startGame(unitKey = "U1", level = "L0") {
+    resetPhase16State();
     gameRunning = true;
     score = 0;
     streak = 0;
@@ -1456,6 +1485,7 @@
   }
   function handleKey(pressed) {
     if (!gameRunning || !currentLetter) return;
+    if (bonusCatchActive) return;
     const expected = currentLetter.toUpperCase();
     const settings = loadSettings();
     if (pressed === expected) {
@@ -1480,7 +1510,6 @@
       updateDailyHint();
       if (speedRoundActive) {
         speedRoundHits++;
-        speedRoundStreak++;
         const hits = document.getElementById("js-speed-hits");
         if (hits) hits.textContent = speedRoundHits;
       } else {
@@ -1493,17 +1522,11 @@
         const pct = Math.round(challenge.dailyMilestone * 100);
         const lang = loadSettings().lang || "zh";
         const phrase = lang === "zh" ? `\u4ECA\u65E5 ${pct}%\uFF01\u4EF2\u5DEE\u5C11\u5C11\uFF01` : `${pct}% today! Almost there!`;
-        const toast = document.getElementById("js-toast");
-        const title = document.getElementById("js-toast-title");
-        const body = document.getElementById("js-toast-body");
-        if (toast && title && body) {
-          title.textContent = lang === "zh" ? `\u{1F3AF} \u4ECA\u65E5\u9032\u5EA6 ${pct}%` : `\u{1F3AF} Daily ${pct}%`;
-          body.textContent = phrase;
-          toast.classList.remove("visible");
-          void toast.offsetWidth;
-          toast.classList.add("visible");
-          setTimeout(() => toast.classList.remove("visible"), 2500);
-        }
+        showToast(
+          lang === "zh" ? `\u{1F3AF} \u4ECA\u65E5\u9032\u5EA6 ${pct}%` : `\u{1F3AF} Daily ${pct}%`,
+          phrase,
+          2500
+        );
         if (challenge.dailyMilestone >= 1) {
           megaFireworks({ theme: loadSettings().theme || "space" });
         }
@@ -1553,8 +1576,12 @@
         megaFireworks({ theme: settings.theme || "space" });
       }
       if (settings.voice && streak >= 1) {
-        speakPraise();
-        if (streak % 3 === 0) speakContextual(currentLetter);
+        const useContextual = streak % 3 === 0;
+        if (useContextual) {
+          speakContextual(currentLetter);
+        } else {
+          speakPraise();
+        }
         if (settings.lang === "en") speakLetterSay(currentLetter);
       }
       setTimeout(() => {
@@ -1592,7 +1619,6 @@
     if (speedRoundActive) return;
     speedRoundActive = true;
     speedRoundHits = 0;
-    speedRoundStreak = 0;
     speedRoundEnd = Date.now() + SPEED_ROUND_DURATION_MS;
     correctSinceSpeed = 0;
     const banner = document.getElementById("js-speed-banner");
@@ -1627,17 +1653,11 @@
       updateStars(stars);
       const lang = loadSettings().lang;
       const phrase = lang === "zh" ? `\u734E\u52F5 +${bonus} \u2B50\uFF01` : `Bonus +${bonus} \u2B50!`;
-      const toast = document.getElementById("js-toast");
-      const title = document.getElementById("js-toast-title");
-      const body = document.getElementById("js-toast-body");
-      if (toast && title && body) {
-        title.textContent = lang === "zh" ? "\u26A1 \u9650\u6642\u5B8C\u6210\uFF01" : "\u26A1 Speed done!";
-        body.textContent = phrase;
-        toast.classList.remove("visible");
-        void toast.offsetWidth;
-        toast.classList.add("visible");
-        setTimeout(() => toast.classList.remove("visible"), 2500);
-      }
+      showToast(
+        lang === "zh" ? "\u26A1 \u9650\u6642\u5B8C\u6210\uFF01" : "\u26A1 Speed done!",
+        phrase,
+        2500
+      );
       if (bonus >= 3) megaFireworks({ theme: loadSettings().theme || "space" });
     }
     if (bonus >= 2 && !bonusCatchActive) {
@@ -1650,7 +1670,6 @@
     const star = document.getElementById("js-bonus-star");
     if (!star) return;
     bonusCatchActive = true;
-    bonusCatchEnd = Date.now() + BONUS_CATCH_DURATION_MS;
     const lane = 0.15 + Math.random() * 0.7;
     const startLeft = window.innerWidth * lane;
     const endTop = window.innerHeight - 120;
@@ -1710,17 +1729,9 @@
       const lang = loadSettings().lang || "zh";
       const title = lang === "zh" ? "\u2B50 \u63A5\u5230\u661F\u661F\uFF01" : "\u2B50 Bonus caught!";
       const body = lang === "zh" ? `+${BONUS_CATCH_STARS} \u2B50 \u734E\u52F5\uFF01` : `+${BONUS_CATCH_STARS} \u2B50 bonus!`;
-      const toast = document.getElementById("js-toast");
-      const titleEl = document.getElementById("js-toast-title");
-      const bodyEl = document.getElementById("js-toast-body");
-      if (toast && titleEl && bodyEl) {
-        titleEl.textContent = title;
-        bodyEl.textContent = body;
-        toast.classList.remove("visible");
-        void toast.offsetWidth;
-        toast.classList.add("visible");
-        setTimeout(() => toast.classList.remove("visible"), 2200);
-      }
+      showToast(title, body, 2200);
+      celebrateRobot(10);
+      mascotReact("cheer");
       megaFireworks({ theme: loadSettings().theme || "space" });
       haptic("streak");
       if (loadSettings().soundFx) playStreak(5);
@@ -1856,7 +1867,14 @@
     ghost.style.left = r.left + r.width / 2 + "px";
     ghost.style.top = r.top + r.height / 2 + "px";
     document.body.appendChild(ghost);
-    setTimeout(() => ghost.remove(), 1400);
+    let cleaned = false;
+    const cleanup = () => {
+      if (cleaned) return;
+      cleaned = true;
+      ghost.remove();
+    };
+    ghost.addEventListener("animationend", cleanup, { once: true });
+    setTimeout(cleanup, 1500);
   }
   function highlightKey(letter) {
     const hint = document.getElementById("js-kb-hint");
@@ -1897,17 +1915,24 @@
     showToast(title, body);
     toastTimer = setTimeout(drainToast, 3500);
   }
-  function showToast(title, body) {
+  function showToast(title, body, hideMs = 3e3) {
     const toast = document.getElementById("js-toast");
     const toastTitle = document.getElementById("js-toast-title");
     const toastBody = document.getElementById("js-toast-body");
     if (!toast || !toastTitle || !toastBody) return;
+    if (toastTimerId) {
+      clearTimeout(toastTimerId);
+      toastTimerId = null;
+    }
     toast.classList.remove("visible");
     void toast.offsetWidth;
     toastTitle.textContent = title;
     toastBody.textContent = body;
     toast.classList.add("visible");
-    setTimeout(() => toast.classList.remove("visible"), 3e3);
+    toastTimerId = setTimeout(() => {
+      toast.classList.remove("visible");
+      toastTimerId = null;
+    }, hideMs);
   }
   function showAchievement(stars2) {
     const ms = ACHIEVEMENT_MILESTONES.find((m) => m.stars === stars2);
@@ -2116,7 +2141,7 @@
       grid.appendChild(cell);
     });
   }
-  var score, streak, stars, currentLetter, touchKeys, gameRunning, animFrame, currentUnit, correctSinceSpeed, speedRoundActive, speedRoundTimer, speedRoundEnd, speedRoundHits, speedRoundStreak, bonusCatchActive, bonusCatchTimer, bonusCatchEnd, toastTimer, toastQueue, ROBOT_PALETTES, FLOOR_EMOJIS, BULLET_SHAPES, BULLET_PALETTES, lastLetterPos, fallPaused, letterArrived, LETTER_SAY, SPEED_ROUND_DURATION_MS, SPEED_ROUND_TRIGGER, bonusCatchKeyListener, BONUS_CATCH_DURATION_MS, BONUS_CATCH_STARS, QWERTY_ROWS, currentKbMode, compactKeys, ACHIEVEMENT_MILESTONES, pendingCompletion;
+  var score, streak, stars, currentLetter, touchKeys, gameRunning, animFrame, currentUnit, correctSinceSpeed, speedRoundActive, speedRoundTimer, speedRoundEnd, speedRoundHits, bonusCatchActive, bonusCatchTimer, toastTimerId, toastTimer, toastQueue, ROBOT_PALETTES, FLOOR_EMOJIS, BULLET_SHAPES, BULLET_PALETTES, lastLetterPos, fallPaused, letterArrived, LETTER_SAY, SPEED_ROUND_DURATION_MS, SPEED_ROUND_TRIGGER, bonusCatchKeyListener, BONUS_CATCH_DURATION_MS, BONUS_CATCH_STARS, QWERTY_ROWS, currentKbMode, compactKeys, ACHIEVEMENT_MILESTONES, pendingCompletion;
   var init_game = __esm({
     "js/game.js"() {
       init_settings();
@@ -2171,10 +2196,9 @@
       speedRoundTimer = null;
       speedRoundEnd = 0;
       speedRoundHits = 0;
-      speedRoundStreak = 0;
       bonusCatchActive = false;
       bonusCatchTimer = null;
-      bonusCatchEnd = 0;
+      toastTimerId = null;
       toastTimer = null;
       toastQueue = [];
       ROBOT_PALETTES = {

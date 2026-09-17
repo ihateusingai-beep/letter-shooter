@@ -35,10 +35,35 @@ let speedRoundActive = false;
 let speedRoundTimer = null;
 let speedRoundEnd = 0;     // timestamp
 let speedRoundHits = 0;
-let speedRoundStreak = 0;
 let bonusCatchActive = false; // bonus catch mode (Phase 16e)
 let bonusCatchTimer = null;
-let bonusCatchEnd = 0;
+let toastTimerId = null;   // shared toast hide-timer (Phase 16 patch — prevents collision)
+
+// Phase 16 patch — full reset of speed-round + bonus-catch state.
+// Called from startGame/stopGame so stale timers/listeners from a previous
+// game can't poison the new one (e.g. speedRoundActive leaking true means
+// correctSinceSpeed never increments and speed round never re-triggers).
+function resetPhase16State() {
+  speedRoundActive = false;
+  if (speedRoundTimer) { clearInterval(speedRoundTimer); speedRoundTimer = null; }
+  speedRoundHits = 0;
+  correctSinceSpeed = 0;
+
+  bonusCatchActive = false;
+  if (bonusCatchTimer) { clearTimeout(bonusCatchTimer); bonusCatchTimer = null; }
+  if (bonusCatchKeyListener) {
+    try { document.removeEventListener('pointerdown', bonusCatchKeyListener, true); } catch {}
+    bonusCatchKeyListener = null;
+  }
+
+  const banner = document.getElementById('js-speed-banner');
+  if (banner) banner.classList.remove('visible');
+  const star = document.getElementById('js-bonus-star');
+  if (star) {
+    star.classList.remove('visible', 'falling', 'caught', 'missed');
+    star.style.transition = 'none';
+  }
+}
 
 // Toast queue — prevents overwrite on rapid unlocks
 let toastTimer = null;
@@ -287,7 +312,9 @@ export function drawRobot(robotIdx = 0) {
   // (Milestone unlocks still trigger showRobotUnlock notifications;
   // palette index is purely cosmetic and always honors the user's pick.)
   const settings = loadSettings();
-  const userPick = typeof settings.robotColor === 'number' ? settings.robotColor : 0;
+  // Phase 16 patch — coerce defensively in case localStorage was corrupted
+  // to a string ("0") or non-numeric value; fallback to default 0.
+  const userPick = Number(settings.robotColor) || 0;
   const p = palettes[userPick % palettes.length];
 
   robotWrap.innerHTML = `
@@ -615,6 +642,7 @@ function startFall(onArrive) {
 
 // ── Game loop ───────────────────────────────────────────────────────────────
 export function startGame(unitKey = 'U1', level = 'L0') {
+  resetPhase16State();   // Phase 16 patch — clean slate on new game
   gameRunning = true;
   score = 0;
   streak = 0;
@@ -644,6 +672,7 @@ export function startGame(unitKey = 'U1', level = 'L0') {
 export function stopGame() {
   gameRunning = false;
   if (animFrame) { cancelAnimationFrame(animFrame); animFrame = null; }
+  resetPhase16State();   // Phase 16 patch — kill any in-flight speed round/bonus
   stopBgm();
 }
 
@@ -689,6 +718,9 @@ function nextTurn(level, keys) {
 // ── Input handling ──────────────────────────────────────────────────────────
 export function handleKey(pressed) {
   if (!gameRunning || !currentLetter) return;
+  // Phase 16 patch — bonus catch absorbs all input (touch + physical keyboard)
+  // so the bonus star's pointerdown doesn't double-count as a letter press.
+  if (bonusCatchActive) return;
   const expected = currentLetter.toUpperCase();
   const settings = loadSettings();
 
@@ -721,7 +753,6 @@ export function handleKey(pressed) {
     // Phase 16a — Speed round: every SPEED_ROUND_TRIGGER correct answers
     if (speedRoundActive) {
       speedRoundHits++;
-      speedRoundStreak++;
       const hits = document.getElementById('js-speed-hits');
       if (hits) hits.textContent = speedRoundHits;
     } else {
@@ -737,17 +768,11 @@ export function handleKey(pressed) {
         ? `今日 ${pct}%！仲差少少！`
         : `${pct}% today! Almost there!`;
       // Quick milestone toast (reuse js-toast)
-      const toast = document.getElementById('js-toast');
-      const title = document.getElementById('js-toast-title');
-      const body = document.getElementById('js-toast-body');
-      if (toast && title && body) {
-        title.textContent = lang === 'zh' ? `🎯 今日進度 ${pct}%` : `🎯 Daily ${pct}%`;
-        body.textContent = phrase;
-        toast.classList.remove('visible');
-        void toast.offsetWidth;
-        toast.classList.add('visible');
-        setTimeout(() => toast.classList.remove('visible'), 2500);
-      }
+      showToast(
+        lang === 'zh' ? `🎯 今日進度 ${pct}%` : `🎯 Daily ${pct}%`,
+        phrase,
+        2500
+      );
       if (challenge.dailyMilestone >= 1.0) {
         // Daily goal complete: mega fireworks
         megaFireworks({ theme: loadSettings().theme || 'space' });
@@ -815,10 +840,16 @@ export function handleKey(pressed) {
 
     // Praise TTS (only on streak >= 1 to avoid spamming every letter)
     if (settings.voice && streak >= 1) {
-      speakPraise();
-      // Phase 16b — Contextual letter-symbol dialogue
-      // (Every 3rd correct to avoid TTS spam, alongside phonetic pron)
-      if (streak % 3 === 0) speakContextual(currentLetter);
+      // Phase 16 patch — on every 3rd correct we replace the generic praise
+      // with the contextual letter-symbol phrase. The old behaviour was to
+      // cancel praise 50ms after speaking it, which meant praise never
+      // actually played on those turns. Skip-on-contextual is cleaner.
+      const useContextual = streak % 3 === 0;
+      if (useContextual) {
+        speakContextual(currentLetter);
+      } else {
+        speakPraise();
+      }
       // Phonetic pronunciation (English only — bilingual stays clean)
       if (settings.lang === 'en') speakLetterSay(currentLetter);
     }
@@ -876,7 +907,6 @@ export function startSpeedRound() {
   if (speedRoundActive) return;
   speedRoundActive = true;
   speedRoundHits = 0;
-  speedRoundStreak = 0;
   speedRoundEnd = Date.now() + SPEED_ROUND_DURATION_MS;
   correctSinceSpeed = 0;
 
@@ -920,17 +950,11 @@ function endSpeedRound() {
     const phrase = lang === 'zh'
       ? `獎勵 +${bonus} ⭐！`
       : `Bonus +${bonus} ⭐!`;
-    const toast = document.getElementById('js-toast');
-    const title = document.getElementById('js-toast-title');
-    const body = document.getElementById('js-toast-body');
-    if (toast && title && body) {
-      title.textContent = lang === 'zh' ? '⚡ 限時完成！' : '⚡ Speed done!';
-      body.textContent = phrase;
-      toast.classList.remove('visible');
-      void toast.offsetWidth;
-      toast.classList.add('visible');
-      setTimeout(() => toast.classList.remove('visible'), 2500);
-    }
+    showToast(
+      lang === 'zh' ? '⚡ 限時完成！' : '⚡ Speed done!',
+      phrase,
+      2500
+    );
     if (bonus >= 3) megaFireworks({ theme: loadSettings().theme || 'space' });
   }
 
@@ -953,7 +977,6 @@ function startBonusCatch() {
   if (!star) return;
 
   bonusCatchActive = true;
-  bonusCatchEnd = Date.now() + BONUS_CATCH_DURATION_MS;
 
   // Random horizontal lane (avoid edges so the star is reachable)
   const lane = 0.15 + Math.random() * 0.7; // 15%–85%
@@ -1027,17 +1050,11 @@ function endBonusCatch(caught) {
     const body  = lang === 'zh'
       ? `+${BONUS_CATCH_STARS} ⭐ 獎勵！`
       : `+${BONUS_CATCH_STARS} ⭐ bonus!`;
-    const toast = document.getElementById('js-toast');
-    const titleEl = document.getElementById('js-toast-title');
-    const bodyEl  = document.getElementById('js-toast-body');
-    if (toast && titleEl && bodyEl) {
-      titleEl.textContent = title;
-      bodyEl.textContent  = body;
-      toast.classList.remove('visible');
-      void toast.offsetWidth;
-      toast.classList.add('visible');
-      setTimeout(() => toast.classList.remove('visible'), 2200);
-    }
+    showToast(title, body, 2200);
+
+    // Phase 16 patch — celebrate big (visual sync with mega fireworks)
+    celebrateRobot(10);
+    mascotReact('cheer');
 
     megaFireworks({ theme: loadSettings().theme || 'space' });
     haptic('streak');
@@ -1214,7 +1231,16 @@ function spawnWrongGhost(letter) {
   ghost.style.left = (r.left + r.width / 2) + 'px';
   ghost.style.top  = (r.top + r.height / 2) + 'px';
   document.body.appendChild(ghost);
-  setTimeout(() => ghost.remove(), 1400);
+  // Phase 16 patch — use animationend (more robust than fixed setTimeout)
+  // with a 1.5s fallback in case the event never fires.
+  let cleaned = false;
+  const cleanup = () => {
+    if (cleaned) return;
+    cleaned = true;
+    ghost.remove();
+  };
+  ghost.addEventListener('animationend', cleanup, { once: true });
+  setTimeout(cleanup, 1500);
 }
 
 // Highlight the target key, dim all others
@@ -1266,11 +1292,16 @@ function drainToast() {
   toastTimer = setTimeout(drainToast, 3500);
 }
 
-function showToast(title, body) {
+function showToast(title, body, hideMs = 3000) {
   const toast      = document.getElementById('js-toast');
   const toastTitle = document.getElementById('js-toast-title');
   const toastBody  = document.getElementById('js-toast-body');
   if (!toast || !toastTitle || !toastBody) return;
+
+  // Phase 16 patch — cancel any prior toast's hide-timer so a fast follow-up
+  // toast (e.g. speed-round → bonus-catch ~600ms later) doesn't get
+  // prematurely hidden by the previous call's setTimeout.
+  if (toastTimerId) { clearTimeout(toastTimerId); toastTimerId = null; }
 
   // Hide first to retrigger animation
   toast.classList.remove('visible');
@@ -1279,7 +1310,10 @@ function showToast(title, body) {
   toastBody.textContent  = body;
   toast.classList.add('visible');
 
-  setTimeout(() => toast.classList.remove('visible'), 3000);
+  toastTimerId = setTimeout(() => {
+    toast.classList.remove('visible');
+    toastTimerId = null;
+  }, hideMs);
 }
 
 // ── Achievement toast (Phase 8a) — bigger, themed pop at star milestones ───
