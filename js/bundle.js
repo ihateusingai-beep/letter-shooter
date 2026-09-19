@@ -1606,7 +1606,6 @@
     const say = LETTER_SAY[letter];
     if (!say) return;
     setTimeout(() => {
-      window.speechSynthesis.cancel();
       const u = new SpeechSynthesisUtterance(say);
       u.lang = "en-US";
       u.rate = 0.7;
@@ -1639,7 +1638,7 @@
       if (Date.now() >= speedRoundEnd) {
         endSpeedRound();
       }
-    }, 100);
+    }, 500);
   }
   function endSpeedRound() {
     if (speedRoundTimer) clearInterval(speedRoundTimer);
@@ -1670,6 +1669,7 @@
     const star = document.getElementById("js-bonus-star");
     if (!star) return;
     bonusCatchActive = true;
+    fallPaused = true;
     const lane = 0.15 + Math.random() * 0.7;
     const startLeft = window.innerWidth * lane;
     const endTop = window.innerHeight - 120;
@@ -1700,6 +1700,7 @@
       clearTimeout(bonusCatchTimer);
       bonusCatchTimer = null;
     }
+    fallPaused = false;
     const star = document.getElementById("js-bonus-star");
     if (star) {
       star.classList.remove("falling");
@@ -1745,7 +1746,6 @@
     u.lang = lang === "zh" ? "zh-HK" : "en-US";
     u.rate = lang === "zh" ? 0.95 : 0.85;
     u.volume = 0.9;
-    setTimeout(() => window.speechSynthesis.cancel(), 50);
     setTimeout(() => window.speechSynthesis.speak(u), 80);
   }
   function speakPraise() {
@@ -1861,6 +1861,10 @@
     const btn = document.querySelector(`.kb-key[data-letter="${letter}"]`);
     if (!btn) return;
     const r = btn.getBoundingClientRect();
+    const existing = document.querySelectorAll(".wrong-ghost");
+    if (existing.length >= MAX_GHOSTS) {
+      existing[0].remove();
+    }
     const ghost = document.createElement("div");
     ghost.className = "wrong-ghost";
     ghost.textContent = letter;
@@ -2141,7 +2145,7 @@
       grid.appendChild(cell);
     });
   }
-  var score, streak, stars, currentLetter, touchKeys, gameRunning, animFrame, currentUnit, correctSinceSpeed, speedRoundActive, speedRoundTimer, speedRoundEnd, speedRoundHits, bonusCatchActive, bonusCatchTimer, toastTimerId, toastTimer, toastQueue, ROBOT_PALETTES, FLOOR_EMOJIS, BULLET_SHAPES, BULLET_PALETTES, lastLetterPos, fallPaused, letterArrived, LETTER_SAY, SPEED_ROUND_DURATION_MS, SPEED_ROUND_TRIGGER, bonusCatchKeyListener, BONUS_CATCH_DURATION_MS, BONUS_CATCH_STARS, QWERTY_ROWS, currentKbMode, compactKeys, ACHIEVEMENT_MILESTONES, pendingCompletion;
+  var score, streak, stars, currentLetter, touchKeys, gameRunning, animFrame, currentUnit, correctSinceSpeed, speedRoundActive, speedRoundTimer, speedRoundEnd, speedRoundHits, bonusCatchActive, bonusCatchTimer, toastTimerId, toastTimer, toastQueue, ROBOT_PALETTES, FLOOR_EMOJIS, BULLET_SHAPES, BULLET_PALETTES, lastLetterPos, fallPaused, letterArrived, LETTER_SAY, SPEED_ROUND_DURATION_MS, SPEED_ROUND_TRIGGER, bonusCatchKeyListener, BONUS_CATCH_DURATION_MS, BONUS_CATCH_STARS, QWERTY_ROWS, currentKbMode, compactKeys, MAX_GHOSTS, ACHIEVEMENT_MILESTONES, pendingCompletion;
   var init_game = __esm({
     "js/game.js"() {
       init_settings();
@@ -2279,6 +2283,7 @@
       ];
       currentKbMode = "compact";
       compactKeys = [];
+      MAX_GHOSTS = 3;
       ACHIEVEMENT_MILESTONES = [
         { stars: 10, icon: "\u{1F31F}", title_zh: "\u7372\u5F97 10 \u7C92\u661F\uFF01", title_en: "10 Stars!", body_zh: "\u7E7C\u7E8C\u52AA\u529B\uFF01", body_en: "Keep going!" },
         { stars: 25, icon: "\u{1F3C6}", title_zh: "\u7372\u5F97 25 \u7C92\u661F\uFF01", title_en: "25 Stars!", body_zh: "\u592A\u53B2\u5BB3\u4E86\uFF01", body_en: "Amazing!" },

@@ -205,6 +205,118 @@ const path = require('path');
     errors.forEach(e => console.log('   - ' + e));
   }
 
+  // ── 13. H1 patch: speed banner timer tick (500ms intervals) ─────────────
+  // Verify timer updates on 0.5s boundaries (5.0, 4.5, 4.0, …) rather than
+  // every 100ms — verifies H1 flicker reduction.
+  await page.evaluate(() => {
+    Object.keys(localStorage).forEach(k => { if (k.startsWith('ls-')) localStorage.removeItem(k); });
+  });
+  await page.reload();
+  await page.waitForSelector('#js-start-btn');
+  await page.click('#js-start-btn');
+  await page.waitForTimeout(400);
+
+  // 10 correct → speed round
+  for (let i = 0; i < 10; i++) {
+    const t = await page.locator('#js-letter').textContent();
+    await page.keyboard.press(t.toLowerCase());
+    await page.waitForTimeout(700);
+  }
+  // Wait for speed round banner
+  await page.waitForTimeout(300);
+  // Sample timer at 0ms and 250ms — should be IDENTICAL (no 100ms flicker)
+  const tSnap1 = await page.locator('#js-speed-timer').textContent();
+  await page.waitForTimeout(250);
+  const tSnap2 = await page.locator('#js-speed-timer').textContent();
+  console.log(`[13] H1 timer stable across 250ms (${tSnap1} → ${tSnap2}): ${tSnap1 === tSnap2 ? 'OK' : 'STILL FLICKERING'}`);
+
+  // ── 14. H2 patch: ghost cap at MAX_GHOSTS=3 ─────────────────────────────
+  // Wait for speed round + bonus catch to clear, then fire 5 wrong presses
+  // and verify .wrong-ghost count never exceeds 3.
+  await page.waitForTimeout(8000); // speed round ends ~5s + bonus catch 3s + buffer
+  const wrongGhosts = await page.evaluate(() => {
+    return new Promise(resolve => {
+      const ghosts = [];
+      // Fire 5 wrong presses rapid-fire
+      const btn = document.querySelector('.kb-key[data-letter="X"]'); // likely wrong
+      if (!btn) { resolve({ count: -1, samples: [] }); return; }
+      for (let i = 0; i < 5; i++) {
+        btn.click();
+      }
+      // Sample ghost count at 100ms intervals
+      let n = 0;
+      const samples = [];
+      const sampler = setInterval(() => {
+        const c = document.querySelectorAll('.wrong-ghost').length;
+        samples.push(c);
+        n++;
+        if (n >= 6) { clearInterval(sampler); resolve({ maxCount: Math.max(...samples), samples }); }
+      }, 100);
+    });
+  });
+  console.log(`[14] H2 ghost cap ≤ 3 (max=${wrongGhosts.maxCount}): ${wrongGhosts.maxCount <= 3 && wrongGhosts.maxCount >= 0 ? 'OK' : 'WRONG (' + wrongGhosts.maxCount + ')'}`);
+
+  // ── 15. H3 patch: bonus catch pauses L1 letter fall ─────────────────────
+  // Switch to L1 mode, drive into speed round + bonus catch, verify the
+  // letter stops falling (letter style.transform doesn't keep changing).
+  await page.evaluate(() => {
+    Object.keys(localStorage).forEach(k => { if (k.startsWith('ls-')) localStorage.removeItem(k); });
+    localStorage.setItem('ls-settings', JSON.stringify({
+      voice: true, soundFx: true, bgm: false, bgmTrack: 'space',
+      theme: 'space', speed: 'slow', highContrast: false, reduceMotion: false,
+      lang: 'zh', currentUnit: 'U1', level: 'L1', kbMode: 'full',
+      robotColor: 0, mascotTheme: 'auto'
+    }));
+  });
+  await page.reload();
+  await page.waitForSelector('#js-start-btn');
+  await page.click('#js-start-btn');
+  await page.waitForTimeout(400);
+
+  // 10 correct to trigger speed round
+  for (let i = 0; i < 10; i++) {
+    const t = await page.locator('#js-letter').textContent();
+    await page.keyboard.press(t.toLowerCase());
+    await page.waitForTimeout(700);
+  }
+  // Keep firing during 5s speed round
+  for (let i = 0; i < 5; i++) {
+    const t = await page.locator('#js-letter').textContent();
+    await page.keyboard.press(t.toLowerCase());
+    await page.waitForTimeout(700);
+  }
+  // Wait for bonus catch to appear
+  await page.waitForTimeout(2400);
+  await page.waitForTimeout(700);
+
+  const bonusActiveL1 = await page.locator('#js-bonus-star.visible').count();
+  if (bonusActiveL1 > 0) {
+    // Sample letter transform 2 times 200ms apart during bonus catch — should be identical (paused)
+    const transform1 = await page.locator('#js-letter').evaluate(el => el.style.transform || '');
+    await page.waitForTimeout(200);
+    const transform2 = await page.locator('#js-letter').evaluate(el => el.style.transform || '');
+    console.log(`[15] H3 L1 fall paused during bonus catch: ${transform1 === transform2 ? 'OK' : 'STILL FALLING (' + transform1 + ' → ' + transform2 + ')'}`);
+    // Catch to clean up
+    await page.mouse.move(400, 400);
+    await page.mouse.down();
+    await page.waitForTimeout(50);
+    await page.mouse.up();
+    await page.waitForTimeout(800);
+    // After catch: letter should resume falling or be at end
+    const transform3 = await page.locator('#js-letter').evaluate(el => el.style.transform || '');
+    console.log(`[15] H3 letter resumes after catch (transform present): ${transform3.length > 0 ? 'OK' : 'WRONG (no transform)'}`);
+  } else {
+    console.log('[15] H3 L1 fall paused: SKIPPED (no bonus spawn)');
+  }
+
+  // ── 16. Final errors check ───────────────────────────────────────────────
+  if (errors.length === 0) {
+    console.log('[16] no JS errors after hot patch: OK');
+  } else {
+    console.log('[16] JS errors after hot patch:');
+    errors.forEach(e => console.log('   - ' + e));
+  }
+
   await browser.close();
   process.exit(errors.length > 0 ? 1 : 0);
 })();

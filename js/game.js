@@ -887,9 +887,10 @@ function speakLetterSay(letter) {
   if (!('speechSynthesis' in window)) return;
   const say = LETTER_SAY[letter];
   if (!say) return;
-  // Slight delay so it doesn't overlap with praise
+  // H4 patch — queue utterance (no cancel) so it doesn't cut off the
+  // contextual letter-symbol phrase that just started playing. Speech
+  // synthesis natively queues utterances; canceling kills in-flight audio.
   setTimeout(() => {
-    window.speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(say);
     u.lang = 'en-US';
     u.rate = 0.7;
@@ -925,13 +926,15 @@ export function startSpeedRound() {
 
   // Countdown updater
   if (speedRoundTimer) clearInterval(speedRoundTimer);
+  // H1 patch — 500ms tick (was 100ms) reduces visual flicker for SEN
+  // overstimulation. Updates on 0.5s boundaries (5.0, 4.5, 4.0, …).
   speedRoundTimer = setInterval(() => {
     const remaining = Math.max(0, speedRoundEnd - Date.now()) / 1000;
     if (timer) timer.textContent = remaining.toFixed(1);
     if (Date.now() >= speedRoundEnd) {
       endSpeedRound();
     }
-  }, 100);
+  }, 500);
 }
 
 function endSpeedRound() {
@@ -978,6 +981,10 @@ function startBonusCatch() {
 
   bonusCatchActive = true;
 
+  // H3 patch — pause L1 letter fall during bonus catch window so the
+  // student isn't juggling two simultaneous falling animations.
+  fallPaused = true;
+
   // Random horizontal lane (avoid edges so the star is reachable)
   const lane = 0.15 + Math.random() * 0.7; // 15%–85%
   const startLeft = window.innerWidth * lane;
@@ -1016,6 +1023,9 @@ function endBonusCatch(caught) {
   if (!bonusCatchActive) return;
   bonusCatchActive = false;
   if (bonusCatchTimer) { clearTimeout(bonusCatchTimer); bonusCatchTimer = null; }
+
+  // H3 patch — resume L1 fall if it was paused
+  fallPaused = false;
 
   const star = document.getElementById('js-bonus-star');
   if (star) {
@@ -1074,8 +1084,8 @@ function speakContextual(letter) {
   u.lang = lang === 'zh' ? 'zh-HK' : 'en-US';
   u.rate = lang === 'zh' ? 0.95 : 0.85;
   u.volume = 0.9;
-  // Cancel previous to avoid pile-up
-  setTimeout(() => window.speechSynthesis.cancel(), 50);
+  // H4 patch — queue (no cancel) so we don't kill any in-flight praise from
+  // the previous turn. Speech synthesis naturally queues utterances.
   setTimeout(() => window.speechSynthesis.speak(u), 80);
 }
 
@@ -1221,10 +1231,18 @@ function flashWrongKey(letter) {
 }
 
 // Wrong-letter ghost (Phase 16d) — spawn ghost of wrong letter floating up
+// H2 patch — cap concurrent ghosts at MAX_GHOSTS so 5-rapid-wrong-presses
+// doesn't stack 5 floating letters (overstimulation risk for SEN).
+const MAX_GHOSTS = 3;
 function spawnWrongGhost(letter) {
   const btn = document.querySelector(`.kb-key[data-letter="${letter}"]`);
   if (!btn) return;
   const r = btn.getBoundingClientRect();
+  // Cap: if we already have MAX_GHOSTS, remove the oldest before spawning
+  const existing = document.querySelectorAll('.wrong-ghost');
+  if (existing.length >= MAX_GHOSTS) {
+    existing[0].remove();
+  }
   const ghost = document.createElement('div');
   ghost.className = 'wrong-ghost';
   ghost.textContent = letter;
