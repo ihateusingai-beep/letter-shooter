@@ -238,8 +238,8 @@
       return "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
     }
     const all = [...unit.newLetters];
-    if (unit.reviewLetters.length && all.length < 3) {
-      all.push(...unit.reviewLetters.slice(0, 3 - all.length));
+    if (unit.reviewLetters.length && all.length < 6) {
+      all.push(...unit.reviewLetters.slice(0, 6 - all.length));
     }
     return all.slice(0, 6);
   }
@@ -2185,7 +2185,9 @@
         closeNameModal,
         submitName,
         highlightKey,
-        clearHighlight
+        clearHighlight,
+        // Phase 16.5 patch — expose for smoke testing of unit letter pools
+        activeLetters
       };
       score = 0;
       streak = 0;

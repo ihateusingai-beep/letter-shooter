@@ -317,6 +317,31 @@ const path = require('path');
     errors.forEach(e => console.log('   - ' + e));
   }
 
+  // ── 17. Curriculum fix: U2 review letter A appears in active pool ───────
+  // Was a silent data loss — U2 reviewLetters=['A'] was defined but the
+  // `all.length < 3` guard prevented it from joining the active pool.
+  // Test via exposed activeLetters() (added in Phase 16.5 patch).
+  const poolU2 = await page.evaluate(() => window.LetterShooter.activeLetters('U2'));
+  const hasNewU2 = ['E', 'F', 'S'].every(l => poolU2.includes(l));
+  const hasReviewU2 = poolU2.includes('A');
+  console.log(`[17] U2 has 3 new letters (E,F,S): ${hasNewU2 ? 'OK' : 'MISSING'}`);
+  console.log(`[17] U2 review letter A in pool: ${hasReviewU2 ? 'OK' : 'MISSING (still broken)'}`);
+  console.log(`[17] U2 pool: [${poolU2.join(',')}] (length=${poolU2.length})`);
+
+  // Spot-check U5 too — was D,G,U + review A
+  const poolU5 = await page.evaluate(() => window.LetterShooter.activeLetters('U5'));
+  const u5Ok = poolU5.includes('A') && poolU5.includes('D') && poolU5.includes('G') && poolU5.includes('U');
+  console.log(`[17] U5 (D,G,U + review A): ${u5Ok ? 'OK [' + poolU5.join(',') + ']' : 'WRONG [' + poolU5.join(',') + ']'}`);
+
+  // U9 has no review letter
+  const poolU9 = await page.evaluate(() => window.LetterShooter.activeLetters('U9'));
+  const u9Ok = poolU9.length === 2 && poolU9.includes('Y') && poolU9.includes('Z');
+  console.log(`[17] U9 (Y,Z, no review): ${u9Ok ? 'OK [' + poolU9.join(',') + ']' : 'WRONG [' + poolU9.join(',') + ']'}`);
+
+  // U10 all 26
+  const poolU10 = await page.evaluate(() => window.LetterShooter.activeLetters('U10'));
+  console.log(`[17] U10 all 26 mixed review: ${poolU10.length === 26 ? 'OK' : 'WRONG (length=' + poolU10.length + ')'}`);
+
   await browser.close();
   process.exit(errors.length > 0 ? 1 : 0);
 })();

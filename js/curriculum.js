@@ -38,8 +38,11 @@ export function activeLetters(unitKey) {
     return 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
   }
   const all = [...unit.newLetters];
-  if (unit.reviewLetters.length && all.length < 3) {
-    all.push(...unit.reviewLetters.slice(0, 3 - all.length));
+  // Phase 16.5 patch — `all.length < 3` was always false since newLetters
+  // already has 3. Switched to < 6 so review letters actually join the pool.
+  // Was: U2 only showed E/F/S, A was defined as review but never appeared.
+  if (unit.reviewLetters.length && all.length < 6) {
+    all.push(...unit.reviewLetters.slice(0, 6 - all.length));
   }
   return all.slice(0, 6);
 }

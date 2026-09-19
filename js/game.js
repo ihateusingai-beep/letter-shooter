@@ -19,6 +19,8 @@ window.LetterShooter = {
   openLeaderboardPanel, closeLeaderboardPanel, renderLeaderboard,
   openNameModal, closeNameModal, submitName,
   highlightKey, clearHighlight,
+  // Phase 16.5 patch — expose for smoke testing of unit letter pools
+  activeLetters,
 };
 
 // ── State ──────────────────────────────────────────────────────────────────
