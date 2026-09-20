@@ -342,6 +342,37 @@ const path = require('path');
   const poolU10 = await page.evaluate(() => window.LetterShooter.activeLetters('U10'));
   console.log(`[17] U10 all 26 mixed review: ${poolU10.length === 26 ? 'OK' : 'WRONG (length=' + poolU10.length + ')'}`);
 
+  // ── 18. Phase 17 W2 — Sound-only mode hides letter ─────────────────────
+  await page.evaluate(() => {
+    Object.keys(localStorage).forEach(k => { if (k.startsWith('ls-')) localStorage.removeItem(k); });
+    localStorage.setItem('ls-settings', JSON.stringify({
+      voice: true, soundFx: true, bgm: false, bgmTrack: 'space',
+      theme: 'space', speed: 'slow', highContrast: false, reduceMotion: false,
+      lang: 'zh', currentUnit: 'U1', level: 'L0', kbMode: 'full',
+      robotColor: 0, mascotTheme: 'auto', gameMode: 'sound'
+    }));
+  });
+  await page.reload();
+  await page.waitForSelector('#js-start-btn');
+  await page.click('#js-start-btn');
+  await page.waitForTimeout(800);
+
+  // body should have data-game-mode="sound"
+  const bodyMode = await page.evaluate(() => document.body.getAttribute('data-game-mode'));
+  console.log(`[18] body data-game-mode=sound: ${bodyMode === 'sound' ? 'OK' : 'WRONG (' + bodyMode + ')'}`);
+
+  // Letter element textContent should be '?' not the actual letter
+  const letterText = await page.locator('#js-letter').textContent();
+  console.log(`[18] letter hidden (textContent='?'): ${letterText.trim() === '?' ? 'OK' : 'WRONG (' + letterText.trim() + ')'}`);
+
+  // Verify computed color is transparent (visually hidden)
+  const letterColor = await page.locator('#js-letter').evaluate(el => getComputedStyle(el).color);
+  console.log(`[18] letter color transparent: ${letterColor === 'rgba(0, 0, 0, 0)' || letterColor === 'transparent' ? 'OK (' + letterColor + ')' : 'WRONG (' + letterColor + ')'}`);
+
+  // Letter trace should be hidden (display: none) in sound mode
+  const traceDisplay = await page.locator('#js-letter-trace').evaluate(el => getComputedStyle(el).display).catch(() => 'not-found');
+  console.log(`[18] letter trace hidden in sound mode: ${traceDisplay === 'none' ? 'OK' : 'WRONG (' + traceDisplay + ')'}`);
+
   await browser.close();
   process.exit(errors.length > 0 ? 1 : 0);
 })();

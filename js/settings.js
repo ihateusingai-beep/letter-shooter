@@ -14,6 +14,7 @@ const DEFAULTS = {
   kbMode: 'full',     // 'full' | 'compact' — full shows 26 QWERTY, compact shows only target letter
   robotColor: 0,      // 0/1/2 — robot palette index (Phase 16f)
   mascotTheme: 'auto', // 'auto' | 'space' | 'candy' | 'ocean' | 'forest' (Phase 16f)
+  gameMode: 'classic', // 'classic' | 'sound' | 'sequence' | 'word' (Phase 17 — secondary SEN variants)
 };
 
 export function loadSettings() {

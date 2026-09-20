@@ -518,7 +518,13 @@ export function shakeLetter() {
 export function showLetter(letter) {
   const { letter: el } = getEls();
   if (!el) return;
-  el.textContent = letter.toUpperCase();
+
+  // Phase 17 W2 — Sound mode: hide the letter visually; only TTS reveals it.
+  // Also skip letter trace (which would otherwise leak the answer visually).
+  const mode = getGameMode();
+  const isSound = mode === 'sound';
+
+  el.textContent = isSound ? '?' : letter.toUpperCase();
   el.style.opacity = '0';
   el.style.transform = 'scale(0.7)';
   requestAnimationFrame(() => {
@@ -530,6 +536,7 @@ export function showLetter(letter) {
 
   // Phase 13d — Letter trace: draw the letter outline first via SVG stroke,
   // then fade out as the main letter becomes fully visible.
+  // Phase 17 W2 — skip trace in sound mode (would reveal answer).
   const gameArea = document.getElementById('js-game-area');
   if (gameArea) {
     // Remove any previous trace
@@ -539,6 +546,7 @@ export function showLetter(letter) {
     trace.id = 'js-letter-trace';
     trace.className = 'letter-trace';
     trace.setAttribute('aria-hidden', 'true');
+    if (isSound) trace.style.display = 'none';
     const settings = loadSettings();
     const color = getComputedStyle(document.documentElement).getPropertyValue('--primary2').trim() || '#4FC3F7';
     trace.innerHTML = `
@@ -1369,8 +1377,24 @@ export function applyTheme(theme) {
   document.body.setAttribute('data-theme', theme || 'space');
 }
 
+// Phase 17 — apply Game Mode by toggling body class. Modes change visual
+// treatment of the target letter but reuse the same handleKey pipeline.
+//   classic  — letter shown as text (default)
+//   sound    — letter hidden, TTS reads it (👂 mode)
+//   sequence — letter shown as part of 3-letter sequence (Phase 17 future)
+//   word     — letter shown as emoji word to spell (Phase 17 future)
+export function applyGameMode(mode) {
+  const m = mode || 'classic';
+  document.body.setAttribute('data-game-mode', m);
+}
+
+export function getGameMode() {
+  return loadSettings().gameMode || 'classic';
+}
+
 // ── Boot: apply saved theme + high-contrast class before first paint ───────
 applyTheme(loadSettings().theme);
+applyGameMode(loadSettings().gameMode);
 
 export function openSettings() {
   const panel = document.getElementById('js-settings-panel');
@@ -1390,6 +1414,7 @@ export function openSettings() {
   panel.querySelector('#js-theme-select').value = settings.theme || 'space';
   panel.querySelector('#js-robot-color-select').value = String(settings.robotColor ?? 0);
   panel.querySelector('#js-mascot-theme-select').value = settings.mascotTheme || 'auto';
+  panel.querySelector('#js-game-mode-select').value = settings.gameMode || 'classic';
 
   panel.classList.add('visible');
 }
@@ -1418,11 +1443,13 @@ export function applySettings() {
   const theme  = panel.querySelector('#js-theme-select')?.value ?? 'space';
   const robotColor = parseInt(panel.querySelector('#js-robot-color-select')?.value ?? '0', 10);
   const mascotTheme = panel.querySelector('#js-mascot-theme-select')?.value ?? 'auto';
+  const gameMode = panel.querySelector('#js-game-mode-select')?.value ?? 'classic';
 
-  const next = { voice, soundFx: sfx, bgm, bgmTrack, speed, highContrast: hc, reduceMotion: motion, lang, currentUnit: unit, level, kbMode, theme, robotColor, mascotTheme };
+  const next = { voice, soundFx: sfx, bgm, bgmTrack, speed, highContrast: hc, reduceMotion: motion, lang, currentUnit: unit, level, kbMode, theme, robotColor, mascotTheme, gameMode };
 
   document.body.classList.toggle('high-contrast', hc);
   applyTheme(theme);
+  applyGameMode(gameMode);
 
   // Apply BGM choice
   if (bgm) startBgm(bgmTrack);

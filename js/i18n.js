@@ -32,6 +32,15 @@ export const i18n = {
     themeOcean: 'Ocean',
     themeForest: 'Forest',
     robotUnlock: 'New robot unlocked!',
+    // Phase 17 — game mode selector
+    gameMode: 'Game Mode',
+    gameModeClassic: 'Classic (single letter)',
+    gameModeSound: 'Sound-only (listen & press)',
+    gameModeSequence: 'Sequence (3 in a row)',
+    gameModeWord: 'Word Mode (spell emoji)',
+    soundModeHint: '👂 Listen & press the letter',
+    sequenceModeHint: 'Press letters in order',
+    wordModeHint: 'Spell the word',
     // Praise phrases (random pick on correct)
     praise: ['Great!', 'Yes!', 'Wonderful!', 'Awesome!', 'Nice!'],
     // Wrong-answer gentle nudge (no fail language)
@@ -103,6 +112,15 @@ export const i18n = {
     themeOcean: '海洋',
     themeForest: '森林',
     robotUnlock: '新機械人解鎖了！',
+    // Phase 17 — game mode selector
+    gameMode: '遊戲模式',
+    gameModeClassic: '經典 (單字母)',
+    gameModeSound: '聽音 (聽到按)',
+    gameModeSequence: '連擊 (順序 3 個)',
+    gameModeWord: '拼字 (emoji 變字)',
+    soundModeHint: '👂 聽到個音,按對應字母',
+    sequenceModeHint: '按順序打中 3 個字母',
+    wordModeHint: '拼出呢個字',
     praise: ['做得好！', '很好！', '太棒了！', '好叻！', '繼續！'],
     nudge: ['再試一次！', '差少少！', '加油！'],
     // Speed round (Phase 16a)

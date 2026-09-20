@@ -56,6 +56,15 @@
           themeOcean: "Ocean",
           themeForest: "Forest",
           robotUnlock: "New robot unlocked!",
+          // Phase 17 — game mode selector
+          gameMode: "Game Mode",
+          gameModeClassic: "Classic (single letter)",
+          gameModeSound: "Sound-only (listen & press)",
+          gameModeSequence: "Sequence (3 in a row)",
+          gameModeWord: "Word Mode (spell emoji)",
+          soundModeHint: "\u{1F442} Listen & press the letter",
+          sequenceModeHint: "Press letters in order",
+          wordModeHint: "Spell the word",
           // Praise phrases (random pick on correct)
           praise: ["Great!", "Yes!", "Wonderful!", "Awesome!", "Nice!"],
           // Wrong-answer gentle nudge (no fail language)
@@ -127,6 +136,15 @@
           themeOcean: "\u6D77\u6D0B",
           themeForest: "\u68EE\u6797",
           robotUnlock: "\u65B0\u6A5F\u68B0\u4EBA\u89E3\u9396\u4E86\uFF01",
+          // Phase 17 — game mode selector
+          gameMode: "\u904A\u6232\u6A21\u5F0F",
+          gameModeClassic: "\u7D93\u5178 (\u55AE\u5B57\u6BCD)",
+          gameModeSound: "\u807D\u97F3 (\u807D\u5230\u6309)",
+          gameModeSequence: "\u9023\u64CA (\u9806\u5E8F 3 \u500B)",
+          gameModeWord: "\u62FC\u5B57 (emoji \u8B8A\u5B57)",
+          soundModeHint: "\u{1F442} \u807D\u5230\u500B\u97F3,\u6309\u5C0D\u61C9\u5B57\u6BCD",
+          sequenceModeHint: "\u6309\u9806\u5E8F\u6253\u4E2D 3 \u500B\u5B57\u6BCD",
+          wordModeHint: "\u62FC\u51FA\u5462\u500B\u5B57",
           praise: ["\u505A\u5F97\u597D\uFF01", "\u5F88\u597D\uFF01", "\u592A\u68D2\u4E86\uFF01", "\u597D\u53FB\uFF01", "\u7E7C\u7E8C\uFF01"],
           nudge: ["\u518D\u8A66\u4E00\u6B21\uFF01", "\u5DEE\u5C11\u5C11\uFF01", "\u52A0\u6CB9\uFF01"],
           // Speed round (Phase 16a)
@@ -217,8 +235,10 @@
         // 'full' | 'compact' — full shows 26 QWERTY, compact shows only target letter
         robotColor: 0,
         // 0/1/2 — robot palette index (Phase 16f)
-        mascotTheme: "auto"
+        mascotTheme: "auto",
         // 'auto' | 'space' | 'candy' | 'ocean' | 'forest' (Phase 16f)
+        gameMode: "classic"
+        // 'classic' | 'sound' | 'sequence' | 'word' (Phase 17 — secondary SEN variants)
       };
     }
   });
@@ -1356,7 +1376,9 @@
   function showLetter(letter) {
     const { letter: el } = getEls();
     if (!el) return;
-    el.textContent = letter.toUpperCase();
+    const mode = getGameMode();
+    const isSound = mode === "sound";
+    el.textContent = isSound ? "?" : letter.toUpperCase();
     el.style.opacity = "0";
     el.style.transform = "scale(0.7)";
     requestAnimationFrame(() => {
@@ -1373,6 +1395,7 @@
       trace.id = "js-letter-trace";
       trace.className = "letter-trace";
       trace.setAttribute("aria-hidden", "true");
+      if (isSound) trace.style.display = "none";
       const settings = loadSettings();
       const color = getComputedStyle(document.documentElement).getPropertyValue("--primary2").trim() || "#4FC3F7";
       trace.innerHTML = `
@@ -1959,6 +1982,13 @@
   function applyTheme(theme) {
     document.body.setAttribute("data-theme", theme || "space");
   }
+  function applyGameMode(mode) {
+    const m = mode || "classic";
+    document.body.setAttribute("data-game-mode", m);
+  }
+  function getGameMode() {
+    return loadSettings().gameMode || "classic";
+  }
   function openSettings() {
     const panel = document.getElementById("js-settings-panel");
     if (!panel) return;
@@ -1976,6 +2006,7 @@
     panel.querySelector("#js-theme-select").value = settings.theme || "space";
     panel.querySelector("#js-robot-color-select").value = String(settings.robotColor ?? 0);
     panel.querySelector("#js-mascot-theme-select").value = settings.mascotTheme || "auto";
+    panel.querySelector("#js-game-mode-select").value = settings.gameMode || "classic";
     panel.classList.add("visible");
   }
   function closeSettings() {
@@ -2000,9 +2031,11 @@
     const theme = panel.querySelector("#js-theme-select")?.value ?? "space";
     const robotColor = parseInt(panel.querySelector("#js-robot-color-select")?.value ?? "0", 10);
     const mascotTheme = panel.querySelector("#js-mascot-theme-select")?.value ?? "auto";
-    const next = { voice, soundFx: sfx, bgm, bgmTrack, speed, highContrast: hc, reduceMotion: motion, lang, currentUnit: unit, level, kbMode, theme, robotColor, mascotTheme };
+    const gameMode = panel.querySelector("#js-game-mode-select")?.value ?? "classic";
+    const next = { voice, soundFx: sfx, bgm, bgmTrack, speed, highContrast: hc, reduceMotion: motion, lang, currentUnit: unit, level, kbMode, theme, robotColor, mascotTheme, gameMode };
     document.body.classList.toggle("high-contrast", hc);
     applyTheme(theme);
+    applyGameMode(gameMode);
     if (bgm) startBgm(bgmTrack);
     else stopBgm();
     saveSettings(next);
@@ -2293,6 +2326,7 @@
         { stars: 100, icon: "\u{1F451}", title_zh: "100 \u7C92\u661F\uFF01", title_en: "100 Stars!", body_zh: "\u5B8C\u7F8E\uFF01", body_en: "Perfect!" }
       ];
       applyTheme(loadSettings().theme);
+      applyGameMode(loadSettings().gameMode);
       pendingCompletion = null;
     }
   });
