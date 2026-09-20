@@ -15,6 +15,7 @@ const DEFAULTS = {
   robotColor: 0,      // 0/1/2 — robot palette index (Phase 16f)
   mascotTheme: 'auto', // 'auto' | 'space' | 'candy' | 'ocean' | 'forest' (Phase 16f)
   gameMode: 'classic', // 'classic' | 'sound' | 'sequence' | 'word' (Phase 17 — secondary SEN variants)
+  caseMode: 'upper',  // 'upper' | 'lower' — display letter case (Phase 17 W4)
 };
 
 export function loadSettings() {

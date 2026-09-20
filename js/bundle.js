@@ -65,6 +65,10 @@
           soundModeHint: "\u{1F442} Listen & press the letter",
           sequenceModeHint: "Press letters in order",
           wordModeHint: "Spell the word",
+          // Phase 17 W4 — case correspondence mode
+          caseMode: "Letter Case",
+          caseModeUpper: "Uppercase (A)",
+          caseModeLower: "Lowercase (a)",
           // Phase 17 W1 — Word bank (emoji → 3-letter word). SEN-friendly 3-letter
           // words covering animals / objects / nature / body parts / actions.
           wordBank: [
@@ -201,6 +205,10 @@
           soundModeHint: "\u{1F442} \u807D\u5230\u500B\u97F3,\u6309\u5C0D\u61C9\u5B57\u6BCD",
           sequenceModeHint: "\u6309\u9806\u5E8F\u6253\u4E2D 3 \u500B\u5B57\u6BCD",
           wordModeHint: "\u62FC\u51FA\u5462\u500B\u5B57",
+          // Phase 17 W4 — case correspondence mode
+          caseMode: "\u5B57\u6BCD\u5927\u7D30\u968E",
+          caseModeUpper: "\u5927\u968E (A)",
+          caseModeLower: "\u7D30\u968E (a)",
           // Note: wordBank + wordEmojis are in the `en` block — they're
           // language-independent spelling targets (English letters + universal emoji).
           praise: ["\u505A\u5F97\u597D\uFF01", "\u5F88\u597D\uFF01", "\u592A\u68D2\u4E86\uFF01", "\u597D\u53FB\uFF01", "\u7E7C\u7E8C\uFF01"],
@@ -295,8 +303,10 @@
         // 0/1/2 — robot palette index (Phase 16f)
         mascotTheme: "auto",
         // 'auto' | 'space' | 'candy' | 'ocean' | 'forest' (Phase 16f)
-        gameMode: "classic"
+        gameMode: "classic",
         // 'classic' | 'sound' | 'sequence' | 'word' (Phase 17 — secondary SEN variants)
+        caseMode: "upper"
+        // 'upper' | 'lower' — display letter case (Phase 17 W4)
       };
     }
   });
@@ -1481,7 +1491,7 @@
       currentLetter = sequenceLetters[0];
       return;
     }
-    el.textContent = isSound ? "?" : letter.toUpperCase();
+    el.textContent = isSound ? "?" : getCaseMode() === "lower" ? letter.toLowerCase() : letter.toUpperCase();
     el.style.opacity = "0";
     el.style.transform = "scale(0.7)";
     requestAnimationFrame(() => {
@@ -2132,6 +2142,9 @@
   function getGameMode() {
     return loadSettings().gameMode || "classic";
   }
+  function getCaseMode() {
+    return loadSettings().caseMode || "upper";
+  }
   function openSettings() {
     const panel = document.getElementById("js-settings-panel");
     if (!panel) return;
@@ -2150,6 +2163,7 @@
     panel.querySelector("#js-robot-color-select").value = String(settings.robotColor ?? 0);
     panel.querySelector("#js-mascot-theme-select").value = settings.mascotTheme || "auto";
     panel.querySelector("#js-game-mode-select").value = settings.gameMode || "classic";
+    panel.querySelector("#js-case-mode-select").value = settings.caseMode || "upper";
     panel.classList.add("visible");
   }
   function closeSettings() {
@@ -2175,7 +2189,8 @@
     const robotColor = parseInt(panel.querySelector("#js-robot-color-select")?.value ?? "0", 10);
     const mascotTheme = panel.querySelector("#js-mascot-theme-select")?.value ?? "auto";
     const gameMode = panel.querySelector("#js-game-mode-select")?.value ?? "classic";
-    const next = { voice, soundFx: sfx, bgm, bgmTrack, speed, highContrast: hc, reduceMotion: motion, lang, currentUnit: unit, level, kbMode, theme, robotColor, mascotTheme, gameMode };
+    const caseMode = panel.querySelector("#js-case-mode-select")?.value ?? "upper";
+    const next = { voice, soundFx: sfx, bgm, bgmTrack, speed, highContrast: hc, reduceMotion: motion, lang, currentUnit: unit, level, kbMode, theme, robotColor, mascotTheme, gameMode, caseMode };
     document.body.classList.toggle("high-contrast", hc);
     applyTheme(theme);
     applyGameMode(gameMode);

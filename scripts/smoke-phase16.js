@@ -438,6 +438,25 @@ const path = require('path');
   const activeAfterWord = await page.locator('.seq-slot.seq-active').textContent();
   console.log(`[20] word mode advances on correct press: ${activeAfterWord !== activeLetterWord ? 'OK (now ' + activeAfterWord.trim() + ')' : 'WRONG (stuck)'}`);
 
+  // ── 21. Phase 17 W4 — Lowercase case mode displays lowercase letter ────
+  await page.evaluate(() => {
+    Object.keys(localStorage).forEach(k => { if (k.startsWith('ls-')) localStorage.removeItem(k); });
+    localStorage.setItem('ls-settings', JSON.stringify({
+      voice: true, soundFx: true, bgm: false, bgmTrack: 'space',
+      theme: 'space', speed: 'slow', highContrast: false, reduceMotion: false,
+      lang: 'zh', currentUnit: 'U1', level: 'L0', kbMode: 'full',
+      robotColor: 0, mascotTheme: 'auto', gameMode: 'classic',
+      caseMode: 'lower'
+    }));
+  });
+  await page.reload();
+  await page.waitForSelector('#js-start-btn');
+  await page.click('#js-start-btn');
+  await page.waitForTimeout(800);
+
+  const letterLower = await page.locator('#js-letter').textContent();
+  console.log(`[21] lowercase case mode displays lowercase ('${letterLower.trim()}'): ${letterLower === letterLower.toLowerCase() && letterLower !== letterLower.toUpperCase() ? 'OK' : 'WRONG'}`);
+
   await browser.close();
   process.exit(errors.length > 0 ? 1 : 0);
 })();

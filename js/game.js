@@ -584,7 +584,7 @@ export function showLetter(letter) {
     return;
   }
 
-  el.textContent = isSound ? '?' : letter.toUpperCase();
+  el.textContent = isSound ? '?' : (getCaseMode() === 'lower' ? letter.toLowerCase() : letter.toUpperCase());
   el.style.opacity = '0';
   el.style.transform = 'scale(0.7)';
   requestAnimationFrame(() => {
@@ -1509,6 +1509,13 @@ export function getGameMode() {
   return loadSettings().gameMode || 'classic';
 }
 
+// Phase 17 W4 — Case mode: 'upper' (default A) or 'lower' (a).
+// Touch keys stay uppercase labels (QWERTY rows are uppercase); only the
+// big target letter display changes case. Trains case correspondence.
+export function getCaseMode() {
+  return loadSettings().caseMode || 'upper';
+}
+
 // ── Boot: apply saved theme + high-contrast class before first paint ───────
 applyTheme(loadSettings().theme);
 applyGameMode(loadSettings().gameMode);
@@ -1532,6 +1539,7 @@ export function openSettings() {
   panel.querySelector('#js-robot-color-select').value = String(settings.robotColor ?? 0);
   panel.querySelector('#js-mascot-theme-select').value = settings.mascotTheme || 'auto';
   panel.querySelector('#js-game-mode-select').value = settings.gameMode || 'classic';
+  panel.querySelector('#js-case-mode-select').value = settings.caseMode || 'upper';
 
   panel.classList.add('visible');
 }
@@ -1561,8 +1569,9 @@ export function applySettings() {
   const robotColor = parseInt(panel.querySelector('#js-robot-color-select')?.value ?? '0', 10);
   const mascotTheme = panel.querySelector('#js-mascot-theme-select')?.value ?? 'auto';
   const gameMode = panel.querySelector('#js-game-mode-select')?.value ?? 'classic';
+  const caseMode = panel.querySelector('#js-case-mode-select')?.value ?? 'upper';
 
-  const next = { voice, soundFx: sfx, bgm, bgmTrack, speed, highContrast: hc, reduceMotion: motion, lang, currentUnit: unit, level, kbMode, theme, robotColor, mascotTheme, gameMode };
+  const next = { voice, soundFx: sfx, bgm, bgmTrack, speed, highContrast: hc, reduceMotion: motion, lang, currentUnit: unit, level, kbMode, theme, robotColor, mascotTheme, gameMode, caseMode };
 
   document.body.classList.toggle('high-contrast', hc);
   applyTheme(theme);

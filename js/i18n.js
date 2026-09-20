@@ -41,6 +41,10 @@ export const i18n = {
     soundModeHint: '👂 Listen & press the letter',
     sequenceModeHint: 'Press letters in order',
     wordModeHint: 'Spell the word',
+    // Phase 17 W4 — case correspondence mode
+    caseMode: 'Letter Case',
+    caseModeUpper: 'Uppercase (A)',
+    caseModeLower: 'Lowercase (a)',
     // Phase 17 W1 — Word bank (emoji → 3-letter word). SEN-friendly 3-letter
     // words covering animals / objects / nature / body parts / actions.
     wordBank: [
@@ -137,6 +141,10 @@ export const i18n = {
     soundModeHint: '👂 聽到個音,按對應字母',
     sequenceModeHint: '按順序打中 3 個字母',
     wordModeHint: '拼出呢個字',
+    // Phase 17 W4 — case correspondence mode
+    caseMode: '字母大細階',
+    caseModeUpper: '大階 (A)',
+    caseModeLower: '細階 (a)',
     // Note: wordBank + wordEmojis are in the `en` block — they're
     // language-independent spelling targets (English letters + universal emoji).
     praise: ['做得好！', '很好！', '太棒了！', '好叻！', '繼續！'],
