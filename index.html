@@ -1016,6 +1016,44 @@
 
   /* ── Phase 17 W3 — Sequence mode (3-letter sequence shown) ───────────── */
   body[data-game-mode="sequence"] #js-letter { font-size: 64px !important; }
+  body[data-game-mode="sequence"] .seq-slot {
+    display: inline-block;
+    padding: 12px 18px;
+    margin: 0 4px;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.08);
+    border: 2px solid rgba(255,255,255,0.3);
+    transition: all 0.2s;
+  }
+  body[data-game-mode="sequence"] .seq-slot.seq-done {
+    background: rgba(105,240,174,0.3);
+    border-color: #69F0AE;
+    color: #69F0AE;
+    text-decoration: none;
+  }
+  body[data-game-mode="sequence"] .seq-slot.seq-active {
+    background: rgba(255,213,79,0.3);
+    border-color: #FFD54F;
+    color: #FFD54F;
+    transform: scale(1.1);
+    box-shadow: 0 0 20px rgba(255,213,79,0.6);
+    animation: seqActivePulse 1.2s ease-in-out infinite;
+  }
+  body[data-game-mode="sequence"] .seq-slot.seq-pending {
+    color: rgba(255,255,255,0.5);
+    border-color: rgba(255,255,255,0.15);
+  }
+  body[data-game-mode="sequence"] .seq-arrow {
+    color: rgba(255,255,255,0.5);
+    font-size: 32px;
+    margin: 0 6px;
+    vertical-align: middle;
+  }
+  @keyframes seqActivePulse {
+    0%, 100% { box-shadow: 0 0 16px rgba(255,213,79,0.5); }
+    50%      { box-shadow: 0 0 28px rgba(255,213,79,0.9); }
+  }
+  .no-motion body[data-game-mode="sequence"] .seq-slot.seq-active { animation: none !important; }
 
   /* ── Phase 17 W1 — Word mode (emoji shown large) ─────────────────────── */
   body[data-game-mode="word"] #js-letter { font-size: 120px !important; }

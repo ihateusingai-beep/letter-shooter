@@ -373,6 +373,40 @@ const path = require('path');
   const traceDisplay = await page.locator('#js-letter-trace').evaluate(el => getComputedStyle(el).display).catch(() => 'not-found');
   console.log(`[18] letter trace hidden in sound mode: ${traceDisplay === 'none' ? 'OK' : 'WRONG (' + traceDisplay + ')'}`);
 
+  // ── 19. Phase 17 W3 — Sequence mode shows 3-letter sequence ─────────────
+  await page.evaluate(() => {
+    Object.keys(localStorage).forEach(k => { if (k.startsWith('ls-')) localStorage.removeItem(k); });
+    localStorage.setItem('ls-settings', JSON.stringify({
+      voice: true, soundFx: true, bgm: false, bgmTrack: 'space',
+      theme: 'space', speed: 'slow', highContrast: false, reduceMotion: false,
+      lang: 'zh', currentUnit: 'U1', level: 'L0', kbMode: 'full',
+      robotColor: 0, mascotTheme: 'auto', gameMode: 'sequence'
+    }));
+  });
+  await page.reload();
+  await page.waitForSelector('#js-start-btn');
+  await page.click('#js-start-btn');
+  await page.waitForTimeout(800);
+
+  // body should have data-game-mode="sequence"
+  const bodyModeSeq = await page.evaluate(() => document.body.getAttribute('data-game-mode'));
+  console.log(`[19] body data-game-mode=sequence: ${bodyModeSeq === 'sequence' ? 'OK' : 'WRONG (' + bodyModeSeq + ')'}`);
+
+  // Should have 3 .seq-slot elements with 1 .seq-active
+  const slotCount = await page.locator('.seq-slot').count();
+  const activeCount = await page.locator('.seq-slot.seq-active').count();
+  console.log(`[19] 3 sequence slots rendered: ${slotCount === 3 ? 'OK' : 'WRONG (' + slotCount + ')'}`);
+  console.log(`[19] 1 active slot: ${activeCount === 1 ? 'OK' : 'WRONG (' + activeCount + ')'}`);
+
+  // Get the active letter — press it, should advance to next slot
+  const activeLetter = await page.locator('.seq-slot.seq-active').textContent();
+  const firstSeqLetter = activeLetter.trim();
+  await page.keyboard.press(firstSeqLetter.toLowerCase());
+  await page.waitForTimeout(300);
+  const activeAfter1 = await page.locator('.seq-slot.seq-active').textContent();
+  const secondSeqLetter = activeAfter1.trim();
+  console.log(`[19] sequence advances after correct press: ${activeAfter1 !== activeLetter && secondSeqLetter.length > 0 ? 'OK (now ' + secondSeqLetter + ')' : 'WRONG (stuck on ' + secondSeqLetter + ')'}`);
+
   await browser.close();
   process.exit(errors.length > 0 ? 1 : 0);
 })();

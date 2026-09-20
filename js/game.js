@@ -41,6 +41,11 @@ let bonusCatchActive = false; // bonus catch mode (Phase 16e)
 let bonusCatchTimer = null;
 let toastTimerId = null;   // shared toast hide-timer (Phase 16 patch — prevents collision)
 
+// Phase 17 W3 — Sequence mode state machine
+const SEQUENCE_LENGTH = 3;
+let sequenceLetters = [];   // ['C', 'A', 'T']
+let sequenceIndex = 0;      // 0..2 — next expected position
+
 // Phase 16 patch — full reset of speed-round + bonus-catch state.
 // Called from startGame/stopGame so stale timers/listeners from a previous
 // game can't poison the new one (e.g. speedRoundActive leaking true means
@@ -57,6 +62,10 @@ function resetPhase16State() {
     try { document.removeEventListener('pointerdown', bonusCatchKeyListener, true); } catch {}
     bonusCatchKeyListener = null;
   }
+
+  // Phase 17 W3 — sequence state reset
+  sequenceLetters = [];
+  sequenceIndex = 0;
 
   const banner = document.getElementById('js-speed-banner');
   if (banner) banner.classList.remove('visible');
@@ -519,10 +528,40 @@ export function showLetter(letter) {
   const { letter: el } = getEls();
   if (!el) return;
 
-  // Phase 17 W2 — Sound mode: hide the letter visually; only TTS reveals it.
-  // Also skip letter trace (which would otherwise leak the answer visually).
+  // Phase 17 — mode-aware rendering
   const mode = getGameMode();
   const isSound = mode === 'sound';
+  const isSequence = mode === 'sequence';
+
+  if (isSequence) {
+    // Generate a fresh 3-letter sequence from the current pool.
+    // Use `letter` (the chosen seed) as the first element so activeLetters
+    // curriclum still applies, then pick 2 more random distinct letters.
+    const used = new Set([letter.toUpperCase()]);
+    const seq = [letter.toUpperCase()];
+    // Pool = current touchKeys — we approximate by reading any in-flight state
+    // via window.LetterShooter; for simplicity, pick from A-Z excluding used.
+    const allLetters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+    while (seq.length < SEQUENCE_LENGTH) {
+      const pick = allLetters[Math.floor(Math.random() * allLetters.length)];
+      if (!used.has(pick)) { seq.push(pick); used.add(pick); }
+    }
+    sequenceLetters = seq;
+    sequenceIndex = 0;
+    el.innerHTML = renderSequenceHTML();
+    el.style.opacity = '0';
+    el.style.transform = 'scale(0.7)';
+    requestAnimationFrame(() => {
+      el.style.transition = 'opacity 0.3s, transform 0.3s';
+      el.style.opacity = '1';
+      el.style.transform = 'scale(1)';
+    });
+    // Track the "current" letter for downstream systems (nextTurn etc).
+    // We treat the first letter as currentLetter so the keyboard hint works.
+    currentLetter = seq[0];
+    // Skip letter trace + sparkle in sequence mode (would conflict with slots)
+    return;
+  }
 
   el.textContent = isSound ? '?' : letter.toUpperCase();
   el.style.opacity = '0';
@@ -575,6 +614,24 @@ export function showLetter(letter) {
   compactKeys = getCompactKeys(letter);
   renderTouchKeys();
   highlightKey(letter);
+}
+
+// Phase 17 W3 — Sequence mode DOM helpers
+function renderSequenceHTML() {
+  return sequenceLetters.map((l, i) => {
+    const cls = i < sequenceIndex ? 'seq-slot seq-done'
+              : i === sequenceIndex ? 'seq-slot seq-active'
+              : 'seq-slot seq-pending';
+    const mark = i < sequenceIndex ? '✓' : '';
+    return `<span class="${cls}" data-pos="${i}">${mark}${l}</span>`;
+  }).join('<span class="seq-arrow">→</span>');
+}
+
+function highlightSequenceProgress() {
+  const el = document.getElementById('js-letter');
+  if (!el) return;
+  // Re-render to update state (cheap — 3 spans)
+  el.innerHTML = renderSequenceHTML();
 }
 
 // ── L1: fall animation ──────────────────────────────────────────────────────
@@ -731,8 +788,47 @@ export function handleKey(pressed) {
   // Phase 16 patch — bonus catch absorbs all input (touch + physical keyboard)
   // so the bonus star's pointerdown doesn't double-count as a letter press.
   if (bonusCatchActive) return;
-  const expected = currentLetter.toUpperCase();
+
   const settings = loadSettings();
+  const mode = getGameMode();
+
+  // Phase 17 W3 — Sequence mode intercept
+  // Correct in-order: highlight next slot, shoot anim on completion only.
+  // Wrong: reset to slot 0 (no streak break — SEN-friendly retry mechanic).
+  if (mode === 'sequence') {
+    const expected = sequenceLetters[sequenceIndex];
+    if (!expected) return;
+    if (pressed.toUpperCase() === expected) {
+      sequenceIndex++;
+      highlightSequenceProgress();
+      if (settings.soundFx) playCorrect();
+      haptic('light');
+      if (sequenceIndex >= SEQUENCE_LENGTH) {
+        // Complete — fall through to standard correct path.
+        // currentLetter was set to seq[0]; replace with last so success uses it.
+        currentLetter = expected;
+        // Continue below to standard correct branch
+      } else {
+        // Update keyboard hint for next expected letter
+        const nextExpected = sequenceLetters[sequenceIndex];
+        if (nextExpected) {
+          compactKeys = getCompactKeys(nextExpected);
+          renderTouchKeys();
+          highlightKey(nextExpected);
+        }
+        return; // partial progress — don't trigger full success yet
+      }
+    } else {
+      // Wrong — reset sequence, gentle feedback only (no streak break)
+      sequenceIndex = 0;
+      highlightSequenceProgress();
+      shakeLetter();
+      if (settings.soundFx) playWrong();
+      return;
+    }
+  }
+
+  const expected = currentLetter.toUpperCase();
 
   if (pressed === expected) {
     // Capture letter position BEFORE bullet flies (for impact rings)

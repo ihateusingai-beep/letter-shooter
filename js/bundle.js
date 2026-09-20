@@ -1034,6 +1034,8 @@
       }
       bonusCatchKeyListener = null;
     }
+    sequenceLetters = [];
+    sequenceIndex = 0;
     const banner = document.getElementById("js-speed-banner");
     if (banner) banner.classList.remove("visible");
     const star = document.getElementById("js-bonus-star");
@@ -1378,6 +1380,31 @@
     if (!el) return;
     const mode = getGameMode();
     const isSound = mode === "sound";
+    const isSequence = mode === "sequence";
+    if (isSequence) {
+      const used = /* @__PURE__ */ new Set([letter.toUpperCase()]);
+      const seq = [letter.toUpperCase()];
+      const allLetters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+      while (seq.length < SEQUENCE_LENGTH) {
+        const pick = allLetters[Math.floor(Math.random() * allLetters.length)];
+        if (!used.has(pick)) {
+          seq.push(pick);
+          used.add(pick);
+        }
+      }
+      sequenceLetters = seq;
+      sequenceIndex = 0;
+      el.innerHTML = renderSequenceHTML();
+      el.style.opacity = "0";
+      el.style.transform = "scale(0.7)";
+      requestAnimationFrame(() => {
+        el.style.transition = "opacity 0.3s, transform 0.3s";
+        el.style.opacity = "1";
+        el.style.transform = "scale(1)";
+      });
+      currentLetter = seq[0];
+      return;
+    }
     el.textContent = isSound ? "?" : letter.toUpperCase();
     el.style.opacity = "0";
     el.style.transform = "scale(0.7)";
@@ -1419,6 +1446,18 @@
     compactKeys = getCompactKeys(letter);
     renderTouchKeys();
     highlightKey(letter);
+  }
+  function renderSequenceHTML() {
+    return sequenceLetters.map((l, i) => {
+      const cls = i < sequenceIndex ? "seq-slot seq-done" : i === sequenceIndex ? "seq-slot seq-active" : "seq-slot seq-pending";
+      const mark = i < sequenceIndex ? "\u2713" : "";
+      return `<span class="${cls}" data-pos="${i}">${mark}${l}</span>`;
+    }).join('<span class="seq-arrow">\u2192</span>');
+  }
+  function highlightSequenceProgress() {
+    const el = document.getElementById("js-letter");
+    if (!el) return;
+    el.innerHTML = renderSequenceHTML();
   }
   function startFall(onArrive) {
     const settings = loadSettings();
@@ -1509,8 +1548,36 @@
   function handleKey(pressed) {
     if (!gameRunning || !currentLetter) return;
     if (bonusCatchActive) return;
-    const expected = currentLetter.toUpperCase();
     const settings = loadSettings();
+    const mode = getGameMode();
+    if (mode === "sequence") {
+      const expected2 = sequenceLetters[sequenceIndex];
+      if (!expected2) return;
+      if (pressed.toUpperCase() === expected2) {
+        sequenceIndex++;
+        highlightSequenceProgress();
+        if (settings.soundFx) playCorrect();
+        haptic("light");
+        if (sequenceIndex >= SEQUENCE_LENGTH) {
+          currentLetter = expected2;
+        } else {
+          const nextExpected = sequenceLetters[sequenceIndex];
+          if (nextExpected) {
+            compactKeys = getCompactKeys(nextExpected);
+            renderTouchKeys();
+            highlightKey(nextExpected);
+          }
+          return;
+        }
+      } else {
+        sequenceIndex = 0;
+        highlightSequenceProgress();
+        shakeLetter();
+        if (settings.soundFx) playWrong();
+        return;
+      }
+    }
+    const expected = currentLetter.toUpperCase();
     if (pressed === expected) {
       const letterHitEl = document.getElementById("js-letter");
       if (letterHitEl) {
@@ -2178,7 +2245,7 @@
       grid.appendChild(cell);
     });
   }
-  var score, streak, stars, currentLetter, touchKeys, gameRunning, animFrame, currentUnit, correctSinceSpeed, speedRoundActive, speedRoundTimer, speedRoundEnd, speedRoundHits, bonusCatchActive, bonusCatchTimer, toastTimerId, toastTimer, toastQueue, ROBOT_PALETTES, FLOOR_EMOJIS, BULLET_SHAPES, BULLET_PALETTES, lastLetterPos, fallPaused, letterArrived, LETTER_SAY, SPEED_ROUND_DURATION_MS, SPEED_ROUND_TRIGGER, bonusCatchKeyListener, BONUS_CATCH_DURATION_MS, BONUS_CATCH_STARS, QWERTY_ROWS, currentKbMode, compactKeys, MAX_GHOSTS, ACHIEVEMENT_MILESTONES, pendingCompletion;
+  var score, streak, stars, currentLetter, touchKeys, gameRunning, animFrame, currentUnit, correctSinceSpeed, speedRoundActive, speedRoundTimer, speedRoundEnd, speedRoundHits, bonusCatchActive, bonusCatchTimer, toastTimerId, SEQUENCE_LENGTH, sequenceLetters, sequenceIndex, toastTimer, toastQueue, ROBOT_PALETTES, FLOOR_EMOJIS, BULLET_SHAPES, BULLET_PALETTES, lastLetterPos, fallPaused, letterArrived, LETTER_SAY, SPEED_ROUND_DURATION_MS, SPEED_ROUND_TRIGGER, bonusCatchKeyListener, BONUS_CATCH_DURATION_MS, BONUS_CATCH_STARS, QWERTY_ROWS, currentKbMode, compactKeys, MAX_GHOSTS, ACHIEVEMENT_MILESTONES, pendingCompletion;
   var init_game = __esm({
     "js/game.js"() {
       init_settings();
@@ -2238,6 +2305,9 @@
       bonusCatchActive = false;
       bonusCatchTimer = null;
       toastTimerId = null;
+      SEQUENCE_LENGTH = 3;
+      sequenceLetters = [];
+      sequenceIndex = 0;
       toastTimer = null;
       toastQueue = [];
       ROBOT_PALETTES = {
