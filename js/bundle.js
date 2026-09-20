@@ -65,6 +65,62 @@
           soundModeHint: "\u{1F442} Listen & press the letter",
           sequenceModeHint: "Press letters in order",
           wordModeHint: "Spell the word",
+          // Phase 17 W1 — Word bank (emoji → 3-letter word). SEN-friendly 3-letter
+          // words covering animals / objects / nature / body parts / actions.
+          wordBank: [
+            "CAT",
+            "DOG",
+            "PIG",
+            "BEE",
+            "OWL",
+            "BAT",
+            "BUS",
+            "CAR",
+            "BED",
+            "CUP",
+            "HAT",
+            "KEY",
+            "SUN",
+            "SEA",
+            "SKY",
+            "EAR",
+            "EYE",
+            "TOE",
+            "ARM",
+            "LEG",
+            "HUG",
+            "RUN",
+            "SIT",
+            "EAT",
+            "JUMP"
+          ],
+          wordEmojis: {
+            CAT: "\u{1F431}",
+            DOG: "\u{1F436}",
+            PIG: "\u{1F437}",
+            BEE: "\u{1F41D}",
+            OWL: "\u{1F989}",
+            BAT: "\u{1F987}",
+            BUS: "\u{1F68C}",
+            CAR: "\u{1F697}",
+            BED: "\u{1F6CF}\uFE0F",
+            CUP: "\u2615",
+            HAT: "\u{1F3A9}",
+            KEY: "\u{1F511}",
+            SUN: "\u2600\uFE0F",
+            SEA: "\u{1F30A}",
+            SKY: "\u{1F30C}",
+            EAR: "\u{1F442}",
+            EYE: "\u{1F441}\uFE0F",
+            TOE: "\u{1F9B6}",
+            ARM: "\u{1F4AA}",
+            LEG: "\u{1F9B5}",
+            HUG: "\u{1F917}",
+            RUN: "\u{1F3C3}",
+            SIT: "\u{1FA91}",
+            EAT: "\u{1F37D}\uFE0F",
+            JUMP: "\u{1F938}"
+          },
           // Praise phrases (random pick on correct)
           praise: ["Great!", "Yes!", "Wonderful!", "Awesome!", "Nice!"],
           // Wrong-answer gentle nudge (no fail language)
@@ -145,6 +201,8 @@
           soundModeHint: "\u{1F442} \u807D\u5230\u500B\u97F3,\u6309\u5C0D\u61C9\u5B57\u6BCD",
           sequenceModeHint: "\u6309\u9806\u5E8F\u6253\u4E2D 3 \u500B\u5B57\u6BCD",
           wordModeHint: "\u62FC\u51FA\u5462\u500B\u5B57",
+          // Note: wordBank + wordEmojis are in the `en` block — they're
+          // language-independent spelling targets (English letters + universal emoji).
           praise: ["\u505A\u5F97\u597D\uFF01", "\u5F88\u597D\uFF01", "\u592A\u68D2\u4E86\uFF01", "\u597D\u53FB\uFF01", "\u7E7C\u7E8C\uFF01"],
           nudge: ["\u518D\u8A66\u4E00\u6B21\uFF01", "\u5DEE\u5C11\u5C11\uFF01", "\u52A0\u6CB9\uFF01"],
           // Speed round (Phase 16a)
@@ -1405,6 +1463,24 @@
       currentLetter = seq[0];
       return;
     }
+    if (mode === "word") {
+      const bank = i18n.en?.wordBank || ["CAT", "DOG", "SUN"];
+      const emojis = i18n.en?.wordEmojis || {};
+      const word = bank[Math.floor(Math.random() * bank.length)];
+      sequenceLetters = word.split("");
+      sequenceIndex = 0;
+      const emoji = emojis[word] || "\u2753";
+      el.innerHTML = `<div class="word-emoji-display">${emoji}</div>${renderSequenceHTML()}`;
+      el.style.opacity = "0";
+      el.style.transform = "scale(0.7)";
+      requestAnimationFrame(() => {
+        el.style.transition = "opacity 0.3s, transform 0.3s";
+        el.style.opacity = "1";
+        el.style.transform = "scale(1)";
+      });
+      currentLetter = sequenceLetters[0];
+      return;
+    }
     el.textContent = isSound ? "?" : letter.toUpperCase();
     el.style.opacity = "0";
     el.style.transform = "scale(0.7)";
@@ -1550,7 +1626,7 @@
     if (bonusCatchActive) return;
     const settings = loadSettings();
     const mode = getGameMode();
-    if (mode === "sequence") {
+    if (mode === "sequence" || mode === "word") {
       const expected2 = sequenceLetters[sequenceIndex];
       if (!expected2) return;
       if (pressed.toUpperCase() === expected2) {

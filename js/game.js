@@ -563,6 +563,27 @@ export function showLetter(letter) {
     return;
   }
 
+  if (mode === 'word') {
+    // Phase 17 W1 — Word mode: pick a 3-letter word from wordBank, show
+    // its emoji, and re-use sequence state machine for letter order.
+    const bank = i18n.en?.wordBank || ['CAT', 'DOG', 'SUN'];
+    const emojis = i18n.en?.wordEmojis || {};
+    const word = bank[Math.floor(Math.random() * bank.length)];
+    sequenceLetters = word.split('');
+    sequenceIndex = 0;
+    const emoji = emojis[word] || '❓';
+    el.innerHTML = `<div class="word-emoji-display">${emoji}</div>${renderSequenceHTML()}`;
+    el.style.opacity = '0';
+    el.style.transform = 'scale(0.7)';
+    requestAnimationFrame(() => {
+      el.style.transition = 'opacity 0.3s, transform 0.3s';
+      el.style.opacity = '1';
+      el.style.transform = 'scale(1)';
+    });
+    currentLetter = sequenceLetters[0];
+    return;
+  }
+
   el.textContent = isSound ? '?' : letter.toUpperCase();
   el.style.opacity = '0';
   el.style.transform = 'scale(0.7)';
@@ -792,10 +813,10 @@ export function handleKey(pressed) {
   const settings = loadSettings();
   const mode = getGameMode();
 
-  // Phase 17 W3 — Sequence mode intercept
+  // Phase 17 W3/W1 — Sequence + Word mode intercept (shared logic).
   // Correct in-order: highlight next slot, shoot anim on completion only.
   // Wrong: reset to slot 0 (no streak break — SEN-friendly retry mechanic).
-  if (mode === 'sequence') {
+  if (mode === 'sequence' || mode === 'word') {
     const expected = sequenceLetters[sequenceIndex];
     if (!expected) return;
     if (pressed.toUpperCase() === expected) {

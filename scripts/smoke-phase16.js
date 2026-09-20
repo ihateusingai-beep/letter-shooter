@@ -407,6 +407,37 @@ const path = require('path');
   const secondSeqLetter = activeAfter1.trim();
   console.log(`[19] sequence advances after correct press: ${activeAfter1 !== activeLetter && secondSeqLetter.length > 0 ? 'OK (now ' + secondSeqLetter + ')' : 'WRONG (stuck on ' + secondSeqLetter + ')'}`);
 
+  // ── 20. Phase 17 W1 — Word mode shows emoji + 3 slots ──────────────────
+  await page.evaluate(() => {
+    Object.keys(localStorage).forEach(k => { if (k.startsWith('ls-')) localStorage.removeItem(k); });
+    localStorage.setItem('ls-settings', JSON.stringify({
+      voice: true, soundFx: true, bgm: false, bgmTrack: 'space',
+      theme: 'space', speed: 'slow', highContrast: false, reduceMotion: false,
+      lang: 'zh', currentUnit: 'U1', level: 'L0', kbMode: 'full',
+      robotColor: 0, mascotTheme: 'auto', gameMode: 'word'
+    }));
+  });
+  await page.reload();
+  await page.waitForSelector('#js-start-btn');
+  await page.click('#js-start-btn');
+  await page.waitForTimeout(800);
+
+  const bodyModeWord = await page.evaluate(() => document.body.getAttribute('data-game-mode'));
+  console.log(`[20] body data-game-mode=word: ${bodyModeWord === 'word' ? 'OK' : 'WRONG (' + bodyModeWord + ')'}`);
+
+  const emojiExists = await page.locator('.word-emoji-display').count();
+  const slotCountWord = await page.locator('.seq-slot').count();
+  console.log(`[20] word emoji display present: ${emojiExists === 1 ? 'OK' : 'WRONG (' + emojiExists + ')'}`);
+  console.log(`[20] 3 seq-slots under emoji: ${slotCountWord === 3 ? 'OK' : 'WRONG (' + slotCountWord + ')'}`);
+
+  // Press the first letter of the sequence, verify advance
+  const activeLetterWord = await page.locator('.seq-slot.seq-active').textContent();
+  const firstWordLetter = activeLetterWord.trim();
+  await page.keyboard.press(firstWordLetter.toLowerCase());
+  await page.waitForTimeout(300);
+  const activeAfterWord = await page.locator('.seq-slot.seq-active').textContent();
+  console.log(`[20] word mode advances on correct press: ${activeAfterWord !== activeLetterWord ? 'OK (now ' + activeAfterWord.trim() + ')' : 'WRONG (stuck)'}`);
+
   await browser.close();
   process.exit(errors.length > 0 ? 1 : 0);
 })();

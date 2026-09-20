@@ -41,6 +41,22 @@ export const i18n = {
     soundModeHint: '👂 Listen & press the letter',
     sequenceModeHint: 'Press letters in order',
     wordModeHint: 'Spell the word',
+    // Phase 17 W1 — Word bank (emoji → 3-letter word). SEN-friendly 3-letter
+    // words covering animals / objects / nature / body parts / actions.
+    wordBank: [
+      'CAT', 'DOG', 'PIG', 'BEE', 'OWL', 'BAT',
+      'BUS', 'CAR', 'BED', 'CUP', 'HAT', 'KEY',
+      'SUN', 'SEA', 'SKY',
+      'EAR', 'EYE', 'TOE', 'ARM', 'LEG',
+      'HUG', 'RUN', 'SIT', 'EAT', 'JUMP',
+    ],
+    wordEmojis: {
+      CAT: '🐱', DOG: '🐶', PIG: '🐷', BEE: '🐝', OWL: '🦉', BAT: '🦇',
+      BUS: '🚌', CAR: '🚗', BED: '🛏️', CUP: '☕', HAT: '🎩', KEY: '🔑',
+      SUN: '☀️', SEA: '🌊', SKY: '🌌',
+      EAR: '👂', EYE: '👁️', TOE: '🦶', ARM: '💪', LEG: '🦵',
+      HUG: '🤗', RUN: '🏃', SIT: '🪑', EAT: '🍽️', JUMP: '🤸',
+    },
     // Praise phrases (random pick on correct)
     praise: ['Great!', 'Yes!', 'Wonderful!', 'Awesome!', 'Nice!'],
     // Wrong-answer gentle nudge (no fail language)
@@ -121,6 +137,8 @@ export const i18n = {
     soundModeHint: '👂 聽到個音,按對應字母',
     sequenceModeHint: '按順序打中 3 個字母',
     wordModeHint: '拼出呢個字',
+    // Note: wordBank + wordEmojis are in the `en` block — they're
+    // language-independent spelling targets (English letters + universal emoji).
     praise: ['做得好！', '很好！', '太棒了！', '好叻！', '繼續！'],
     nudge: ['再試一次！', '差少少！', '加油！'],
     // Speed round (Phase 16a)

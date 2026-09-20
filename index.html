@@ -1055,8 +1055,25 @@
   }
   .no-motion body[data-game-mode="sequence"] .seq-slot.seq-active { animation: none !important; }
 
-  /* ── Phase 17 W1 — Word mode (emoji shown large) ─────────────────────── */
-  body[data-game-mode="word"] #js-letter { font-size: 120px !important; }
+  /* ── Phase 17 W1 — Word mode (emoji shown large + 3 slots below) ───── */
+  body[data-game-mode="word"] #js-letter { font-size: 40px !important; }
+  body[data-game-mode="word"] .word-emoji-display {
+    font-size: 140px;
+    line-height: 1;
+    margin-bottom: 18px;
+    display: block;
+    filter: drop-shadow(0 0 24px var(--primary2, #4FC3F7));
+  }
+  /* In word mode, seq-slots should be smaller (sit below the emoji) */
+  body[data-game-mode="word"] .seq-slot {
+    font-size: 28px;
+    padding: 8px 14px;
+    margin: 0 3px;
+  }
+  body[data-game-mode="word"] .seq-arrow {
+    font-size: 24px;
+    margin: 0 4px;
+  }
 
   /* ── Phase 16 — Wrong-letter ghost (16d) ────────────────────────────── */
   .wrong-ghost {
