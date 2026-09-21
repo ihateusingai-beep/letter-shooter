@@ -1537,13 +1537,25 @@
     return sequenceLetters.map((l, i) => {
       const cls = i < sequenceIndex ? "seq-slot seq-done" : i === sequenceIndex ? "seq-slot seq-active" : "seq-slot seq-pending";
       const mark = i < sequenceIndex ? "\u2713" : "";
-      return `<span class="${cls}" data-pos="${i}">${mark}${l}</span>`;
+      const display = getCaseMode() === "lower" ? l.toLowerCase() : l;
+      return `<span class="${cls}" data-pos="${i}">${mark}${display}</span>`;
     }).join('<span class="seq-arrow">\u2192</span>');
   }
   function highlightSequenceProgress() {
     const el = document.getElementById("js-letter");
     if (!el) return;
     el.innerHTML = renderSequenceHTML();
+  }
+  function speakWord(word) {
+    if (!("speechSynthesis" in window)) return;
+    if (!word) return;
+    const lang = loadSettings().lang || "zh";
+    const u = new SpeechSynthesisUtterance(word);
+    u.lang = lang === "zh" ? "zh-HK" : "en-US";
+    u.rate = 0.85;
+    u.pitch = 1.1;
+    u.volume = 0.9;
+    window.speechSynthesis.speak(u);
   }
   function startFall(onArrive) {
     const settings = loadSettings();
@@ -1644,8 +1656,13 @@
         highlightSequenceProgress();
         if (settings.soundFx) playCorrect();
         haptic("light");
+        if (settings.voice) speakLetter(expected2);
         if (sequenceIndex >= SEQUENCE_LENGTH) {
           currentLetter = expected2;
+          if (mode === "word") {
+            const word = sequenceLetters.join("");
+            setTimeout(() => speakWord(word), 200);
+          }
         } else {
           const nextExpected = sequenceLetters[sequenceIndex];
           if (nextExpected) {
@@ -2196,9 +2213,12 @@
     applyGameMode(gameMode);
     if (bgm) startBgm(bgmTrack);
     else stopBgm();
+    const prevSettings = loadSettings();
     saveSettings(next);
     closeSettings();
     if (gameRunning) {
+      const modeChanged = prevSettings.gameMode !== gameMode;
+      const caseChanged = prevSettings.caseMode !== caseMode;
       const prog = loadProgress();
       const robotIdx = currentRobotIndex(masteredCount(prog));
       drawRobot(robotIdx);
@@ -2206,6 +2226,17 @@
       populateFloor(theme);
       renderTouchKeys();
       if (currentLetter) highlightKey(currentLetter);
+      if (modeChanged || caseChanged) {
+        const lvl = loadSettings().level || "L0";
+        sequenceLetters = [];
+        sequenceIndex = 0;
+        const target = currentLetter || touchKeys[0] || "A";
+        showLetter(target);
+        speakLetter(target);
+        if (lvl === "L1") {
+          startFall(() => robotReach());
+        }
+      }
     }
   }
   function openProgressPanel() {

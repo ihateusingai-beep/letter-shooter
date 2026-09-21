@@ -457,6 +457,31 @@ const path = require('path');
   const letterLower = await page.locator('#js-letter').textContent();
   console.log(`[21] lowercase case mode displays lowercase ('${letterLower.trim()}'): ${letterLower === letterLower.toLowerCase() && letterLower !== letterLower.toUpperCase() ? 'OK' : 'WRONG'}`);
 
+  // ── 22. Phase 17 polish — mid-game mode change re-renders letter ───────
+  await page.evaluate(() => {
+    Object.keys(localStorage).forEach(k => { if (k.startsWith('ls-')) localStorage.removeItem(k); });
+    localStorage.setItem('ls-settings', JSON.stringify({
+      voice: true, soundFx: true, bgm: false, bgmTrack: 'space',
+      theme: 'space', speed: 'slow', highContrast: false, reduceMotion: false,
+      lang: 'zh', currentUnit: 'U1', level: 'L0', kbMode: 'full',
+      robotColor: 0, mascotTheme: 'auto', gameMode: 'classic', caseMode: 'upper'
+    }));
+  });
+  await page.reload();
+  await page.waitForSelector('#js-start-btn');
+  await page.click('#js-start-btn');
+  await page.waitForTimeout(800);
+
+  const beforeSwitch = await page.locator('#js-letter').textContent();
+  await page.click('#js-settings-btn');
+  await page.waitForSelector('#js-settings-panel.visible');
+  await page.selectOption('#js-game-mode-select', 'sound');
+  await page.click('#js-settings-apply');
+  await page.waitForTimeout(500);
+
+  const afterSwitch = await page.locator('#js-letter').textContent();
+  console.log(`[22] mid-game mode switch re-renders letter ('${beforeSwitch.trim()}' → '${afterSwitch.trim()}'): ${afterSwitch.trim() === '?' ? 'OK' : 'WRONG'}`);
+
   await browser.close();
   process.exit(errors.length > 0 ? 1 : 0);
 })();

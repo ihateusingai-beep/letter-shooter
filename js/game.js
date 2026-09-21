@@ -644,7 +644,9 @@ function renderSequenceHTML() {
               : i === sequenceIndex ? 'seq-slot seq-active'
               : 'seq-slot seq-pending';
     const mark = i < sequenceIndex ? '✓' : '';
-    return `<span class="${cls}" data-pos="${i}">${mark}${l}</span>`;
+    // Phase 17 polish — respect caseMode (lowercase display if caseMode='lower')
+    const display = getCaseMode() === 'lower' ? l.toLowerCase() : l;
+    return `<span class="${cls}" data-pos="${i}">${mark}${display}</span>`;
   }).join('<span class="seq-arrow">→</span>');
 }
 
@@ -653,6 +655,20 @@ function highlightSequenceProgress() {
   if (!el) return;
   // Re-render to update state (cheap — 3 spans)
   el.innerHTML = renderSequenceHTML();
+}
+
+// Phase 17 polish — TTS the whole word on word-mode completion.
+// Uses Web Speech (same rate/pitch/volume profile as speakLetter).
+function speakWord(word) {
+  if (!('speechSynthesis' in window)) return;
+  if (!word) return;
+  const lang = loadSettings().lang || 'zh';
+  const u = new SpeechSynthesisUtterance(word);
+  u.lang = lang === 'zh' ? 'zh-HK' : 'en-US';
+  u.rate = 0.85;
+  u.pitch = 1.1;
+  u.volume = 0.9;
+  window.speechSynthesis.speak(u);
 }
 
 // ── L1: fall animation ──────────────────────────────────────────────────────
@@ -824,11 +840,18 @@ export function handleKey(pressed) {
       highlightSequenceProgress();
       if (settings.soundFx) playCorrect();
       haptic('light');
+      // Phase 17 polish — TTS the letter just pressed (phonemic reinforcement
+      // for SEN learners in sequence/word modes).
+      if (settings.voice) speakLetter(expected);
       if (sequenceIndex >= SEQUENCE_LENGTH) {
         // Complete — fall through to standard correct path.
         // currentLetter was set to seq[0]; replace with last so success uses it.
         currentLetter = expected;
-        // Continue below to standard correct branch
+        // Phase 17 polish — word mode: speak the whole word on completion
+        if (mode === 'word') {
+          const word = sequenceLetters.join('');
+          setTimeout(() => speakWord(word), 200);
+        }
       } else {
         // Update keyboard hint for next expected letter
         const nextExpected = sequenceLetters[sequenceIndex];
@@ -1581,11 +1604,17 @@ export function applySettings() {
   if (bgm) startBgm(bgmTrack);
   else stopBgm();
 
+  // Phase 17 polish — capture prev settings BEFORE save so we can detect
+  // gameMode / caseMode changes and re-render the current letter.
+  const prevSettings = loadSettings();
   saveSettings(next);
   closeSettings();
 
   // Re-render keyboard with new mode + theme robot palette
   if (gameRunning) {
+    const modeChanged = prevSettings.gameMode !== gameMode;
+    const caseChanged = prevSettings.caseMode !== caseMode;
+
     const prog = loadProgress();
     const robotIdx = currentRobotIndex(masteredCount(prog));
     drawRobot(robotIdx);
@@ -1593,6 +1622,23 @@ export function applySettings() {
     populateFloor(theme);
     renderTouchKeys();
     if (currentLetter) highlightKey(currentLetter);
+
+    // Phase 17 polish — when gameMode or caseMode changes mid-game,
+    // re-render the current letter so the visual treatment updates
+    // immediately instead of waiting for the next correct press.
+    if (modeChanged || caseChanged) {
+      const lvl = loadSettings().level || 'L0';
+      // sequence/word mode state was set up for old gameMode; reset cleanly
+      sequenceLetters = [];
+      sequenceIndex = 0;
+      // Force re-show by passing the current letter through showLetter
+      const target = currentLetter || touchKeys[0] || 'A';
+      showLetter(target);
+      speakLetter(target);
+      if (lvl === 'L1') {
+        startFall(() => robotReach());
+      }
+    }
   }
 }
 
