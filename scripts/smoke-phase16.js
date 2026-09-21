@@ -527,6 +527,18 @@ const path = require('path');
   const previewText = await page.locator('#js-custom-levels-preview').textContent();
   console.log(`[23] preview shows parsed levels: ${previewText.includes('ABC') && previewText.includes('DEF') ? 'OK' : 'WRONG (' + previewText + ')'}`);
 
+  // ── 24. Default kbMode is 'full' (26-key QWERTY) ─────────────────────
+  await page.evaluate(() => {
+    Object.keys(localStorage).forEach(k => { if (k.startsWith('ls-')) localStorage.removeItem(k); });
+    // No settings at all — pure DEFAULTS path
+  });
+  await page.reload();
+  await page.waitForSelector('#js-start-btn');
+  await page.click('#js-start-btn');
+  await page.waitForTimeout(500);
+  const keyCount = await page.locator('.kb-key').count();
+  console.log(`[24] default kbMode renders 26 full keys: ${keyCount === 26 ? 'OK (' + keyCount + ')' : 'WRONG (' + keyCount + ')'}`);
+
   await browser.close();
   process.exit(errors.length > 0 ? 1 : 0);
 })();

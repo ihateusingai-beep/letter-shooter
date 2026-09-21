@@ -2042,7 +2042,7 @@
     container.innerHTML = "";
     const settings = loadSettings();
     const reduceMotion = settings.reduceMotion;
-    currentKbMode = settings.kbMode || "compact";
+    currentKbMode = settings.kbMode || "full";
     const hint = document.createElement("div");
     hint.className = "kb-hint";
     hint.id = "js-kb-hint";
@@ -2226,7 +2226,7 @@
     panel.querySelector("#js-lang-select").value = settings.lang;
     panel.querySelector("#js-unit-select").value = settings.currentUnit;
     panel.querySelector("#js-level-select").value = settings.level;
-    panel.querySelector("#js-kb-mode-select").value = settings.kbMode || "compact";
+    panel.querySelector("#js-kb-mode-select").value = settings.kbMode || "full";
     panel.querySelector("#js-theme-select").value = settings.theme || "space";
     panel.querySelector("#js-robot-color-select").value = String(settings.robotColor ?? 0);
     panel.querySelector("#js-mascot-theme-select").value = settings.mascotTheme || "auto";
@@ -2294,7 +2294,7 @@
     const lang = panel.querySelector("#js-lang-select")?.value ?? "zh";
     const unit = panel.querySelector("#js-unit-select")?.value ?? "U1";
     const level = panel.querySelector("#js-level-select")?.value ?? "L0";
-    const kbMode = panel.querySelector("#js-kb-mode-select")?.value ?? "compact";
+    const kbMode = panel.querySelector("#js-kb-mode-select")?.value ?? "full";
     const theme = panel.querySelector("#js-theme-select")?.value ?? "space";
     const robotColor = parseInt(panel.querySelector("#js-robot-color-select")?.value ?? "0", 10);
     const mascotTheme = panel.querySelector("#js-mascot-theme-select")?.value ?? "auto";
@@ -2602,7 +2602,7 @@
         ["A", "S", "D", "F", "G", "H", "J", "K", "L"],
         ["Z", "X", "C", "V", "B", "N", "M"]
       ];
-      currentKbMode = "compact";
+      currentKbMode = "full";
       compactKeys = [];
       MAX_GHOSTS = 3;
       ACHIEVEMENT_MILESTONES = [
