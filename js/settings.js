@@ -22,6 +22,10 @@ const DEFAULTS = {
                                 // gentle = 12 particles, no emoji burst
                                 // normal = 32 particles + 3 letter emoji (default)
                                 // party  = 50 particles + 5 letter emoji, longer duration
+  masteryThreshold: 6,         // 5 | 6 | 7 | 8 — Phase 19.5 teacher-overrideable mastery threshold
+                                // Default 6 (= 60% in rolling 10-window) preserves current behavior.
+                                // Lower for moderate-ID students who can't sustain 60% accuracy.
+                                // Status re-evaluated on threshold change (see progress.js reevaluateAllStatuses).
 };
 
 export function loadSettings() {

@@ -1,10 +1,10 @@
 # Letter Shooter — Handover & Field Testing Guide
 
 **Audience**: SEN teacher preparing iPad classroom testing
-**App**: Letter Shooter v1.7 (letter-shooting game for moderate-intellectual-disability primary students)
+**App**: Letter Shooter v1.7.1 (letter-shooting game for moderate-intellectual-disability primary students)
 **Live URL**: https://ihateusingai-beep.github.io/letter-shooter
 **Repo**: https://github.com/ihateusingai-beep/letter-shooter
-**Last refreshed**: 2026-09-22 (Phase 19.3)
+**Last refreshed**: 2026-09-22 (Phase 19.5)
 
 **Dev docs**: [ARCHITECTURE.md](./ARCHITECTURE.md) (file map, localStorage schema, game mode state machine, feedback pipeline, build pipeline) — start there if picking up the codebase.
 
@@ -110,6 +110,16 @@ Students see a giant letter (A-Z) and press the matching keyboard key or touch k
 | 18.1 | kbMode default aligned to 'full' (26-key QWERTY) across all fallbacks | Boot defaults to full keyboard |
 | 18.2 | Levels section promoted to top of settings panel (teacher-adjustable is more important than keyboard cosmetics) | Settings panel ordering |
 
+### Engagement tuning (Phase 19)
+
+| # | Feature | Where to test |
+|---|---|---|
+| 19.1 | **Reduce-motion actually works** — body-level `no-motion` class toggled on/off; all 30+ per-animation CSS `.no-motion` rules take effect when on | Settings → 減動畫 |
+| 19.2 | **Confetti intensity** — gentle (12 particles, no emoji) / normal (32+3, default) / party (50+5, longer) | Settings → 彩紙強度 |
+| 19.3 | **Settings panel sections** — 4 collapsible groups (玩法 / 聲音 / 外觀 / 進階) using HTML5 `<details>` | Settings panel |
+| 19.4 | **ARCHITECTURE.md** — dev reference doc replacing v0.2 plan (file map, schema, state machines, build pipeline) | ARCHITECTURE.md |
+| 19.5 | **Mastery threshold teacher-override** — 5/6/7/8 correct per rolling 10-window. Lower for moderate-ID students. Re-evaluates all letter statuses on change | Settings → 掌握門檻 |
+
 ---
 
 ## Settings Panel Reference
@@ -119,12 +129,13 @@ Top-right ⚙️ icon opens settings. **4 collapsible sections** (Phase 19.3) + 
 **🌐 語言 Language** (always at top)
 - 語言 Language — 繁體中文 / English
 
-**🎮 玩法 Gameplay** (5 rows, open by default)
+**🎮 玩法 Gameplay** (6 rows, open by default)
 - 單元 Unit — U1-ABC / U2-EFS / ... / U10 混合 / C1, C2, ... (Phase 18)
 - 自訂關卡 Custom Levels — textarea "ABC,DEF,GHI" (live preview)
 - 難度 Level — L0 靜止 / L1 慢落
 - 遊戲模式 Game Mode — 經典 / 聽音 / 連擊 / 拼字
 - 字母大細階 Case — 大寫 / 小寫
+- 掌握門檻 Mastery — 5/10 (寬鬆) / 6/10 (一般, default) / 7/10 (嚴格) / 8/10 (高要求) — Phase 19.5
 
 **🔊 聲音 Audio** (3 rows, open by default)
 - 語音朗讀 Voice — On/Off

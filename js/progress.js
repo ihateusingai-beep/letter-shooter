@@ -1,4 +1,5 @@
 // js/progress.js — per-letter progress tracking
+import { getMasteryThreshold, ALLOWED_MASTERY_THRESHOLDS, DEFAULT_MASTERY_THRESHOLD } from './curriculum.js';
 
 const STORAGE_KEY = 'ls-progress';
 
@@ -58,16 +59,38 @@ export function recordAttempt(letter, firstTry) {
   entry.recent.push(firstTry ? 1 : 0);
   if (entry.recent.length > 10) entry.recent.shift();
 
-  // Update status
+  // Update status (Phase 19.5 — threshold is now teacher-overrideable)
   if (entry.seen === 1) {
     entry.status = 'new';
   } else if (entry.recent.length >= 10) {
     const ok = entry.recent.reduce((a, b) => a + b, 0);
-    entry.status = ok >= 6 ? 'mastered' : 'practice';
+    const threshold = getMasteryThreshold();
+    entry.status = ok >= threshold ? 'mastered' : 'practice';
   } else {
     entry.status = 'practice';
   }
 
+  saveProgress(prog);
+  return prog;
+}
+
+// Phase 19.5 — Re-evaluate every letter's mastered/practice status against the
+// given threshold. Called when settings.masteryThreshold changes so that letters
+// with a full rolling window immediately reflect the new bar. Letters with
+// <10 attempts retain 'new' or 'practice' (can't compute mastery yet).
+export function reevaluateAllStatuses(threshold) {
+  if (!ALLOWED_MASTERY_THRESHOLDS.includes(threshold)) {
+    threshold = DEFAULT_MASTERY_THRESHOLD;
+  }
+  const prog = loadProgress();
+  for (const letter of Object.keys(prog)) {
+    const entry = prog[letter];
+    if (entry.recent.length >= 10) {
+      const ok = entry.recent.reduce((a, b) => a + b, 0);
+      const prev = entry.status;
+      entry.status = ok >= threshold ? 'mastered' : 'practice';
+    }
+  }
   saveProgress(prog);
   return prog;
 }

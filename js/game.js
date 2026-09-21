@@ -1,6 +1,6 @@
 // js/game.js — core game loop: L0 / L1, shooting, scoring
 import { loadSettings, saveSettings, fallDuration } from './settings.js';
-import { loadProgress, recordAttempt, masteredCount } from './progress.js';
+import { loadProgress, recordAttempt, masteredCount, reevaluateAllStatuses } from './progress.js';
 import { activeLetters, currentRobotIndex, isUnitComplete, parseCustomLevels, getCustomUnitKeys } from './curriculum.js';
 import { t, pickT, setLang, i18n } from './i18n.js';
 import { playCorrect, playWrong, playStreak, playUnlock, unlockAudio, haptic } from './sfx.js';
@@ -1562,6 +1562,7 @@ export function openSettings() {
   panel.querySelector('#js-hc-toggle').checked = settings.highContrast;
   panel.querySelector('#js-motion-toggle').checked = settings.reduceMotion;
   panel.querySelector('#js-confetti-intensity-select').value = settings.confettiIntensity || 'normal';
+  panel.querySelector('#js-mastery-threshold-select').value = String(settings.masteryThreshold ?? 6);
   panel.querySelector('#js-lang-select').value = settings.lang;
   panel.querySelector('#js-unit-select').value = settings.currentUnit;
   panel.querySelector('#js-level-select').value = settings.level;
@@ -1655,8 +1656,9 @@ export function applySettings() {
   const caseMode = panel.querySelector('#js-case-mode-select')?.value ?? 'upper';
   const customLevels = panel.querySelector('#js-custom-levels-input')?.value?.trim() ?? '';
   const confettiIntensity = panel.querySelector('#js-confetti-intensity-select')?.value ?? 'normal';
+  const masteryThreshold = parseInt(panel.querySelector('#js-mastery-threshold-select')?.value ?? '6', 10);
 
-  const next = { voice, soundFx: sfx, bgm, bgmTrack, speed, highContrast: hc, reduceMotion: motion, lang, currentUnit: unit, level, kbMode, theme, robotColor, mascotTheme, gameMode, caseMode, customLevels, confettiIntensity };
+  const next = { voice, soundFx: sfx, bgm, bgmTrack, speed, highContrast: hc, reduceMotion: motion, lang, currentUnit: unit, level, kbMode, theme, robotColor, mascotTheme, gameMode, caseMode, customLevels, confettiIntensity, masteryThreshold };
 
   document.body.classList.toggle('high-contrast', hc);
   // Phase 19 — apply reduce-motion class globally so all CSS .no-motion rules
@@ -1673,6 +1675,12 @@ export function applySettings() {
   // gameMode / caseMode changes and re-render the current letter.
   const prevSettings = loadSettings();
   saveSettings(next);
+  // Phase 19.5 — re-evaluate per-letter mastered/practice statuses against the
+  // new threshold so a teacher's change takes effect immediately for letters
+  // that already have a full rolling window of 10 attempts.
+  if (prevSettings.masteryThreshold !== masteryThreshold) {
+    reevaluateAllStatuses(masteryThreshold);
+  }
   closeSettings();
 
   // Re-render keyboard with new mode + theme robot palette

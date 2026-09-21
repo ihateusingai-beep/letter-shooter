@@ -393,6 +393,19 @@
     });
     return result;
   }
+  // Phase 19.5 — mastery threshold constants + reader
+  var ALLOWED_MASTERY_THRESHOLDS = [5, 6, 7, 8];
+  var DEFAULT_MASTERY_THRESHOLD = 6;
+  function getMasteryThreshold() {
+    let raw = 6;
+    try {
+      if (typeof localStorage !== "undefined") {
+        const parsed = JSON.parse(localStorage.getItem("ls-settings") || "{}");
+        raw = Number(parsed.masteryThreshold);
+      }
+    } catch {}
+    return ALLOWED_MASTERY_THRESHOLDS.includes(raw) ? raw : DEFAULT_MASTERY_THRESHOLD;
+  }
   var UNITS, ROBOT_MILESTONES, TOTAL_ROBOTS;
   var init_curriculum = __esm({
     "js/curriculum.js"() {
@@ -468,7 +481,8 @@
       entry.status = "new";
     } else if (entry.recent.length >= 10) {
       const ok = entry.recent.reduce((a, b) => a + b, 0);
-      entry.status = ok >= 6 ? "mastered" : "practice";
+      const threshold = getMasteryThreshold();
+      entry.status = ok >= threshold ? "mastered" : "practice";
     } else {
       entry.status = "practice";
     }
@@ -477,6 +491,23 @@
   }
   function masteredCount(prog) {
     return Object.values(prog).filter((e) => e.status === "mastered").length;
+  }
+  // Phase 19.5 — re-evaluate every letter's mastered/practice status against
+  // the given threshold. Called when settings.masteryThreshold changes.
+  function reevaluateAllStatuses(threshold) {
+    if (!ALLOWED_MASTERY_THRESHOLDS.includes(threshold)) {
+      threshold = DEFAULT_MASTERY_THRESHOLD;
+    }
+    const prog = loadProgress();
+    for (const letter of Object.keys(prog)) {
+      const entry = prog[letter];
+      if (entry.recent.length >= 10) {
+        const ok = entry.recent.reduce((a, b) => a + b, 0);
+        entry.status = ok >= threshold ? "mastered" : "practice";
+      }
+    }
+    saveProgress(prog);
+    return prog;
   }
   var STORAGE_KEY;
   var init_progress = __esm({
@@ -2241,6 +2272,7 @@
     panel.querySelector("#js-hc-toggle").checked = settings.highContrast;
     panel.querySelector("#js-motion-toggle").checked = settings.reduceMotion;
     panel.querySelector("#js-confetti-intensity-select").value = settings.confettiIntensity || "normal";
+    panel.querySelector("#js-mastery-threshold-select").value = String(settings.masteryThreshold ?? 6);
     panel.querySelector("#js-lang-select").value = settings.lang;
     panel.querySelector("#js-unit-select").value = settings.currentUnit;
     panel.querySelector("#js-level-select").value = settings.level;
@@ -2320,7 +2352,8 @@
     const caseMode = panel.querySelector("#js-case-mode-select")?.value ?? "upper";
     const customLevels = panel.querySelector("#js-custom-levels-input")?.value?.trim() ?? "";
     const confettiIntensity = panel.querySelector("#js-confetti-intensity-select")?.value ?? "normal";
-    const next = { voice, soundFx: sfx, bgm, bgmTrack, speed, highContrast: hc, reduceMotion: motion, lang, currentUnit: unit, level, kbMode, theme, robotColor, mascotTheme, gameMode, caseMode, customLevels, confettiIntensity };
+    const masteryThreshold = parseInt(panel.querySelector("#js-mastery-threshold-select")?.value ?? "6", 10);
+    const next = { voice, soundFx: sfx, bgm, bgmTrack, speed, highContrast: hc, reduceMotion: motion, lang, currentUnit: unit, level, kbMode, theme, robotColor, mascotTheme, gameMode, caseMode, customLevels, confettiIntensity, masteryThreshold };
     document.body.classList.toggle("high-contrast", hc);
     document.body.classList.toggle("no-motion", motion);
     applyTheme(theme);
@@ -2329,6 +2362,9 @@
     else stopBgm();
     const prevSettings = loadSettings();
     saveSettings(next);
+    if (prevSettings.masteryThreshold !== masteryThreshold) {
+      reevaluateAllStatuses(masteryThreshold);
+    }
     closeSettings();
     if (gameRunning) {
       const modeChanged = prevSettings.gameMode !== gameMode;

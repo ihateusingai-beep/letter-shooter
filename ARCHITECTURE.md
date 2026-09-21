@@ -74,6 +74,7 @@ All keys prefixed `ls-` (except a few legacy keys). No encryption; no PII beyond
   gameMode:     'classic',    // 'classic' | 'sound' | 'sequence' | 'word'
   caseMode:     'upper',      // 'upper' | 'lower'
   customLevels: '',          // comma-separated "ABC,DEF,GHI" (Phase 18)
+  masteryThreshold: 6,       // 5 | 6 | 7 | 8 — Phase 19.5 (see §6 + curriculum.js ALLOWED_MASTERY_THRESHOLDS)
 
   // Misc
   lang:         'zh',         // 'zh' | 'en'
@@ -95,8 +96,9 @@ All keys prefixed `ls-` (except a few legacy keys). No encryption; no PII beyond
 }
 ```
 
-- **Mastery threshold**: `recent.length >= 10 && sum(recent) >= 6` → `mastered` (Phase curriculum.js MASTERY_THRESHOLD = 6, MASTERY_WINDOW = 10)
-- **Robot unlocks**: at 9 / 18 / 26 mastered letters (Phase curriculum.js ROBOT_MILESTONES)
+- **Mastery threshold** (Phase 19.5): teacher-overrideable via `settings.masteryThreshold` (5/6/7/8). Default 6 = 60% correct in rolling 10-attempt window. Computed via `getMasteryThreshold()` from `curriculum.js`. Letters with `<10 attempts` retain `new` or `practice` status (can't compute mastery yet).
+- **Status re-evaluation** (Phase 19.5): when `masteryThreshold` changes, `reevaluateAllStatuses(newThreshold)` walks every letter with a full rolling window and recomputes `mastered`/`practice`. Letters below move down, letters above move up.
+- **Robot unlocks**: at 9 / 18 / 26 mastered letters (Phase curriculum.js ROBOT_MILESTONES) — affected by masteryThreshold because mastered count is what drives robot palette unlock.
 
 ### `ls-leaderboard` (array of entries)
 
@@ -252,6 +254,8 @@ setTimeout(250ms) → openLeaderboardPanel()   auto-show
 | 19.1 | game.js, bundle.js, index.html | Wire reduce-motion to actually disable all animations | `0d8dfc1` |
 | 19.2 | settings.js, fx.js, game.js | Confetti intensity setting (gentle/normal/party) | `dac35e1` |
 | 19.3 | index.html | Settings panel grouped into 4 collapsible sections | `b9bbbfa` |
+| 19.4 | ARCHITECTURE.md | Replace v0.2 plan with 437-line dev reference doc | `e883bb1` |
+| 19.5 | settings.js, curriculum.js, progress.js, game.js | Teacher-overrideable masteryThreshold (5/6/7/8) with re-evaluation | (current) |
 
 ---
 
@@ -261,7 +265,10 @@ setTimeout(250ms) → openLeaderboardPanel()   auto-show
 Single source of truth for `DEFAULTS`. `loadSettings()` does `{ ...DEFAULTS, ...JSON.parse(localStorage) }`. `saveSettings(patch)` merges and persists. Add new settings here AND in `bundle.js` DEFAULTS block.
 
 ### `js/curriculum.js` (121 LoC)
-Defines `UNITS` (U1-U10), `ROBOT_MILESTONES` (9/18/26), `MASTERY_THRESHOLD` (6), `MASTERY_WINDOW` (10). Phase 18 added `parseCustomLevels(rawString)` + `getCustomUnitKeys()`. **Bug-prone area**: `activeLetters(unitKey)` — review-letter join logic changed in 16.5 patch (`all.length < 6` not `< 3`); before patch, U2 only showed E/F/S and review letter A was defined but never appeared.
+Defines `UNITS` (U1-U10), `ROBOT_MILESTONES` (9/18/26), `MASTERY_WINDOW` (10), `DEFAULT_MASTERY_THRESHOLD` (6), `ALLOWED_MASTERY_THRESHOLDS` ([5,6,7,8]). Phase 18 added `parseCustomLevels(rawString)` + `getCustomUnitKeys()`. **Phase 19.5** added `getMasteryThreshold()` which reads `settings.masteryThreshold` with fallback to default + validation against allowed set. **Bug-prone area**: `activeLetters(unitKey)` — review-letter join logic changed in 16.5 patch (`all.length < 6` not `< 3`); before patch, U2 only showed E/F/S and review letter A was defined but never appeared.
+
+### `js/progress.js` (81 LoC)
+Per-letter rolling window of 10. `recordAttempt(letter, firstTry)` is the only mutator and uses `getMasteryThreshold()` from curriculum. Mastery computation: `sum(recent) >= threshold` → `mastered`. **Phase 19.5** added `reevaluateAllStatuses(threshold)` — bulk re-eval when teacher changes threshold setting; only walks letters with full rolling window. `masteredCount(prog)` for robot unlock + leaderboard logic.
 
 ### `js/progress.js` (81 LoC)
 Per-letter rolling window of 10. `recordAttempt(letter, firstTry)` is the only mutator. Mastery computation: `sum(recent) >= 6`. `masteredCount(prog)` for robot unlock + leaderboard logic.
@@ -425,12 +432,9 @@ Backlog from prior audits (Phase 19 review):
 
 - **C1** Export/import localStorage progress (data portability)
 - **A2** Visual picker for Custom Levels (replace textarea)
-- **B1** Mastery threshold teacher override-able (default 5 instead of 6)
+- **B1 already shipped** (Phase 19.5 masteryThreshold)
 - **B2** U10 mixed review sub-pool (split by mastered + practice)
 - **B3** Sound-only mode phonetic hint for hard consonants
-- **B7 already shipped** (Phase 19.2 confetti intensity)
-- **A1 already shipped** (Phase 19.3 settings sections)
-- **C3 already shipped** (Phase 19 HANDOVER refresh)
 - Replace manual bundle.js with esbuild
 - Add WebKit smoke for iPad parity check
 - Per-student profile switcher (multi-student on same device)

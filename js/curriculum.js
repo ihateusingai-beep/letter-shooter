@@ -77,9 +77,12 @@ export function isUnitComplete(prog, unitKey) {
   return letters.length > 0 && letters.every(l => prog[l]?.status === 'mastered');
 }
 
-// Mastery threshold: 6/10
-export const MASTERY_THRESHOLD = 6;
+// Mastery window: rolling 10 attempts (Phase 1 — unchanged)
+// Mastery threshold is now teacher-overrideable via settings.masteryThreshold
+// (Phase 19.5). Default 6 (= 60% correct). Read via getMasteryThreshold().
 export const MASTERY_WINDOW = 10;
+export const DEFAULT_MASTERY_THRESHOLD = 6;
+export const ALLOWED_MASTERY_THRESHOLDS = [5, 6, 7, 8];
 
 // Phase 18 — Custom levels (teacher-defined letter groups)
 // Storage: settings.customLevels = "ABC,DEF,GHI" (comma-separated)
@@ -118,4 +121,18 @@ export function getCustomUnitKeys() {
     : {};
   const groups = parseCustomLevels(settings.customLevels || '');
   return groups.map((_, i) => `C${i + 1}`);
+}
+
+// Phase 19.5 — Mastery threshold is now teacher-overrideable via settings.
+// Returns the active threshold from localStorage, falling back to default.
+// Validates against ALLOWED_MASTERY_THRESHOLDS; coerces invalid values to default.
+export function getMasteryThreshold() {
+  let raw = 6;
+  try {
+    if (typeof localStorage !== 'undefined') {
+      const parsed = JSON.parse(localStorage.getItem('ls-settings') || '{}');
+      raw = Number(parsed.masteryThreshold);
+    }
+  } catch {}
+  return ALLOWED_MASTERY_THRESHOLDS.includes(raw) ? raw : DEFAULT_MASTERY_THRESHOLD;
 }
