@@ -313,9 +313,14 @@
         // 'classic' | 'sound' | 'sequence' | 'word' (Phase 17 — secondary SEN variants)
         caseMode: "upper",
         // 'upper' | 'lower' — display letter case (Phase 17 W4)
-        customLevels: ""
+        customLevels: "",
         // teacher-defined letter groups, comma-separated (Phase 18)
         // e.g. "ABC,DEF,GHI" → C1=ABC, C2=DEF, C3=GHI
+        confettiIntensity: "normal"
+        // 'gentle' | 'normal' | 'party' — Phase 19.2 overstimulation control
+        // gentle = 12 particles, no emoji burst
+        // normal = 32 particles + 3 letter emoji (default)
+        // party  = 50 particles + 5 letter emoji, longer duration
       };
     }
   });
@@ -581,7 +586,15 @@
     if (!container) return;
     const theme = opts.theme || "space";
     const letter = opts.letter;
-    const count = opts.count || 32;
+    // Phase 19.2 — honor confetti intensity setting (overstimulation control)
+    const intensity = opts.intensity || "normal";
+    const intensityMap = {
+      gentle: { count: 12, emojiCount: 0, durationBase: 0.9, durationRange: 0.5 },
+      normal: { count: 32, emojiCount: 3, durationBase: 0.9, durationRange: 0.5 },
+      party:  { count: 50, emojiCount: 5, durationBase: 1.2, durationRange: 0.6 }
+    };
+    const intensityCfg = intensityMap[intensity] || intensityMap.normal;
+    const count = opts.count ?? intensityCfg.count;
     const palettes = {
       space: ["#4FC3F7", "#FF6B9D", "#FFD54F", "#69F0AE", "#CE93D8", "#FF8A65", "#80DEEA", "#F48FB1"],
       candy: ["#FF6B9D", "#FFD54F", "#B388FF", "#69F0AE", "#FF9D7A", "#F48FB1"],
@@ -647,12 +660,12 @@
       piece.style.setProperty("--dx", dx + "px");
       piece.style.setProperty("--dy", dy + "px");
       piece.style.setProperty("--rot", rot + "deg");
-      piece.style.animationDuration = 0.9 + Math.random() * 0.5 + "s";
+      piece.style.animationDuration = intensityCfg.durationBase + Math.random() * intensityCfg.durationRange + "s";
       container.appendChild(piece);
       piece.addEventListener("animationend", () => piece.remove(), { once: true });
     }
-    if (letter && LETTER_SYMBOLS[letter]) {
-      for (let i = 0; i < 3; i++) {
+    if (letter && LETTER_SYMBOLS[letter] && intensityCfg.emojiCount > 0) {
+      for (let i = 0; i < intensityCfg.emojiCount; i++) {
         const sym = document.createElement("div");
         sym.className = "confetti-piece letter-symbol";
         sym.textContent = LETTER_SYMBOLS[letter];
@@ -665,7 +678,7 @@
         sym.style.setProperty("--dx", dx + "px");
         sym.style.setProperty("--dy", dy + "px");
         sym.style.setProperty("--rot", (Math.random() - 0.5) * 180 + "deg");
-        sym.style.animationDuration = 1.4 + Math.random() * 0.4 + "s";
+        sym.style.animationDuration = 1.4 + Math.random() * (intensity === "party" ? 0.7 : 0.4) + "s";
         container.appendChild(sym);
         sym.addEventListener("animationend", () => sym.remove(), { once: true });
       }
@@ -1780,7 +1793,11 @@
         confettiBurst(
           letterBox.left + letterBox.width / 2,
           letterBox.top + letterBox.height / 2,
-          { theme: settings.theme || "space", letter: currentLetter }
+          {
+            theme: settings.theme || "space",
+            letter: currentLetter,
+            intensity: settings.confettiIntensity || "normal"
+          }
         );
         const lang = settings.lang || "zh";
         const tier = streak >= 10 ? 10 : streak >= 5 ? 5 : streak >= 3 ? 3 : 1;
@@ -2223,6 +2240,7 @@
     panel.querySelector("#js-speed-select").value = settings.speed;
     panel.querySelector("#js-hc-toggle").checked = settings.highContrast;
     panel.querySelector("#js-motion-toggle").checked = settings.reduceMotion;
+    panel.querySelector("#js-confetti-intensity-select").value = settings.confettiIntensity || "normal";
     panel.querySelector("#js-lang-select").value = settings.lang;
     panel.querySelector("#js-unit-select").value = settings.currentUnit;
     panel.querySelector("#js-level-select").value = settings.level;
@@ -2301,7 +2319,8 @@
     const gameMode = panel.querySelector("#js-game-mode-select")?.value ?? "classic";
     const caseMode = panel.querySelector("#js-case-mode-select")?.value ?? "upper";
     const customLevels = panel.querySelector("#js-custom-levels-input")?.value?.trim() ?? "";
-    const next = { voice, soundFx: sfx, bgm, bgmTrack, speed, highContrast: hc, reduceMotion: motion, lang, currentUnit: unit, level, kbMode, theme, robotColor, mascotTheme, gameMode, caseMode, customLevels };
+    const confettiIntensity = panel.querySelector("#js-confetti-intensity-select")?.value ?? "normal";
+    const next = { voice, soundFx: sfx, bgm, bgmTrack, speed, highContrast: hc, reduceMotion: motion, lang, currentUnit: unit, level, kbMode, theme, robotColor, mascotTheme, gameMode, caseMode, customLevels, confettiIntensity };
     document.body.classList.toggle("high-contrast", hc);
     document.body.classList.toggle("no-motion", motion);
     applyTheme(theme);

@@ -44,7 +44,18 @@ export function confettiBurst(originX, originY, opts = {}) {
 
   const theme = opts.theme || 'space';
   const letter = opts.letter;
-  const count = opts.count || 32;
+  // Phase 19.2 — honor confetti intensity setting (overstimulation control)
+  // gentle = 12 particles, no emoji burst, default duration
+  // normal = 32 particles + 3 letter emoji (default behavior)
+  // party  = 50 particles + 5 letter emoji, longer duration
+  const intensity = opts.intensity || 'normal';
+  const intensityMap = {
+    gentle: { count: 12, emojiCount: 0, durationBase: 0.9, durationRange: 0.5 },
+    normal: { count: 32, emojiCount: 3, durationBase: 0.9, durationRange: 0.5 },
+    party:  { count: 50, emojiCount: 5, durationBase: 1.2, durationRange: 0.6 },
+  };
+  const intensityCfg = intensityMap[intensity] || intensityMap.normal;
+  const count = opts.count ?? intensityCfg.count;
 
   // Theme-specific palettes
   const palettes = {
@@ -120,15 +131,15 @@ export function confettiBurst(originX, originY, opts = {}) {
     piece.style.setProperty('--dx', dx + 'px');
     piece.style.setProperty('--dy', dy + 'px');
     piece.style.setProperty('--rot', rot + 'deg');
-    piece.style.animationDuration = (0.9 + Math.random() * 0.5) + 's';
+    piece.style.animationDuration = (intensityCfg.durationBase + Math.random() * intensityCfg.durationRange) + 's';
 
     container.appendChild(piece);
     piece.addEventListener('animationend', () => piece.remove(), { once: true });
   }
 
-  // Phase 10d: per-letter symbol particles (3 large emoji floating up)
-  if (letter && LETTER_SYMBOLS[letter]) {
-    for (let i = 0; i < 3; i++) {
+  // Phase 10d: per-letter symbol particles — count varies by intensity
+  if (letter && LETTER_SYMBOLS[letter] && intensityCfg.emojiCount > 0) {
+    for (let i = 0; i < intensityCfg.emojiCount; i++) {
       const sym = document.createElement('div');
       sym.className = 'confetti-piece letter-symbol';
       sym.textContent = LETTER_SYMBOLS[letter];
@@ -141,7 +152,8 @@ export function confettiBurst(originX, originY, opts = {}) {
       sym.style.setProperty('--dx', dx + 'px');
       sym.style.setProperty('--dy', dy + 'px');
       sym.style.setProperty('--rot', (Math.random() - 0.5) * 180 + 'deg');
-      sym.style.animationDuration = (1.4 + Math.random() * 0.4) + 's';
+      // Phase 19.2 — party mode uses slightly longer emoji drift
+      sym.style.animationDuration = (1.4 + Math.random() * (intensity === 'party' ? 0.7 : 0.4)) + 's';
       container.appendChild(sym);
       sym.addEventListener('animationend', () => sym.remove(), { once: true });
     }

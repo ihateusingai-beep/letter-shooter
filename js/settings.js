@@ -18,6 +18,10 @@ const DEFAULTS = {
   caseMode: 'upper',  // 'upper' | 'lower' — display letter case (Phase 17 W4)
   customLevels: '',   // teacher-defined letter groups, comma-separated (Phase 18)
                      // e.g. "ABC,DEF,GHI" → C1=ABC, C2=DEF, C3=GHI
+  confettiIntensity: 'normal', // 'gentle' | 'normal' | 'party' — Phase 19.2 overstimulation control
+                                // gentle = 12 particles, no emoji burst
+                                // normal = 32 particles + 3 letter emoji (default)
+                                // party  = 50 particles + 5 letter emoji, longer duration
 };
 
 export function loadSettings() {

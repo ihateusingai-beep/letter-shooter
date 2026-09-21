@@ -935,7 +935,11 @@ export function handleKey(pressed) {
       confettiBurst(
         letterBox.left + letterBox.width / 2,
         letterBox.top + letterBox.height / 2,
-        { theme: settings.theme || 'space', letter: currentLetter }
+        {
+          theme: settings.theme || 'space',
+          letter: currentLetter,
+          intensity: settings.confettiIntensity || 'normal', // Phase 19.2
+        }
       );
 
       // Floating combo text (Phase 9b) — escalates by streak tier
@@ -1557,6 +1561,7 @@ export function openSettings() {
   panel.querySelector('#js-speed-select').value = settings.speed;
   panel.querySelector('#js-hc-toggle').checked = settings.highContrast;
   panel.querySelector('#js-motion-toggle').checked = settings.reduceMotion;
+  panel.querySelector('#js-confetti-intensity-select').value = settings.confettiIntensity || 'normal';
   panel.querySelector('#js-lang-select').value = settings.lang;
   panel.querySelector('#js-unit-select').value = settings.currentUnit;
   panel.querySelector('#js-level-select').value = settings.level;
@@ -1649,8 +1654,9 @@ export function applySettings() {
   const gameMode = panel.querySelector('#js-game-mode-select')?.value ?? 'classic';
   const caseMode = panel.querySelector('#js-case-mode-select')?.value ?? 'upper';
   const customLevels = panel.querySelector('#js-custom-levels-input')?.value?.trim() ?? '';
+  const confettiIntensity = panel.querySelector('#js-confetti-intensity-select')?.value ?? 'normal';
 
-  const next = { voice, soundFx: sfx, bgm, bgmTrack, speed, highContrast: hc, reduceMotion: motion, lang, currentUnit: unit, level, kbMode, theme, robotColor, mascotTheme, gameMode, caseMode, customLevels };
+  const next = { voice, soundFx: sfx, bgm, bgmTrack, speed, highContrast: hc, reduceMotion: motion, lang, currentUnit: unit, level, kbMode, theme, robotColor, mascotTheme, gameMode, caseMode, customLevels, confettiIntensity };
 
   document.body.classList.toggle('high-contrast', hc);
   // Phase 19 — apply reduce-motion class globally so all CSS .no-motion rules
