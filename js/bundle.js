@@ -2303,6 +2303,7 @@
     const customLevels = panel.querySelector("#js-custom-levels-input")?.value?.trim() ?? "";
     const next = { voice, soundFx: sfx, bgm, bgmTrack, speed, highContrast: hc, reduceMotion: motion, lang, currentUnit: unit, level, kbMode, theme, robotColor, mascotTheme, gameMode, caseMode, customLevels };
     document.body.classList.toggle("high-contrast", hc);
+    document.body.classList.toggle("no-motion", motion);
     applyTheme(theme);
     applyGameMode(gameMode);
     if (bgm) startBgm(bgmTrack);
@@ -2613,6 +2614,7 @@
       ];
       applyTheme(loadSettings().theme);
       applyGameMode(loadSettings().gameMode);
+      document.body.classList.toggle("no-motion", !!loadSettings().reduceMotion);
       pendingCompletion = null;
     }
   });

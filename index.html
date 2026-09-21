@@ -2181,6 +2181,7 @@ const LS = window.LetterShooter;
 // ── Boot ──────────────────────────────────────────────────────────────────
 const settings = LS.loadSettings ? LS.loadSettings() : {};
 if (settings.highContrast) document.body.classList.add('high-contrast');
+if (settings.reduceMotion) document.body.classList.add('no-motion');
 
 // ── Keyboard ─────────────────────────────────────────────────────────────
 document.addEventListener('keydown', (e) => {

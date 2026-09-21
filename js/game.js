@@ -1542,6 +1542,9 @@ export function getCaseMode() {
 // ── Boot: apply saved theme + high-contrast class before first paint ───────
 applyTheme(loadSettings().theme);
 applyGameMode(loadSettings().gameMode);
+// Phase 19 — apply reduce-motion class so all CSS .no-motion rules take effect
+// (CSS already has comprehensive .no-motion rules; only the body toggle was missing)
+document.body.classList.toggle('no-motion', !!loadSettings().reduceMotion);
 
 export function openSettings() {
   const panel = document.getElementById('js-settings-panel');
@@ -1650,6 +1653,9 @@ export function applySettings() {
   const next = { voice, soundFx: sfx, bgm, bgmTrack, speed, highContrast: hc, reduceMotion: motion, lang, currentUnit: unit, level, kbMode, theme, robotColor, mascotTheme, gameMode, caseMode, customLevels };
 
   document.body.classList.toggle('high-contrast', hc);
+  // Phase 19 — apply reduce-motion class globally so all CSS .no-motion rules
+  // (already defined per-animation in CSS) actually take effect when toggled.
+  document.body.classList.toggle('no-motion', motion);
   applyTheme(theme);
   applyGameMode(gameMode);
 
