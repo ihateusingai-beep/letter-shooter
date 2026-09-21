@@ -6,6 +6,8 @@
 **Repo**: https://github.com/ihateusingai-beep/letter-shooter
 **Last refreshed**: 2026-09-22 (Phase 19.3)
 
+**Dev docs**: [ARCHITECTURE.md](./ARCHITECTURE.md) (file map, localStorage schema, game mode state machine, feedback pipeline, build pipeline) — start there if picking up the codebase.
+
 ---
 
 ## What This Game Does
@@ -192,9 +194,10 @@ letter-shooter/
 │   ├── fx.js               ← Visual effects (confetti, fireworks, sparkle, combo, mega) + LETTER_SYMBOLS map
 │   └── bgm.js              ← Procedural ambient BGM (space / xylophone / rain)
 ├── scripts/
-│   ├── smoke-phase2.js … smoke-phase16.js  ← Playwright smoke tests per phase
-├── letter-shooter-sen-plan.md  ← Original v0.2 plan (322 lines, NOT refreshed since)
-└── HANDOVER.md             ← This file (last refreshed 2026-09-21)
+│   ├── smoke-phase2.js … smoke-phase19.3.js  ← Playwright smoke tests per phase
+├── letter-shooter-sen-plan.md  ← Original v0.2 plan (SUPERSEDED — see ARCHITECTURE.md)
+├── ARCHITECTURE.md             ← Dev/maintainer doc (file map, schema, state machines)
+└── HANDOVER.md             ← This file (last refreshed 2026-09-22)
 ```
 
 ### Feedback pipeline (per correct press)
