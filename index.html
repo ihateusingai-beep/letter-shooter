@@ -1486,6 +1486,49 @@
   }
   select option { background: #1a1a3e; }
 
+  /* Phase 19.3 — Settings panel sections (collapsible) */
+  .settings-section {
+    margin: 14px 0 6px;
+    border-radius: 14px;
+    overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+  .settings-section > summary {
+    padding: 12px 16px;
+    cursor: pointer;
+    background: rgba(79,195,247,0.12);
+    border-left: 3px solid var(--primary2, #4FC3F7);
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--primary2, #4FC3F7);
+    list-style: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    user-select: none;
+  }
+  .settings-section > summary::-webkit-details-marker { display: none; }
+  .settings-section > summary::after {
+    content: '▸';
+    font-size: 12px;
+    transition: transform 0.2s;
+    opacity: 0.7;
+  }
+  .settings-section[open] > summary::after {
+    content: '▾';
+  }
+  .settings-section > summary:hover {
+    background: rgba(79,195,247,0.18);
+  }
+  .settings-section-body {
+    padding: 6px 8px 10px;
+    background: rgba(0,0,0,0.12);
+  }
+  .settings-section-body .setting-row {
+    margin: 6px 0;
+    background: rgba(255,255,255,0.05);
+  }
+
   .settings-apply {
     margin-top: auto; padding-top: 16px;
   }
@@ -1915,210 +1958,238 @@
       </select>
     </div>
 
-    <div class="settings-section-title" style="margin-top:18px;padding:8px 12px;background:rgba(79,195,247,0.15);border-left:3px solid var(--primary2,#4FC3F7);font-weight:700;font-size:14px;color:var(--primary2,#4FC3F7);">
-      關卡 Levels
-    </div>
+    <!-- 🎮 玩法 Gameplay — open by default (most common teacher adjustments) -->
+    <details class="settings-section" open>
+      <summary>🎮 玩法 Gameplay</summary>
+      <div class="settings-section-body">
 
-    <div class="setting-row">
-      <label>
-        單元 Unit
-        <span class="sublabel">U1–U10（U10=混合複習）</span>
-      </label>
-      <select id="js-unit-select">
-        <option value="U1">U1·ABC</option>
-        <option value="U2">U2·EFS</option>
-        <option value="U3">U3·IOT</option>
-        <option value="U4">U4·MPH</option>
-        <option value="U5">U5·DGU</option>
-        <option value="U6">U6·LRN</option>
-        <option value="U7">U7·JKW</option>
-        <option value="U8">U8·VXQ</option>
-        <option value="U9">U9·YZ</option>
-        <option value="U10">U10·混合複習</option>
-        <!-- Phase 18 — C1, C2, C3... injected dynamically by openSettings() -->
-      </select>
-    </div>
+        <div class="setting-row">
+          <label>
+            單元 Unit
+            <span class="sublabel">U1–U10（U10=混合複習）</span>
+          </label>
+          <select id="js-unit-select">
+            <option value="U1">U1·ABC</option>
+            <option value="U2">U2·EFS</option>
+            <option value="U3">U3·IOT</option>
+            <option value="U4">U4·MPH</option>
+            <option value="U5">U5·DGU</option>
+            <option value="U6">U6·LRN</option>
+            <option value="U7">U7·JKW</option>
+            <option value="U8">U8·VXQ</option>
+            <option value="U9">U9·YZ</option>
+            <option value="U10">U10·混合複習</option>
+            <!-- Phase 18 — C1, C2, C3... injected dynamically by openSettings() -->
+          </select>
+        </div>
 
-    <div class="setting-row setting-row-block">
-      <label>
-        自訂關卡 Custom Levels
-        <span class="sublabel">逗號分隔,例如 ABC,DEF,GHI</span>
-      </label>
-      <textarea id="js-custom-levels-input" rows="3" maxlength="80"
-        placeholder="ABC,DEF,GHI"
-        style="width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.3);background:rgba(0,0,0,0.2);color:white;font-family:inherit;font-size:14px;resize:vertical;"
-        aria-describedby="js-custom-levels-preview"></textarea>
-      <span class="sublabel" id="js-custom-levels-preview"
-        style="display:block;margin-top:6px;font-size:12px;color:var(--text-dim);">
-        留空即用預設 U1–U10
-      </span>
-    </div>
+        <div class="setting-row setting-row-block">
+          <label>
+            自訂關卡 Custom Levels
+            <span class="sublabel">逗號分隔,例如 ABC,DEF,GHI</span>
+          </label>
+          <textarea id="js-custom-levels-input" rows="3" maxlength="80"
+            placeholder="ABC,DEF,GHI"
+            style="width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.3);background:rgba(0,0,0,0.2);color:white;font-family:inherit;font-size:14px;resize:vertical;"
+            aria-describedby="js-custom-levels-preview"></textarea>
+          <span class="sublabel" id="js-custom-levels-preview"
+            style="display:block;margin-top:6px;font-size:12px;color:var(--text-dim);">
+            留空即用預設 U1–U10
+          </span>
+        </div>
 
-    <div class="setting-row">
-      <label>
-        難度 Level
-        <span class="sublabel">L0=靜止 L1=慢落</span>
-      </label>
-      <select id="js-level-select">
-        <option value="L0">L0 靜止</option>
-        <option value="L1">L1 慢落</option>
-      </select>
-    </div>
+        <div class="setting-row">
+          <label>
+            難度 Level
+            <span class="sublabel">L0=靜止 L1=慢落</span>
+          </label>
+          <select id="js-level-select">
+            <option value="L0">L0 靜止</option>
+            <option value="L1">L1 慢落</option>
+          </select>
+        </div>
 
-    <div class="setting-row">
-      <label>
-        遊戲模式 Game Mode
-        <span class="sublabel">經典 / 聽音 / 連擊 / 拼字</span>
-      </label>
-      <select id="js-game-mode-select">
-        <option value="classic">🔤 經典 Classic</option>
-        <option value="sound">👂 聽音 Sound</option>
-        <option value="sequence">🔗 連擊 Sequence</option>
-        <option value="word">🧩 拼字 Word</option>
-      </select>
-    </div>
+        <div class="setting-row">
+          <label>
+            遊戲模式 Game Mode
+            <span class="sublabel">經典 / 聽音 / 連擊 / 拼字</span>
+          </label>
+          <select id="js-game-mode-select">
+            <option value="classic">🔤 經典 Classic</option>
+            <option value="sound">👂 聽音 Sound</option>
+            <option value="sequence">🔗 連擊 Sequence</option>
+            <option value="word">🧩 拼字 Word</option>
+          </select>
+        </div>
 
-    <div class="setting-row">
-      <label>
-        字母大細階 Letter Case
-        <span class="sublabel">大階 / 細階</span>
-      </label>
-      <select id="js-case-mode-select">
-        <option value="upper" selected>A 大階 Upper</option>
-        <option value="lower">a 細階 Lower</option>
-      </select>
-    </div>
+        <div class="setting-row">
+          <label>
+            字母大細階 Letter Case
+            <span class="sublabel">大階 / 細階</span>
+          </label>
+          <select id="js-case-mode-select">
+            <option value="upper" selected>A 大階 Upper</option>
+            <option value="lower">a 細階 Lower</option>
+          </select>
+        </div>
 
-    <div class="setting-row">
-      <label>
-        語音朗讀 Voice
-        <span class="sublabel">按對後朗讀字母</span>
-      </label>
-      <label class="toggle">
-        <input type="checkbox" id="js-voice-toggle" checked>
-        <span class="toggle-slider"></span>
-      </label>
-    </div>
+      </div>
+    </details>
 
-    <div class="setting-row">
-      <label>
-        音效 Sound FX
-        <span class="sublabel">答對/連對/解鎖音效</span>
-      </label>
-      <label class="toggle">
-        <input type="checkbox" id="js-sfx-toggle" checked>
-        <span class="toggle-slider"></span>
-      </label>
-    </div>
+    <!-- 🔊 聲音 Audio — open by default (default-off safety settings) -->
+    <details class="settings-section" open>
+      <summary>🔊 聲音 Audio</summary>
+      <div class="settings-section-body">
 
-    <div class="setting-row">
-      <label>
-        背景音樂 BGM
-        <span class="sublabel">預設關閉，避免分心</span>
-      </label>
-      <select id="js-bgm-select">
-        <option value="off" selected>關 Off</option>
-        <option value="space">🌌 太空 Space</option>
-        <option value="xylophone">🎵 木琴 Xylophone</option>
-        <option value="rain">🌧️ 雨聲 Rain</option>
-      </select>
-    </div>
+        <div class="setting-row">
+          <label>
+            語音朗讀 Voice
+            <span class="sublabel">按對後朗讀字母</span>
+          </label>
+          <label class="toggle">
+            <input type="checkbox" id="js-voice-toggle" checked>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
 
-    <div class="setting-row">
-      <label>
-        速度 Speed
-        <span class="sublabel">字母下落速度（L1）</span>
-      </label>
-      <select id="js-speed-select">
-        <option value="verySlow">很慢 Very Slow</option>
-        <option value="slow" selected>慢 Slow</option>
-        <option value="medium">中 Medium</option>
-      </select>
-    </div>
+        <div class="setting-row">
+          <label>
+            音效 Sound FX
+            <span class="sublabel">答對/連對/解鎖音效</span>
+          </label>
+          <label class="toggle">
+            <input type="checkbox" id="js-sfx-toggle" checked>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
 
-    <div class="setting-row">
-      <label>
-        鍵盤模式 Keyboard
-        <span class="sublabel">精簡=只顯示目標字母</span>
-      </label>
-      <select id="js-kb-mode-select">
-        <option value="full" selected>完整 26 鍵</option>
-        <option value="compact">精簡（目標字母）</option>
-      </select>
-    </div>
+        <div class="setting-row">
+          <label>
+            背景音樂 BGM
+            <span class="sublabel">預設關閉，避免分心</span>
+          </label>
+          <select id="js-bgm-select">
+            <option value="off" selected>關 Off</option>
+            <option value="space">🌌 太空 Space</option>
+            <option value="xylophone">🎵 木琴 Xylophone</option>
+            <option value="rain">🌧️ 雨聲 Rain</option>
+          </select>
+        </div>
 
-    <div class="setting-row">
-      <label>
-        主題 Theme
-        <span class="sublabel">太空 / 糖果 / 海洋 / 森林</span>
-      </label>
-      <select id="js-theme-select">
-        <option value="space" selected>🌌 太空 Space</option>
-        <option value="candy">🍬 糖果 Candy</option>
-        <option value="ocean">🌊 海洋 Ocean</option>
-        <option value="forest">🌳 森林 Forest</option>
-      </select>
-    </div>
+      </div>
+    </details>
 
-    <div class="setting-row">
-      <label>
-        機械人顏色 Robot Color
-        <span class="sublabel">3 種配色</span>
-      </label>
-      <select id="js-robot-color-select">
-        <option value="0" selected>🤖 藍綠 Blue (default)</option>
-        <option value="1">🤖 粉紅 Pink</option>
-        <option value="2">🤖 薄荷綠 Mint</option>
-      </select>
-    </div>
+    <!-- 🎨 外觀 Appearance — open by default (theme preference) -->
+    <details class="settings-section" open>
+      <summary>🎨 外觀 Appearance</summary>
+      <div class="settings-section-body">
 
-    <div class="setting-row">
-      <label>
-        吉祥物 Mascot
-        <span class="sublabel">跟主題 / 自選</span>
-      </label>
-      <select id="js-mascot-theme-select">
-        <option value="auto" selected>🐱 跟主題 Auto</option>
-        <option value="space">🌌 太空風 Space</option>
-        <option value="candy">🍬 糖果風 Candy</option>
-        <option value="ocean">🌊 海洋風 Ocean</option>
-        <option value="forest">🌳 森林風 Forest</option>
-      </select>
-    </div>
+        <div class="setting-row">
+          <label>
+            主題 Theme
+            <span class="sublabel">太空 / 糖果 / 海洋 / 森林</span>
+          </label>
+          <select id="js-theme-select">
+            <option value="space" selected>🌌 太空 Space</option>
+            <option value="candy">🍬 糖果 Candy</option>
+            <option value="ocean">🌊 海洋 Ocean</option>
+            <option value="forest">🌳 森林 Forest</option>
+          </select>
+        </div>
 
-    <div class="setting-row">
-      <label>
-        高對比 High Contrast
-        <span class="sublabel">深色背景大字</span>
-      </label>
-      <label class="toggle">
-        <input type="checkbox" id="js-hc-toggle">
-        <span class="toggle-slider"></span>
-      </label>
-    </div>
+        <div class="setting-row">
+          <label>
+            機械人顏色 Robot Color
+            <span class="sublabel">3 種配色</span>
+          </label>
+          <select id="js-robot-color-select">
+            <option value="0" selected>🤖 藍綠 Blue (default)</option>
+            <option value="1">🤖 粉紅 Pink</option>
+            <option value="2">🤖 薄荷綠 Mint</option>
+          </select>
+        </div>
 
-    <div class="setting-row">
-      <label>
-        減動畫 Reduce Motion
-        <span class="sublabel">停用動畫過場</span>
-      </label>
-      <label class="toggle">
-        <input type="checkbox" id="js-motion-toggle">
-        <span class="toggle-slider"></span>
-      </label>
-    </div>
+        <div class="setting-row">
+          <label>
+            吉祥物 Mascot
+            <span class="sublabel">跟主題 / 自選</span>
+          </label>
+          <select id="js-mascot-theme-select">
+            <option value="auto" selected>🐱 跟主題 Auto</option>
+            <option value="space">🌌 太空風 Space</option>
+            <option value="candy">🍬 糖果風 Candy</option>
+            <option value="ocean">🌊 海洋風 Ocean</option>
+            <option value="forest">🌳 森林風 Forest</option>
+          </select>
+        </div>
 
-    <div class="setting-row">
-      <label>
-        彩紙強度 Confetti
-        <span class="sublabel">過度刺激學生可選溫和</span>
-      </label>
-      <select id="js-confetti-intensity-select">
-        <option value="gentle">溫和 Gentle</option>
-        <option value="normal" selected>一般 Normal</option>
-        <option value="party">熱鬧 Party</option>
-      </select>
-    </div>
+        <div class="setting-row">
+          <label>
+            高對比 High Contrast
+            <span class="sublabel">深色背景大字</span>
+          </label>
+          <label class="toggle">
+            <input type="checkbox" id="js-hc-toggle">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+
+        <div class="setting-row">
+          <label>
+            減動畫 Reduce Motion
+            <span class="sublabel">停用動畫過場</span>
+          </label>
+          <label class="toggle">
+            <input type="checkbox" id="js-motion-toggle">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+
+        <div class="setting-row">
+          <label>
+            彩紙強度 Confetti
+            <span class="sublabel">過度刺激學生可選溫和</span>
+          </label>
+          <select id="js-confetti-intensity-select">
+            <option value="gentle">溫和 Gentle</option>
+            <option value="normal" selected>一般 Normal</option>
+            <option value="party">熱鬧 Party</option>
+          </select>
+        </div>
+
+      </div>
+    </details>
+
+    <!-- ⚙️ 進階 Advanced — collapsed by default (rare changes) -->
+    <details class="settings-section">
+      <summary>⚙️ 進階 Advanced</summary>
+      <div class="settings-section-body">
+
+        <div class="setting-row">
+          <label>
+            速度 Speed
+            <span class="sublabel">字母下落速度（L1）</span>
+          </label>
+          <select id="js-speed-select">
+            <option value="verySlow">很慢 Very Slow</option>
+            <option value="slow" selected>慢 Slow</option>
+            <option value="medium">中 Medium</option>
+          </select>
+        </div>
+
+        <div class="setting-row">
+          <label>
+            鍵盤模式 Keyboard
+            <span class="sublabel">精簡=只顯示目標字母</span>
+          </label>
+          <select id="js-kb-mode-select">
+            <option value="full" selected>完整 26 鍵</option>
+            <option value="compact">精簡（目標字母）</option>
+          </select>
+        </div>
+
+      </div>
+    </details>
 
   </div>
 

@@ -1,10 +1,10 @@
 # Letter Shooter — Handover & Field Testing Guide
 
 **Audience**: SEN teacher preparing iPad classroom testing
-**App**: Letter Shooter v1.6 (letter-shooting game for moderate-intellectual-disability primary students)
+**App**: Letter Shooter v1.7 (letter-shooting game for moderate-intellectual-disability primary students)
 **Live URL**: https://ihateusingai-beep.github.io/letter-shooter
 **Repo**: https://github.com/ihateusingai-beep/letter-shooter
-**Last refreshed**: 2026-09-21 (Phase 18.2)
+**Last refreshed**: 2026-09-22 (Phase 19.3)
 
 ---
 
@@ -112,26 +112,34 @@ Students see a giant letter (A-Z) and press the matching keyboard key or touch k
 
 ## Settings Panel Reference
 
-Top-right ⚙️ icon opens settings. 16 rows (Phase 18.2 order):
+Top-right ⚙️ icon opens settings. **4 collapsible sections** (Phase 19.3) + 1 always-visible top control:
 
-| # | Row | Options | Default |
-|---|---|---|---|
-| 1 | 關卡 Levels | U1-ABC / U2-EFS / ... / U10 混合 / C1, C2, ... | U1 |
-| 2 | 難度 Level | L0 靜止 / L1 慢落 | L0 |
-| 3 | 速度 Speed | 很慢 / 慢 / 中 (L1 only) | 慢 |
-| 4 | 玩法模式 Game Mode | 經典 / 聽聲 / 順序 / 拼字 | 經典 |
-| 5 | 大小寫 Case | 大寫 / 小寫 | 大寫 |
-| 6 | 自訂關卡 Custom Levels | textarea "ABC,DEF,GHI" (live preview) | (空) |
-| 7 | 語言 Language | 繁體中文 / English | 繁體中文 |
-| 8 | 主題 Theme | 🌌太空 / 🍬糖果 / 🌊海洋 / 🌲森林 | 🌌太空 |
-| 9 | 機械人 Robot Color | 0 / 1 / 2 (per-theme palettes) | 0 |
-| 10 | 吉祥物 Mascot | 自動 / 太空 / 糖果 / 海洋 / 森林 | 自動 |
-| 11 | 高對比 High Contrast | On/Off | Off |
-| 12 | 減動畫 Reduce Motion | On/Off | Off |
-| 13 | 語音朗讀 Voice | On/Off | On |
-| 14 | 音效 Sound FX | On/Off | On |
-| 15 | 背景音樂 BGM | 關 / 🌌太空 / 🎵木琴 / 🌧️雨聲 | 關 |
-| 16 | 鍵盤模式 Keyboard | 完整 26 鍵 / 精簡（目標字母） | 完整 |
+**🌐 語言 Language** (always at top)
+- 語言 Language — 繁體中文 / English
+
+**🎮 玩法 Gameplay** (5 rows, open by default)
+- 單元 Unit — U1-ABC / U2-EFS / ... / U10 混合 / C1, C2, ... (Phase 18)
+- 自訂關卡 Custom Levels — textarea "ABC,DEF,GHI" (live preview)
+- 難度 Level — L0 靜止 / L1 慢落
+- 遊戲模式 Game Mode — 經典 / 聽音 / 連擊 / 拼字
+- 字母大細階 Case — 大寫 / 小寫
+
+**🔊 聲音 Audio** (3 rows, open by default)
+- 語音朗讀 Voice — On/Off
+- 音效 Sound FX — On/Off
+- 背景音樂 BGM — 關 / 🌌太空 / 🎵木琴 / 🌧️雨聲
+
+**🎨 外觀 Appearance** (6 rows, open by default)
+- 主題 Theme — 🌌太空 / 🍬糖果 / 🌊海洋 / 🌲森林
+- 機械人顏色 Robot Color — 3 per-theme palettes
+- 吉祥物 Mascot — 自動 / 各主題
+- 高對比 High Contrast — On/Off
+- 減動畫 Reduce Motion — On/Off (Phase 19.1 — now actually disables all CSS animations)
+- 彩紙強度 Confetti — 溫和 / 一般 / 熱鬧 (Phase 19.2)
+
+**⚙️ 進階 Advanced** (2 rows, collapsed by default)
+- 速度 Speed — 很慢 / 慢 / 中 (L1 only)
+- 鍵盤模式 Keyboard — 完整 26 鍵 / 精簡（目標字母）
 
 ---
 
