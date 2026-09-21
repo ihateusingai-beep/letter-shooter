@@ -1,7 +1,7 @@
 // js/game.js — core game loop: L0 / L1, shooting, scoring
 import { loadSettings, saveSettings, fallDuration } from './settings.js';
 import { loadProgress, recordAttempt, masteredCount } from './progress.js';
-import { activeLetters, currentRobotIndex, isUnitComplete } from './curriculum.js';
+import { activeLetters, currentRobotIndex, isUnitComplete, parseCustomLevels, getCustomUnitKeys } from './curriculum.js';
 import { t, pickT, setLang, i18n } from './i18n.js';
 import { playCorrect, playWrong, playStreak, playUnlock, unlockAudio, haptic } from './sfx.js';
 import { confettiBurst, streakFlash, megaFireworks, startLetterTrail, stopLetterTrail, letterSparkle, floatCombo, LETTER_SYMBOLS } from './fx.js';
@@ -1564,7 +1564,59 @@ export function openSettings() {
   panel.querySelector('#js-game-mode-select').value = settings.gameMode || 'classic';
   panel.querySelector('#js-case-mode-select').value = settings.caseMode || 'upper';
 
+  // Phase 18 — Custom levels: populate textarea + inject C# options into unit dropdown
+  const customLevels = settings.customLevels || '';
+  const customInput = panel.querySelector('#js-custom-levels-input');
+  if (customInput) customInput.value = customLevels;
+  rebuildUnitDropdown(panel.querySelector('#js-unit-select'), settings.currentUnit, customLevels);
+  updateCustomLevelsPreview(customLevels);
+
+  // Phase 18 — live preview as user types
+  if (customInput && !customInput._liveBound) {
+    customInput.addEventListener('input', () => {
+      const v = customInput.value;
+      updateCustomLevelsPreview(v);
+      rebuildUnitDropdown(panel.querySelector('#js-unit-select'),
+                          panel.querySelector('#js-unit-select')?.value,
+                          v);
+    });
+    customInput._liveBound = true;
+  }
+
   panel.classList.add('visible');
+}
+
+// Phase 18 — Rebuild the unit dropdown options based on current customLevels string.
+// Removes existing C# options, then injects fresh ones. Keeps the currently
+// selected value if still valid; otherwise falls back to U1.
+function rebuildUnitDropdown(selectEl, currentValue, customLevelsRaw) {
+  if (!selectEl) return;
+  // Remove any existing C# options
+  Array.from(selectEl.querySelectorAll('option[data-custom]')).forEach(o => o.remove());
+  const groups = parseCustomLevels(customLevelsRaw || '');
+  groups.forEach((letters, i) => {
+    const opt = document.createElement('option');
+    opt.value = `C${i + 1}`;
+    opt.textContent = `C${i + 1}·${letters.join('')}`;
+    opt.setAttribute('data-custom', '1');
+    selectEl.appendChild(opt);
+  });
+  // Restore selection if still valid
+  const validValues = Array.from(selectEl.querySelectorAll('option')).map(o => o.value);
+  selectEl.value = validValues.includes(currentValue) ? currentValue : 'U1';
+}
+
+// Phase 18 — Update the preview line below the textarea ("C1=ABC, C2=DEF, ...")
+function updateCustomLevelsPreview(rawString) {
+  const preview = document.getElementById('js-custom-levels-preview');
+  if (!preview) return;
+  const groups = parseCustomLevels(rawString || '');
+  if (groups.length === 0) {
+    preview.textContent = '留空即用預設 U1–U10';
+  } else {
+    const labels = groups.map((l, i) => `C${i + 1}=${l.join('')}`).join(', ');
+    preview.textContent = `✓ 將會加入: ${labels}`;
+  }
 }
 
 export function closeSettings() {
@@ -1593,8 +1645,9 @@ export function applySettings() {
   const mascotTheme = panel.querySelector('#js-mascot-theme-select')?.value ?? 'auto';
   const gameMode = panel.querySelector('#js-game-mode-select')?.value ?? 'classic';
   const caseMode = panel.querySelector('#js-case-mode-select')?.value ?? 'upper';
+  const customLevels = panel.querySelector('#js-custom-levels-input')?.value?.trim() ?? '';
 
-  const next = { voice, soundFx: sfx, bgm, bgmTrack, speed, highContrast: hc, reduceMotion: motion, lang, currentUnit: unit, level, kbMode, theme, robotColor, mascotTheme, gameMode, caseMode };
+  const next = { voice, soundFx: sfx, bgm, bgmTrack, speed, highContrast: hc, reduceMotion: motion, lang, currentUnit: unit, level, kbMode, theme, robotColor, mascotTheme, gameMode, caseMode, customLevels };
 
   document.body.classList.toggle('high-contrast', hc);
   applyTheme(theme);

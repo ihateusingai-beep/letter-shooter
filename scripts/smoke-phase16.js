@@ -482,6 +482,51 @@ const path = require('path');
   const afterSwitch = await page.locator('#js-letter').textContent();
   console.log(`[22] mid-game mode switch re-renders letter ('${beforeSwitch.trim()}' → '${afterSwitch.trim()}'): ${afterSwitch.trim() === '?' ? 'OK' : 'WRONG'}`);
 
+  // ── 23. Phase 18 — Custom levels: teacher-defined letter groups ─────────
+  // Set customLevels="ABC,DEF" → expect C1=ABC, C2=DEF
+  await page.evaluate(() => {
+    Object.keys(localStorage).forEach(k => { if (k.startsWith('ls-')) localStorage.removeItem(k); });
+    localStorage.setItem('ls-settings', JSON.stringify({
+      voice: true, soundFx: true, bgm: false, bgmTrack: 'space',
+      theme: 'space', speed: 'slow', highContrast: false, reduceMotion: false,
+      lang: 'zh', currentUnit: 'C1', level: 'L0', kbMode: 'full',
+      robotColor: 0, mascotTheme: 'auto', gameMode: 'classic', caseMode: 'upper',
+      customLevels: 'ABC,DEF'
+    }));
+  });
+  await page.reload();
+  await page.waitForSelector('#js-start-btn');
+
+  // activeLetters('C1') should return ['A','B','C']
+  const c1Letters = await page.evaluate(() => window.LetterShooter.activeLetters('C1'));
+  console.log(`[23] C1 returns [${c1Letters.join(',')}]: ${JSON.stringify(c1Letters) === '["A","B","C"]' ? 'OK' : 'WRONG'}`);
+
+  // activeLetters('C2') should return ['D','E','F']
+  const c2Letters = await page.evaluate(() => window.LetterShooter.activeLetters('C2'));
+  console.log(`[23] C2 returns [${c2Letters.join(',')}]: ${JSON.stringify(c2Letters) === '["D","E","F"]' ? 'OK' : 'WRONG'}`);
+
+  // activeLetters('C99') out of range → fallback ['A','B','C']
+  const c99Letters = await page.evaluate(() => window.LetterShooter.activeLetters('C99'));
+  console.log(`[23] C99 fallback to ABC: ${JSON.stringify(c99Letters) === '["A","B","C"]' ? 'OK' : 'WRONG'}`);
+
+  // Verify the unit dropdown includes C1 and C2
+  // Start the game first to dismiss start overlay, then open settings
+  await page.click('#js-start-btn');
+  await page.waitForTimeout(400);
+  await page.click('#js-settings-btn');
+  await page.waitForSelector('#js-settings-panel.visible');
+  const customOptions = await page.evaluate(() => {
+    const sel = document.getElementById('js-unit-select');
+    return Array.from(sel.querySelectorAll('option[data-custom]')).map(o => ({ value: o.value, text: o.textContent }));
+  });
+  const hasC1 = customOptions.some(o => o.value === 'C1' && o.text.includes('ABC'));
+  const hasC2 = customOptions.some(o => o.value === 'C2' && o.text.includes('DEF'));
+  console.log(`[23] unit dropdown has C1·ABC + C2·DEF: ${hasC1 && hasC2 ? 'OK' : 'WRONG (' + JSON.stringify(customOptions) + ')'}`);
+
+  // Preview shows "C1=ABC, C2=DEF"
+  const previewText = await page.locator('#js-custom-levels-preview').textContent();
+  console.log(`[23] preview shows parsed levels: ${previewText.includes('ABC') && previewText.includes('DEF') ? 'OK' : 'WRONG (' + previewText + ')'}`);
+
   await browser.close();
   process.exit(errors.length > 0 ? 1 : 0);
 })();

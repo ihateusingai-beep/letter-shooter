@@ -69,6 +69,9 @@
           caseMode: "Letter Case",
           caseModeUpper: "Uppercase (A)",
           caseModeLower: "Lowercase (a)",
+          // Phase 18 — teacher-defined custom levels
+          customLevels: "Custom Levels",
+          customLevelsHint: "Comma-separated, e.g. ABC,DEF,GHI",
           // Phase 17 W1 — Word bank (emoji → 3-letter word). SEN-friendly 3-letter
           // words covering animals / objects / nature / body parts / actions.
           wordBank: [
@@ -209,6 +212,9 @@
           caseMode: "\u5B57\u6BCD\u5927\u7D30\u968E",
           caseModeUpper: "\u5927\u968E (A)",
           caseModeLower: "\u7D30\u968E (a)",
+          // Phase 18 — teacher-defined custom levels
+          customLevels: "\u81EA\u8A02\u95DC\u5361",
+          customLevelsHint: "\u9017\u865F\u5206\u9694,\u4F8B\u5982 ABC,DEF,GHI",
           // Note: wordBank + wordEmojis are in the `en` block — they're
           // language-independent spelling targets (English letters + universal emoji).
           praise: ["\u505A\u5F97\u597D\uFF01", "\u5F88\u597D\uFF01", "\u592A\u68D2\u4E86\uFF01", "\u597D\u53FB\uFF01", "\u7E7C\u7E8C\uFF01"],
@@ -305,8 +311,11 @@
         // 'auto' | 'space' | 'candy' | 'ocean' | 'forest' (Phase 16f)
         gameMode: "classic",
         // 'classic' | 'sound' | 'sequence' | 'word' (Phase 17 — secondary SEN variants)
-        caseMode: "upper"
+        caseMode: "upper",
         // 'upper' | 'lower' — display letter case (Phase 17 W4)
+        customLevels: ""
+        // teacher-defined letter groups, comma-separated (Phase 18)
+        // e.g. "ABC,DEF,GHI" → C1=ABC, C2=DEF, C3=GHI
       };
     }
   });
@@ -320,6 +329,14 @@
     return idx;
   }
   function activeLetters(unitKey) {
+    if (typeof unitKey === "string" && unitKey.startsWith("C")) {
+      const idx = parseInt(unitKey.slice(1), 10) - 1;
+      if (Number.isFinite(idx) && idx >= 0) {
+        const groups = parseCustomLevels(getCustomLevelsRaw());
+        if (groups[idx]) return groups[idx];
+      }
+      return ["A", "B", "C"];
+    }
     const unit = UNITS[unitKey];
     if (!unit) return ["A", "B", "C"];
     if (unit.allMastered) {
@@ -331,11 +348,45 @@
     }
     return all.slice(0, 6);
   }
+  function getCustomLevelsRaw() {
+    if (typeof localStorage === "undefined") return "";
+    try {
+      const raw = localStorage.getItem("ls-settings");
+      if (!raw) return "";
+      const parsed = JSON.parse(raw);
+      return parsed.customLevels || "";
+    } catch {
+      return "";
+    }
+  }
   function isUnitComplete(prog, unitKey) {
     const unit = UNITS[unitKey];
     if (!unit) return false;
     const letters = [...unit.newLetters];
     return letters.length > 0 && letters.every((l) => prog[l]?.status === "mastered");
+  }
+  function parseCustomLevels(rawString) {
+    if (!rawString || typeof rawString !== "string") return [];
+    const seen = /* @__PURE__ */ new Set();
+    const result = [];
+    rawString.split(",").forEach((group) => {
+      const letters = [];
+      const groupSeen = /* @__PURE__ */ new Set();
+      group.toUpperCase().split("").forEach((ch) => {
+        if (ch >= "A" && ch <= "Z" && !groupSeen.has(ch)) {
+          groupSeen.add(ch);
+          letters.push(ch);
+        }
+      });
+      if (letters.length > 0 && letters.length <= 6) {
+        const key = letters.join("");
+        if (!seen.has(key)) {
+          seen.add(key);
+          result.push(letters);
+        }
+      }
+    });
+    return result;
   }
   var UNITS, ROBOT_MILESTONES, TOTAL_ROBOTS;
   var init_curriculum = __esm({
@@ -2181,7 +2232,49 @@
     panel.querySelector("#js-mascot-theme-select").value = settings.mascotTheme || "auto";
     panel.querySelector("#js-game-mode-select").value = settings.gameMode || "classic";
     panel.querySelector("#js-case-mode-select").value = settings.caseMode || "upper";
+    const customLevels = settings.customLevels || "";
+    const customInput = panel.querySelector("#js-custom-levels-input");
+    if (customInput) customInput.value = customLevels;
+    rebuildUnitDropdown(panel.querySelector("#js-unit-select"), settings.currentUnit, customLevels);
+    updateCustomLevelsPreview(customLevels);
+    if (customInput && !customInput._liveBound) {
+      customInput.addEventListener("input", () => {
+        const v = customInput.value;
+        updateCustomLevelsPreview(v);
+        rebuildUnitDropdown(
+          panel.querySelector("#js-unit-select"),
+          panel.querySelector("#js-unit-select")?.value,
+          v
+        );
+      });
+      customInput._liveBound = true;
+    }
     panel.classList.add("visible");
+  }
+  function rebuildUnitDropdown(selectEl, currentValue, customLevelsRaw) {
+    if (!selectEl) return;
+    Array.from(selectEl.querySelectorAll("option[data-custom]")).forEach((o) => o.remove());
+    const groups = parseCustomLevels(customLevelsRaw || "");
+    groups.forEach((letters, i) => {
+      const opt = document.createElement("option");
+      opt.value = `C${i + 1}`;
+      opt.textContent = `C${i + 1}\xB7${letters.join("")}`;
+      opt.setAttribute("data-custom", "1");
+      selectEl.appendChild(opt);
+    });
+    const validValues = Array.from(selectEl.querySelectorAll("option")).map((o) => o.value);
+    selectEl.value = validValues.includes(currentValue) ? currentValue : "U1";
+  }
+  function updateCustomLevelsPreview(rawString) {
+    const preview = document.getElementById("js-custom-levels-preview");
+    if (!preview) return;
+    const groups = parseCustomLevels(rawString || "");
+    if (groups.length === 0) {
+      preview.textContent = "\u7559\u7A7A\u5373\u7528\u9810\u8A2D U1\u2013U10";
+    } else {
+      const labels = groups.map((l, i) => `C${i + 1}=${l.join("")}`).join(", ");
+      preview.textContent = `\u2713 \u5C07\u6703\u52A0\u5165: ${labels}`;
+    }
   }
   function closeSettings() {
     const panel = document.getElementById("js-settings-panel");
@@ -2207,7 +2300,8 @@
     const mascotTheme = panel.querySelector("#js-mascot-theme-select")?.value ?? "auto";
     const gameMode = panel.querySelector("#js-game-mode-select")?.value ?? "classic";
     const caseMode = panel.querySelector("#js-case-mode-select")?.value ?? "upper";
-    const next = { voice, soundFx: sfx, bgm, bgmTrack, speed, highContrast: hc, reduceMotion: motion, lang, currentUnit: unit, level, kbMode, theme, robotColor, mascotTheme, gameMode, caseMode };
+    const customLevels = panel.querySelector("#js-custom-levels-input")?.value?.trim() ?? "";
+    const next = { voice, soundFx: sfx, bgm, bgmTrack, speed, highContrast: hc, reduceMotion: motion, lang, currentUnit: unit, level, kbMode, theme, robotColor, mascotTheme, gameMode, caseMode, customLevels };
     document.body.classList.toggle("high-contrast", hc);
     applyTheme(theme);
     applyGameMode(gameMode);

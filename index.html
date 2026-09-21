@@ -1931,6 +1931,7 @@
         <option value="U8">U8·VXQ</option>
         <option value="U9">U9·YZ</option>
         <option value="U10">U10·混合複習</option>
+        <!-- Phase 18 — C1, C2, C3... injected dynamically by openSettings() -->
       </select>
     </div>
 
@@ -1967,6 +1968,21 @@
         <option value="upper" selected>A 大階 Upper</option>
         <option value="lower">a 細階 Lower</option>
       </select>
+    </div>
+
+    <div class="setting-row setting-row-block">
+      <label>
+        自訂關卡 Custom Levels
+        <span class="sublabel">逗號分隔,例如 ABC,DEF,GHI</span>
+      </label>
+      <textarea id="js-custom-levels-input" rows="3" maxlength="80"
+        placeholder="ABC,DEF,GHI"
+        style="width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.3);background:rgba(0,0,0,0.2);color:white;font-family:inherit;font-size:14px;resize:vertical;"
+        aria-describedby="js-custom-levels-preview"></textarea>
+      <span class="sublabel" id="js-custom-levels-preview"
+        style="display:block;margin-top:6px;font-size:12px;color:var(--text-dim);">
+        留空即用預設 U1–U10
+      </span>
     </div>
 
     <div class="setting-row">

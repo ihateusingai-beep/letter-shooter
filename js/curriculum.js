@@ -31,6 +31,15 @@ export function unlockedRobot(masteredCount) {
 
 // For MVP, return active letters from current unit
 export function activeLetters(unitKey) {
+  // Phase 18 — Custom level (e.g. 'C1', 'C2'): teacher-defined letter group
+  if (typeof unitKey === 'string' && unitKey.startsWith('C')) {
+    const idx = parseInt(unitKey.slice(1), 10) - 1;
+    if (Number.isFinite(idx) && idx >= 0) {
+      const groups = parseCustomLevels(getCustomLevelsRaw());
+      if (groups[idx]) return groups[idx];
+    }
+    return ['A', 'B', 'C']; // fallback if index out of range
+  }
   const unit = UNITS[unitKey];
   if (!unit) return ['A', 'B', 'C'];
   // U10: mixed review — all 26 letters
@@ -47,6 +56,19 @@ export function activeLetters(unitKey) {
   return all.slice(0, 6);
 }
 
+// Helper: read raw customLevels string from localStorage
+function getCustomLevelsRaw() {
+  if (typeof localStorage === 'undefined') return '';
+  try {
+    const raw = localStorage.getItem('ls-settings');
+    if (!raw) return '';
+    const parsed = JSON.parse(raw);
+    return parsed.customLevels || '';
+  } catch {
+    return '';
+  }
+}
+
 // ── Unit completion check (Phase 14d) ────────────────────────────────────────
 export function isUnitComplete(prog, unitKey) {
   const unit = UNITS[unitKey];
@@ -58,3 +80,42 @@ export function isUnitComplete(prog, unitKey) {
 // Mastery threshold: 6/10
 export const MASTERY_THRESHOLD = 6;
 export const MASTERY_WINDOW = 10;
+
+// Phase 18 — Custom levels (teacher-defined letter groups)
+// Storage: settings.customLevels = "ABC,DEF,GHI" (comma-separated)
+// Returns: array of letter arrays, e.g. [['A','B','C'], ['D','E','F'], ['G','H','I']]
+// Validates: A-Z only, max 6 per group, dedupe within group, trim.
+export function parseCustomLevels(rawString) {
+  if (!rawString || typeof rawString !== 'string') return [];
+  const seen = new Set();
+  const result = [];
+  rawString.split(',').forEach(group => {
+    const letters = [];
+    const groupSeen = new Set();
+    group.toUpperCase().split('').forEach(ch => {
+      if (ch >= 'A' && ch <= 'Z' && !groupSeen.has(ch)) {
+        groupSeen.add(ch);
+        letters.push(ch);
+      }
+    });
+    if (letters.length > 0 && letters.length <= 6) {
+      // Dedupe groups by content (so identical groups don't duplicate)
+      const key = letters.join('');
+      if (!seen.has(key)) {
+        seen.add(key);
+        result.push(letters);
+      }
+    }
+  });
+  return result;
+}
+
+// Returns array of custom unit keys like ['C1', 'C2', 'C3']
+// Empty array if no custom levels defined.
+export function getCustomUnitKeys() {
+  const settings = (typeof localStorage !== 'undefined')
+    ? JSON.parse(localStorage.getItem('ls-settings') || '{}')
+    : {};
+  const groups = parseCustomLevels(settings.customLevels || '');
+  return groups.map((_, i) => `C${i + 1}`);
+}

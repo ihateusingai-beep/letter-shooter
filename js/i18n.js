@@ -45,6 +45,9 @@ export const i18n = {
     caseMode: 'Letter Case',
     caseModeUpper: 'Uppercase (A)',
     caseModeLower: 'Lowercase (a)',
+    // Phase 18 — teacher-defined custom levels
+    customLevels: 'Custom Levels',
+    customLevelsHint: 'Comma-separated, e.g. ABC,DEF,GHI',
     // Phase 17 W1 — Word bank (emoji → 3-letter word). SEN-friendly 3-letter
     // words covering animals / objects / nature / body parts / actions.
     wordBank: [
@@ -145,6 +148,9 @@ export const i18n = {
     caseMode: '字母大細階',
     caseModeUpper: '大階 (A)',
     caseModeLower: '細階 (a)',
+    // Phase 18 — teacher-defined custom levels
+    customLevels: '自訂關卡',
+    customLevelsHint: '逗號分隔,例如 ABC,DEF,GHI',
     // Note: wordBank + wordEmojis are in the `en` block — they're
     // language-independent spelling targets (English letters + universal emoji).
     praise: ['做得好！', '很好！', '太棒了！', '好叻！', '繼續！'],
