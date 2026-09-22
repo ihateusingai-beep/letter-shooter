@@ -42,9 +42,12 @@ export function activeLetters(unitKey) {
   }
   const unit = UNITS[unitKey];
   if (!unit) return ['A', 'B', 'C'];
-  // U10: mixed review — all 26 letters
+  // Phase 19.7 (B2) — U10 mixed review sub-pool: avoid 26-letter overwhelm
+  // by composing a ~12-letter pool from practice (not-yet-mastered) + random
+  // mastered letters. Returns 'all 26' fallback only if localStorage is empty.
   if (unit.allMastered) {
-    return 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+    const prog = readProgressSafe();
+    return buildU10SubPool(prog);
   }
   const all = [...unit.newLetters];
   // Phase 16.5 patch — `all.length < 3` was always false since newLetters
@@ -54,6 +57,66 @@ export function activeLetters(unitKey) {
     all.push(...unit.reviewLetters.slice(0, 6 - all.length));
   }
   return all.slice(0, 6);
+}
+
+// Phase 19.7 (B2) — Helper: read ls-progress with try/catch fallback.
+// Returns null on parse failure or missing key (caller must handle).
+function readProgressSafe() {
+  if (typeof localStorage === 'undefined') return null;
+  try {
+    const raw = localStorage.getItem('ls-progress');
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+}
+
+// Phase 19.7 (B2) — Build U10 sub-pool from per-letter progress.
+// Composition rules:
+//   1. Try up to 6 unmastered letters (status: 'practice' or 'new')
+//   2. Fill rest up to 12 with random mastered letters
+//   3. If total < 12, leave it short (don't pad with unopened letters —
+//      would confuse students who haven't seen those letters yet)
+//   4. If progress is null/empty/all-unopened, fallback to first 12 alphabet
+// Cap at 12 to avoid U10 overwhelm — Phase 17/18 polish feedback.
+function buildU10SubPool(prog) {
+  const ALL = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+  if (!prog || typeof prog !== 'object') {
+    return ALL.slice(0, 12);
+  }
+  // Bucket letters by status. 'new' counts as practice (it's a letter that
+  // has been seen but not mastered yet — relevant for U10 review).
+  const practiceLetters = [];
+  const masteredLetters = [];
+  for (const L of ALL) {
+    const s = prog[L]?.status;
+    if (s === 'mastered') masteredLetters.push(L);
+    else if (s === 'practice' || s === 'new') practiceLetters.push(L);
+    // 'unopened' is excluded — student hasn't encountered it yet, would
+    // only confuse them in U10 mixed review
+  }
+  // Defensive fallback: if no letters classified (e.g. empty {} storage),
+  // return first 12 letters deterministically rather than random sampling.
+  if (practiceLetters.length === 0 && masteredLetters.length === 0) {
+    return ALL.slice(0, 12);
+  }
+  // Fisher-Yates shuffle (in-place, deterministic with seeded callers)
+  const shuffled = (arr) => {
+    const a = arr.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  };
+  const MAX_POOL = 12;
+  const MAX_PER_BUCKET = 6;
+  const practicePick = shuffled(practiceLetters).slice(0, MAX_PER_BUCKET);
+  // Mastered pool fills the remainder: if practice < 6, take up to (12 - practice)
+  // mastered; if practice = 6, take up to 6 mastered; never exceed MAX_POOL.
+  const masteredCap = Math.max(0, MAX_POOL - practicePick.length);
+  const masteredPick = shuffled(masteredLetters).slice(0, masteredCap);
+  return [...practicePick, ...masteredPick].slice(0, MAX_POOL);
 }
 
 // Helper: read raw customLevels string from localStorage

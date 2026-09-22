@@ -1,10 +1,10 @@
 # Letter Shooter — Handover & Field Testing Guide
 
 **Audience**: SEN teacher preparing iPad classroom testing
-**App**: Letter Shooter v1.7.1 (letter-shooting game for moderate-intellectual-disability primary students)
+**App**: Letter Shooter v1.7.2 (letter-shooting game for moderate-intellectual-disability primary students)
 **Live URL**: https://ihateusingai-beep.github.io/letter-shooter
 **Repo**: https://github.com/ihateusingai-beep/letter-shooter
-**Last refreshed**: 2026-09-22 (Phase 19.5)
+**Last refreshed**: 2026-09-22 (Phase 19.7)
 
 **Dev docs**: [ARCHITECTURE.md](./ARCHITECTURE.md) (file map, localStorage schema, game mode state machine, feedback pipeline, build pipeline) — start there if picking up the codebase.
 
@@ -83,7 +83,7 @@ Students see a giant letter (A-Z) and press the matching keyboard key or touch k
 |---|---|---|
 | 12 | **Daily challenge** — 20 stars/day goal with mini progress bar in header, weekly progress too | Top bar "今日 X/20 ⭐" |
 | 13 | **Forest theme** (4th theme), iPad haptic feedback (vibration on correct/wrong), Solfège TTS for letter pronunciation, letter trace animation | Forest theme; haptic on iPad only |
-| 14 | **U10 mixed review** (all 26 letters), **leaderboard** with name entry on unit completion, sanitized input (max name length, no special chars) | Complete a unit (U1-9) → modal pops for name → leaderboard opens |
+| 14 | **U10 mixed review** (sub-pool, ≤12 letters from practice + mastered — Phase 19.7), **leaderboard** with name entry on unit completion, sanitized input (max name length, no special chars) | Complete a unit (U1-9) → modal pops for name → leaderboard opens |
 
 ### Game variety (Phase 15-16)
 
@@ -119,6 +119,8 @@ Students see a giant letter (A-Z) and press the matching keyboard key or touch k
 | 19.3 | **Settings panel sections** — 4 collapsible groups (玩法 / 聲音 / 外觀 / 進階) using HTML5 `<details>` | Settings panel |
 | 19.4 | **ARCHITECTURE.md** — dev reference doc replacing v0.2 plan (file map, schema, state machines, build pipeline) | ARCHITECTURE.md |
 | 19.5 | **Mastery threshold teacher-override** — 5/6/7/8 correct per rolling 10-window. Lower for moderate-ID students. Re-evaluates all letter statuses on change | Settings → 掌握門檻 |
+| 19.6 | **Export/Import progress** — download JSON backup of all localStorage; import restores. Settings → ⚙️ Advanced | Settings → ⚙️ Advanced → 匯出/匯入 |
+| 19.7 | **U10 sub-pool** — mixed review now returns ≤12 letters (practice + mastered) instead of all 26 — avoids U10 overwhelm | U10 unit |
 
 ---
 
@@ -150,9 +152,11 @@ Top-right ⚙️ icon opens settings. **4 collapsible sections** (Phase 19.3) + 
 - 減動畫 Reduce Motion — On/Off (Phase 19.1 — now actually disables all CSS animations)
 - 彩紙強度 Confetti — 溫和 / 一般 / 熱鬧 (Phase 19.2)
 
-**⚙️ 進階 Advanced** (2 rows, collapsed by default)
+**⚙️ 進階 Advanced** (4 rows, collapsed by default)
 - 速度 Speed — 很慢 / 慢 / 中 (L1 only)
 - 鍵盤模式 Keyboard — 完整 26 鍵 / 精簡（目標字母）
+- 匯出進度 Export — 下載 JSON 備份 (Phase 19.6)
+- 匯入進度 Import — 從備份還原 (Phase 19.6)
 
 ---
 
@@ -179,7 +183,7 @@ For each student session, please record (a simple spreadsheet works):
 2. **No per-student profiles**: single device = single progress record. If multiple students share an iPad, data is shared/overwritten.
 3. **No analytics / telemetry**: no way to track which letters each student struggles with across sessions in a remote dashboard.
 4. **No 2-player mode**: single-player only.
-5. **U10 mixed review = all 26 letters at once**: no sub-pool mechanic (planned Phase 19 candidate). May be overwhelming for early students.
+5. **U10 mixed review = up to 12 letters (Phase 19.7)**: composition = up to 6 unmastered (status: practice/new) + remainder mastered, capped at 12. Empty progress falls back to first 12 alphabet letters. Avoids 26-letter overwhelm for early students.
 6. **BGM iOS quirks**: if BGM is enabled, on iOS Safari the audio context must be unlocked via a user gesture first. The start button does this, but if user navigates away and back, audio may need to be re-unlocked.
 7. **No export/import**: localStorage-only. If Safari clears cache, progress is lost.
 8. **Sound-only mode has no phonetic hint** for students who can't distinguish similar-sounding letters (B/P, M/N, D/T).

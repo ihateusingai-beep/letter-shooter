@@ -255,7 +255,9 @@ setTimeout(250ms) → openLeaderboardPanel()   auto-show
 | 19.2 | settings.js, fx.js, game.js | Confetti intensity setting (gentle/normal/party) | `dac35e1` |
 | 19.3 | index.html | Settings panel grouped into 4 collapsible sections | `b9bbbfa` |
 | 19.4 | ARCHITECTURE.md | Replace v0.2 plan with 437-line dev reference doc | `e883bb1` |
-| 19.5 | settings.js, curriculum.js, progress.js, game.js | Teacher-overrideable masteryThreshold (5/6/7/8) with re-evaluation | (current) |
+| 19.5 | settings.js, curriculum.js, progress.js, game.js | Teacher-overrideable masteryThreshold (5/6/7/8) with re-evaluation | `e8c21a0` |
+| 19.6 | dataio.js (new), game.js, index.html | Export/Import localStorage progress as JSON (settings → ⚙️ Advanced) | (current) |
+| 19.7 | curriculum.js | U10 mixed review sub-pool: ≤12 letters from practice + mastered (no unopened padding) | (current) |
 
 ---
 
@@ -265,7 +267,10 @@ setTimeout(250ms) → openLeaderboardPanel()   auto-show
 Single source of truth for `DEFAULTS`. `loadSettings()` does `{ ...DEFAULTS, ...JSON.parse(localStorage) }`. `saveSettings(patch)` merges and persists. Add new settings here AND in `bundle.js` DEFAULTS block.
 
 ### `js/curriculum.js` (121 LoC)
-Defines `UNITS` (U1-U10), `ROBOT_MILESTONES` (9/18/26), `MASTERY_WINDOW` (10), `DEFAULT_MASTERY_THRESHOLD` (6), `ALLOWED_MASTERY_THRESHOLDS` ([5,6,7,8]). Phase 18 added `parseCustomLevels(rawString)` + `getCustomUnitKeys()`. **Phase 19.5** added `getMasteryThreshold()` which reads `settings.masteryThreshold` with fallback to default + validation against allowed set. **Bug-prone area**: `activeLetters(unitKey)` — review-letter join logic changed in 16.5 patch (`all.length < 6` not `< 3`); before patch, U2 only showed E/F/S and review letter A was defined but never appeared.
+Defines `UNITS` (U1-U10), `ROBOT_MILESTONES` (9/18/26), `MASTERY_WINDOW` (10), `DEFAULT_MASTERY_THRESHOLD` (6), `ALLOWED_MASTERY_THRESHOLDS` ([5,6,7,8]). Phase 18 added `parseCustomLevels(rawString)` + `getCustomUnitKeys()`. **Phase 19.5** added `getMasteryThreshold()` which reads `settings.masteryThreshold` with fallback to default + validation against allowed set. **Phase 19.7** added `buildU10SubPool(prog)` — U10 mixed review now returns up to 12 letters (max 6 unmastered + rest mastered) instead of all 26. **Bug-prone area**: `activeLetters(unitKey)` — review-letter join logic changed in 16.5 patch (`all.length < 6` not `< 3`); before patch, U2 only showed E/F/S and review letter A was defined but never appeared.
+
+### `js/dataio.js` (Phase 19.6)
+Export/import localStorage progress. `serializeExport()` returns JSON with `{version, exportedAt, appVersion, data}` wrapper; `downloadExport()` triggers browser download. `parseImport(jsonString)` validates structure; `applyImport(payload)` writes known keys via JSON-roundtrip safe setItem. `importFromString(s)` is the high-level entrypoint. Triggered via Settings → ⚙️ Advanced → Export/Import buttons.
 
 ### `js/progress.js` (81 LoC)
 Per-letter rolling window of 10. `recordAttempt(letter, firstTry)` is the only mutator and uses `getMasteryThreshold()` from curriculum. Mastery computation: `sum(recent) >= threshold` → `mastered`. **Phase 19.5** added `reevaluateAllStatuses(threshold)` — bulk re-eval when teacher changes threshold setting; only walks letters with full rolling window. `masteredCount(prog)` for robot unlock + leaderboard logic.
@@ -433,8 +438,13 @@ Backlog from prior audits (Phase 19 review):
 - **C1** Export/import localStorage progress (data portability)
 - **A2** Visual picker for Custom Levels (replace textarea)
 - **B1 already shipped** (Phase 19.5 masteryThreshold)
-- **B2** U10 mixed review sub-pool (split by mastered + practice)
+- **B2 already shipped** (Phase 19.7 U10 sub-pool)
 - **B3** Sound-only mode phonetic hint for hard consonants
+- **A2** Custom Levels visual picker (replace textarea)
+- **C1 already shipped** (Phase 19.6 export/import)
+- Replace manual bundle.js with esbuild
+- Add WebKit smoke for iPad parity check
+- Per-student profile switcher (multi-student on same device)
 - Replace manual bundle.js with esbuild
 - Add WebKit smoke for iPad parity check
 - Per-student profile switcher (multi-student on same device)

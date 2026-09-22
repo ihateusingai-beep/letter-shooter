@@ -345,13 +345,57 @@
     const unit = UNITS[unitKey];
     if (!unit) return ["A", "B", "C"];
     if (unit.allMastered) {
-      return "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+      const prog = readProgressSafe();
+      return buildU10SubPool(prog);
     }
     const all = [...unit.newLetters];
     if (unit.reviewLetters.length && all.length < 6) {
       all.push(...unit.reviewLetters.slice(0, 6 - all.length));
     }
     return all.slice(0, 6);
+  }
+  // Phase 19.7 (B2) — read ls-progress with safe fallback
+  function readProgressSafe() {
+    if (typeof localStorage === "undefined") return null;
+    try {
+      const raw = localStorage.getItem("ls-progress");
+        return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  }
+  // Phase 19.7 (B2) — U10 sub-pool composition: ≤12 letters from
+  // practice (max 6) + mastered (max 6). If both buckets empty, fallback
+  // to first 12 alphabet letters. Never pads with unopened letters.
+  function buildU10SubPool(prog) {
+    const ALL = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+    if (!prog || typeof prog !== "object") {
+      return ALL.slice(0, 12);
+    }
+    const practiceLetters = [];
+    const masteredLetters = [];
+    for (const L of ALL) {
+      const s = prog[L]?.status;
+      if (s === "mastered") masteredLetters.push(L);
+      else if (s === "practice" || s === "new") practiceLetters.push(L);
+    }
+    if (practiceLetters.length === 0 && masteredLetters.length === 0) {
+      return ALL.slice(0, 12);
+    }
+    const shuffled = (arr) => {
+      const a = arr.slice();
+      for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+      }
+      return a;
+    };
+    const MAX_POOL = 12;
+    const MAX_PER_BUCKET = 6;
+    const practicePick = shuffled(practiceLetters).slice(0, MAX_PER_BUCKET);
+    const masteredCap = Math.max(0, MAX_POOL - practicePick.length);
+    const masteredPick = shuffled(masteredLetters).slice(0, masteredCap);
+    return [...practicePick, ...masteredPick].slice(0, MAX_POOL);
   }
   function getCustomLevelsRaw() {
     if (typeof localStorage === "undefined") return "";
