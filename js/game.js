@@ -8,6 +8,7 @@ import { confettiBurst, streakFlash, megaFireworks, startLetterTrail, stopLetter
 import { recordStar, getDailyProgress, dailyGoal, getWeeklyProgress, weeklyGoal } from './challenge.js';
 import { getLeaderboard, submitEntry, sanitizeName, clearLeaderboard, MAX_NAME } from './leaderboard.js';
 import { startBgm, stopBgm, pauseBgm, resumeBgm, unlockBgm } from './bgm.js';
+import { downloadExport, importFromString } from './dataio.js';
 
 // Attach public API to window for non-module HTML
 window.LetterShooter = {
@@ -19,6 +20,9 @@ window.LetterShooter = {
   openLeaderboardPanel, closeLeaderboardPanel, renderLeaderboard,
   openNameModal, closeNameModal, submitName,
   highlightKey, clearHighlight,
+  // Phase 19.6 (C1) — Export/Import data I/O
+  exportProgress: () => downloadExport(),
+  importProgressFromString: (json) => importFromString(json),
   // Phase 16.5 patch — expose for smoke testing of unit letter pools
   activeLetters,
 };

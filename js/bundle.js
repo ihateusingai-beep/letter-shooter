@@ -1131,6 +1131,103 @@
     }
   });
 
+  // js/dataio.js — Phase 19.6 (C1) Export/Import data I/O
+  var EXPORT_KEYS = ["ls-settings", "ls-progress", "ls-leaderboard", "ls-daily", "ls-weekly"];
+  var EXPORT_VERSION = "1.0";
+  var APP_VERSION = "1.7.1";
+  function collectLocalStorage() {
+    const out = {};
+    for (const key of EXPORT_KEYS) {
+      const raw = localStorage.getItem(key);
+      if (raw !== null) {
+        try {
+          out[key] = JSON.parse(raw);
+        } catch {
+          out[key] = raw;
+        }
+      }
+    }
+    return out;
+  }
+  function buildExportPayload() {
+    return {
+      version: EXPORT_VERSION,
+      exportedAt: new Date().toISOString(),
+      appVersion: APP_VERSION,
+      data: collectLocalStorage()
+    };
+  }
+  function serializeExport() {
+    return JSON.stringify(buildExportPayload(), null, 2);
+  }
+  function downloadExport() {
+    const json = serializeExport();
+    const blob = new Blob([json], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const date = new Date().toISOString().slice(0, 10);
+    const filename = `letter-shooter-${date}.json`;
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 0);
+    return filename;
+  }
+  function parseImport(jsonString) {
+    if (!jsonString || typeof jsonString !== "string") {
+      throw new Error("檔案內容空白");
+    }
+    let parsed;
+    try {
+      parsed = JSON.parse(jsonString);
+    } catch {
+      throw new Error("JSON 格式錯誤");
+    }
+    if (!parsed || typeof parsed !== "object") {
+      throw new Error("JSON 結構錯誤");
+    }
+    if (!parsed.data || typeof parsed.data !== "object") {
+      throw new Error("缺少 data 欄位");
+    }
+    const knownKeys = new Set(EXPORT_KEYS);
+    const incomingKeys = Object.keys(parsed.data);
+    const unknownKeys = incomingKeys.filter((k) => !knownKeys.has(k));
+    return { payload: parsed, unknownKeys };
+  }
+  function applyImport(payload) {
+    const appliedKeys = [];
+    const skippedKeys = [];
+    for (const key of EXPORT_KEYS) {
+      if (key in payload.data) {
+        try {
+          localStorage.setItem(key, JSON.stringify(payload.data[key]));
+          appliedKeys.push(key);
+        } catch {
+          skippedKeys.push(key);
+        }
+      }
+    }
+    return { appliedKeys, skippedKeys };
+  }
+  function importFromString(jsonString) {
+    const { payload, unknownKeys } = parseImport(jsonString);
+    const { appliedKeys, skippedKeys } = applyImport(payload);
+    return {
+      version: payload.version,
+      exportedAt: payload.exportedAt,
+      appVersion: payload.appVersion,
+      appliedKeys,
+      skippedKeys,
+      unknownKeys
+    };
+  }
+  var init_dataio = __esm({
+    "js/dataio.js"() {
+    }
+  });
+
   // js/leaderboard.js
   function readAll() {
     try {
@@ -2529,6 +2626,7 @@
       init_challenge();
       init_leaderboard();
       init_bgm();
+      init_dataio();
       window.LetterShooter = {
         startGame,
         handleKey,
@@ -2552,6 +2650,9 @@
         closeProgressPanel,
         openLeaderboardPanel,
         closeLeaderboardPanel,
+        // Phase 19.6 (C1) — Export/Import
+        exportProgress: () => downloadExport(),
+        importProgressFromString: (json) => importFromString(json),
         renderLeaderboard,
         openNameModal,
         closeNameModal,

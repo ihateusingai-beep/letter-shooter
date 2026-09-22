@@ -2201,6 +2201,31 @@
           </select>
         </div>
 
+        <!-- Phase 19.6 (C1) — Export/Import data I/O -->
+        <div class="setting-row setting-row-block">
+          <label>
+            匯出進度 Export
+            <span class="sublabel">下載 JSON 備份所有進度</span>
+          </label>
+          <button type="button" class="btn-secondary" id="js-export-btn"
+            style="padding:10px 18px;border-radius:10px;border:1px solid rgba(255,255,255,0.3);background:rgba(79,195,247,0.15);color:white;font-weight:600;cursor:pointer;font-family:inherit;font-size:14px;">
+            📥 下載 JSON
+          </button>
+        </div>
+
+        <div class="setting-row setting-row-block">
+          <label>
+            匯入進度 Import
+            <span class="sublabel">從備份還原(覆蓋現有進度)</span>
+          </label>
+          <input type="file" id="js-import-input" accept=".json,application/json"
+            style="display:none" aria-label="選擇 JSON 檔案">
+          <button type="button" class="btn-secondary" id="js-import-btn"
+            style="padding:10px 18px;border-radius:10px;border:1px solid rgba(255,255,255,0.3);background:rgba(105,240,174,0.15);color:white;font-weight:600;cursor:pointer;font-family:inherit;font-size:14px;">
+            📤 選擇檔案
+          </button>
+        </div>
+
       </div>
     </details>
 
@@ -2300,6 +2325,46 @@ document.addEventListener('keyup', (e) => {
 // ── Settings panel buttons ───────────────────────────────────────────────
 document.getElementById('js-settings-btn')?.addEventListener('click', LS.openSettings);
 document.getElementById('js-settings-close')?.addEventListener('click', LS.closeSettings);
+// Phase 19.6 (C1) — Export/Import data I/O buttons
+document.getElementById('js-export-btn')?.addEventListener('click', () => {
+  if (typeof LS.exportProgress !== 'function') {
+    alert('Export 功能尚未準備好 Export not ready');
+    return;
+  }
+  try {
+    const filename = LS.exportProgress();
+    if (typeof LS.showToast === 'function') {
+      LS.showToast('✅ 已下載', filename, 2500);
+    }
+  } catch (e) {
+    alert('匯出失敗：' + (e?.message || e));
+  }
+});
+document.getElementById('js-import-btn')?.addEventListener('click', () => {
+  document.getElementById('js-import-input')?.click();
+});
+document.getElementById('js-import-input')?.addEventListener('change', (e) => {
+  const file = e.target.files?.[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (evt) => {
+    try {
+      const summary = LS.importProgressFromString(evt.target.result);
+      const count = summary.appliedKeys?.length || 0;
+      if (typeof LS.showToast === 'function') {
+        LS.showToast('✅ 已匯入', `${count} 個項目已還原`, 2500);
+      }
+      // Reload page so all UI (progress, leaderboard, settings) reflects new state
+      setTimeout(() => location.reload(), 800);
+    } catch (err) {
+      alert('匯入失敗：' + (err?.message || err));
+    } finally {
+      e.target.value = ''; // Reset so same file can be re-picked
+    }
+  };
+  reader.onerror = () => alert('讀檔失敗');
+  reader.readAsText(file);
+});
 document.getElementById('js-settings-apply')?.addEventListener('click', () => {
   LS.applySettings();
   // Refresh themed floating background for new theme
