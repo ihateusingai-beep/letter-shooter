@@ -2424,23 +2424,102 @@
     panel.querySelector("#js-game-mode-select").value = settings.gameMode || "classic";
     panel.querySelector("#js-case-mode-select").value = settings.caseMode || "upper";
     const customLevels = settings.customLevels || "";
-    const customInput = panel.querySelector("#js-custom-levels-input");
-    if (customInput) customInput.value = customLevels;
-    rebuildUnitDropdown(panel.querySelector("#js-unit-select"), settings.currentUnit, customLevels);
-    updateCustomLevelsPreview(customLevels);
-    if (customInput && !customInput._liveBound) {
-      customInput.addEventListener("input", () => {
-        const v = customInput.value;
-        updateCustomLevelsPreview(v);
-        rebuildUnitDropdown(
-          panel.querySelector("#js-unit-select"),
-          panel.querySelector("#js-unit-select")?.value,
-          v
-        );
-      });
-      customInput._liveBound = true;
-    }
+    initCustomLevelsPicker(panel, customLevels);
     panel.classList.add("visible");
+  }
+  // Phase 19.8 (A2) — Custom Levels visual picker (replaces Phase 18 textarea)
+  function initCustomLevelsPicker(panel2, customLevelsRaw) {
+    const groups = parseCustomLevels(customLevelsRaw || "");
+    currentGroup = new Set();
+    committedGroups = groups.map((g) => g.slice());
+    const letterBtns = panel2.querySelectorAll("#js-letter-picker .letter-btn");
+    letterBtns.forEach((btn) => {
+      if (btn._pickerBound) return;
+      btn._pickerBound = true;
+      btn.addEventListener("click", () => {
+        const letter = btn.dataset.letter;
+        if (committedGroups.some((g) => g.includes(letter))) return;
+        if (currentGroup.has(letter)) {
+          currentGroup.delete(letter);
+        } else if (currentGroup.size < 6) {
+          currentGroup.add(letter);
+        }
+        renderPicker(panel2);
+      });
+    });
+    const clearBtn = panel2.querySelector("#js-clear-current-group");
+    if (clearBtn && !clearBtn._pickerBound) {
+      clearBtn._pickerBound = true;
+      clearBtn.addEventListener("click", () => {
+        currentGroup.clear();
+        renderPicker(panel2);
+      });
+    }
+    const commitBtn = panel2.querySelector("#js-commit-group");
+    if (commitBtn && !commitBtn._pickerBound) {
+      commitBtn._pickerBound = true;
+      commitBtn.addEventListener("click", () => {
+        if (currentGroup.size === 0) return;
+        const letters = [...currentGroup].sort();
+        committedGroups.push(letters);
+        currentGroup.clear();
+        renderPicker(panel2);
+      });
+    }
+    renderPicker(panel2);
+  }
+  function renderPicker(panel2) {
+    const letterBtns = panel2.querySelectorAll("#js-letter-picker .letter-btn");
+    const committedSet = new Set(committedGroups.flat());
+    letterBtns.forEach((btn) => {
+      const L = btn.dataset.letter;
+      btn.classList.toggle("in-current", currentGroup.has(L));
+      btn.classList.toggle("in-committed", committedSet.has(L));
+      btn.disabled = committedSet.has(L);
+    });
+    const display = panel2.querySelector("#js-current-group-display");
+    if (display) {
+      if (currentGroup.size === 0) {
+        display.textContent = "—";
+      } else {
+        display.textContent = [...currentGroup].sort().join(" ");
+      }
+    }
+    const commitBtn = panel2.querySelector("#js-commit-group");
+    if (commitBtn) commitBtn.disabled = currentGroup.size === 0;
+    const chipsContainer = panel2.querySelector("#js-committed-groups");
+    if (chipsContainer) {
+      if (committedGroups.length === 0) {
+        chipsContainer.innerHTML = '<span class="empty-hint">尚未新增群組</span>';
+      } else {
+        chipsContainer.innerHTML = committedGroups.map((g, i) => {
+          const label = `C${i + 1}·${g.join("")}`;
+          return `<span class="chip" data-group-idx="${i}">${label}<button type="button" class="chip-remove" aria-label="刪除群組 ${i + 1}">×</button></span>`;
+        }).join("");
+        chipsContainer.querySelectorAll(".chip").forEach((chip) => {
+          chip.querySelector(".chip-remove")?.addEventListener("click", (e) => {
+            e.stopPropagation();
+            const idx = parseInt(chip.dataset.groupIdx, 10);
+            if (Number.isFinite(idx)) {
+              committedGroups.splice(idx, 1);
+              renderPicker(panel2);
+            }
+          });
+        });
+      }
+    }
+    const allGroups = currentGroup.size > 0
+      ? [...committedGroups, [...currentGroup].sort()]
+      : committedGroups;
+    const customLevelsString = allGroups.map((g) => g.join("")).join(",");
+    const hidden = panel2.querySelector("#js-custom-levels-input");
+    if (hidden) hidden.value = customLevelsString;
+    rebuildUnitDropdown(
+      panel2.querySelector("#js-unit-select"),
+      panel2.querySelector("#js-unit-select")?.value,
+      customLevelsString
+    );
+    updateCustomLevelsPreview(customLevelsString);
   }
   function rebuildUnitDropdown(selectEl, currentValue, customLevelsRaw) {
     if (!selectEl) return;
@@ -2658,7 +2737,7 @@
       grid.appendChild(cell);
     });
   }
-  var score, streak, stars, currentLetter, touchKeys, gameRunning, animFrame, currentUnit, correctSinceSpeed, speedRoundActive, speedRoundTimer, speedRoundEnd, speedRoundHits, bonusCatchActive, bonusCatchTimer, toastTimerId, SEQUENCE_LENGTH, sequenceLetters, sequenceIndex, toastTimer, toastQueue, ROBOT_PALETTES, FLOOR_EMOJIS, BULLET_SHAPES, BULLET_PALETTES, lastLetterPos, fallPaused, letterArrived, LETTER_SAY, SPEED_ROUND_DURATION_MS, SPEED_ROUND_TRIGGER, bonusCatchKeyListener, BONUS_CATCH_DURATION_MS, BONUS_CATCH_STARS, QWERTY_ROWS, currentKbMode, compactKeys, MAX_GHOSTS, ACHIEVEMENT_MILESTONES, pendingCompletion;
+  var score, streak, stars, currentLetter, touchKeys, gameRunning, animFrame, currentUnit, correctSinceSpeed, speedRoundActive, speedRoundTimer, speedRoundEnd, speedRoundHits, bonusCatchActive, bonusCatchTimer, toastTimerId, SEQUENCE_LENGTH, sequenceLetters, sequenceIndex, toastTimer, toastQueue, ROBOT_PALETTES, FLOOR_EMOJIS, BULLET_SHAPES, BULLET_PALETTES, lastLetterPos, fallPaused, letterArrived, LETTER_SAY, SPEED_ROUND_DURATION_MS, SPEED_ROUND_TRIGGER, bonusCatchKeyListener, BONUS_CATCH_DURATION_MS, BONUS_CATCH_STARS, QWERTY_ROWS, currentKbMode, compactKeys, MAX_GHOSTS, ACHIEVEMENT_MILESTONES, pendingCompletion, currentGroup, committedGroups;
   var init_game = __esm({
     "js/game.js"() {
       init_settings();

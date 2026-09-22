@@ -257,7 +257,8 @@ setTimeout(250ms) → openLeaderboardPanel()   auto-show
 | 19.4 | ARCHITECTURE.md | Replace v0.2 plan with 437-line dev reference doc | `e883bb1` |
 | 19.5 | settings.js, curriculum.js, progress.js, game.js | Teacher-overrideable masteryThreshold (5/6/7/8) with re-evaluation | `e8c21a0` |
 | 19.6 | dataio.js (new), game.js, index.html | Export/Import localStorage progress as JSON (settings → ⚙️ Advanced) | (current) |
-| 19.7 | curriculum.js | U10 mixed review sub-pool: ≤12 letters from practice + mastered (no unopened padding) | (current) |
+| 19.7 | curriculum.js | U10 mixed review sub-pool: ≤12 letters from practice + mastered (no unopened padding) | `9508e3c` |
+| 19.8 | index.html, game.js | Custom Levels visual picker (replace Phase 18 textarea with 26-button grid) | (current) |
 
 ---
 
@@ -439,8 +440,8 @@ Backlog from prior audits (Phase 19 review):
 - **A2** Visual picker for Custom Levels (replace textarea)
 - **B1 already shipped** (Phase 19.5 masteryThreshold)
 - **B2 already shipped** (Phase 19.7 U10 sub-pool)
+- **A2 already shipped** (Phase 19.8 custom levels visual picker)
 - **B3** Sound-only mode phonetic hint for hard consonants
-- **A2** Custom Levels visual picker (replace textarea)
 - **C1 already shipped** (Phase 19.6 export/import)
 - Replace manual bundle.js with esbuild
 - Add WebKit smoke for iPad parity check

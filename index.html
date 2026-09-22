@@ -1529,6 +1529,100 @@
     background: rgba(255,255,255,0.05);
   }
 
+  /* Phase 19.8 (A2) — Custom Levels visual letter picker */
+  .letter-picker {
+    display: grid;
+    grid-template-columns: repeat(10, 1fr);
+    gap: 6px;
+    margin: 10px 0;
+    padding: 8px;
+    background: rgba(0,0,0,0.2);
+    border-radius: 10px;
+  }
+  .letter-picker .letter-btn {
+    aspect-ratio: 1;
+    padding: 0;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 8px;
+    color: white;
+    font-size: 16px;
+    font-weight: 700;
+    font-family: 'Fredoka', sans-serif;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .letter-picker .letter-btn:hover { background: rgba(255,255,255,0.18); transform: scale(1.05); }
+  .letter-picker .letter-btn.in-current {
+    background: var(--primary2, #4FC3F7);
+    border-color: var(--primary2, #4FC3F7);
+    color: #0a0a2a;
+  }
+  .letter-picker .letter-btn.in-committed {
+    background: rgba(105,240,174,0.25);
+    border-color: rgba(105,240,174,0.5);
+    color: rgba(255,255,255,0.6);
+    cursor: not-allowed;
+  }
+  .letter-picker .letter-btn:disabled { cursor: not-allowed; }
+  .group-controls {
+    display: flex; align-items: center; gap: 10px;
+    margin: 8px 0;
+    flex-wrap: wrap;
+  }
+  .group-controls .current-label {
+    font-size: 13px; color: var(--text-dim);
+  }
+  .group-controls .current-display {
+    flex: 1; min-width: 80px;
+    padding: 6px 10px;
+    background: rgba(79,195,247,0.15);
+    border-radius: 8px;
+    color: white;
+    font-weight: 700;
+    font-size: 15px;
+    letter-spacing: 2px;
+    font-family: 'Fredoka', sans-serif;
+  }
+  .btn-tiny {
+    padding: 6px 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.3);
+    background: rgba(255,255,255,0.08);
+    color: white;
+    font-size: 13px; font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+  }
+  .btn-tiny:hover:not(:disabled) { background: rgba(255,255,255,0.18); }
+  .btn-tiny:disabled { opacity: 0.4; cursor: not-allowed; }
+  .committed-groups {
+    display: flex; flex-wrap: wrap; gap: 6px;
+    margin: 8px 0;
+    min-height: 8px;
+  }
+  .committed-groups .empty-hint {
+    font-size: 12px; color: var(--text-dim);
+    padding: 4px 0;
+  }
+  .chip {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 4px 10px;
+    background: rgba(105,240,174,0.18);
+    border: 1px solid rgba(105,240,174,0.4);
+    border-radius: 12px;
+    font-size: 13px; font-weight: 600;
+    color: white;
+    font-family: 'Fredoka', sans-serif;
+  }
+  .chip .chip-remove {
+    background: transparent; border: none;
+    color: rgba(255,255,255,0.7); cursor: pointer;
+    font-size: 14px; padding: 0;
+    line-height: 1;
+  }
+  .chip .chip-remove:hover { color: #FF6B9D; }
+
   .settings-apply {
     margin-top: auto; padding-top: 16px;
   }
@@ -1986,14 +2080,55 @@
         <div class="setting-row setting-row-block">
           <label>
             自訂關卡 Custom Levels
-            <span class="sublabel">逗號分隔,例如 ABC,DEF,GHI</span>
+            <span class="sublabel">點字母組成最多 6 個一組,加新群組</span>
           </label>
-          <textarea id="js-custom-levels-input" rows="3" maxlength="80"
-            placeholder="ABC,DEF,GHI"
-            style="width:100%;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.3);background:rgba(0,0,0,0.2);color:white;font-family:inherit;font-size:14px;resize:vertical;"
-            aria-describedby="js-custom-levels-preview"></textarea>
+
+          <!-- Phase 19.8 (A2) — Visual letter picker -->
+          <div class="letter-picker" id="js-letter-picker" aria-label="字母選擇器">
+            <button type="button" class="letter-btn" data-letter="A">A</button>
+            <button type="button" class="letter-btn" data-letter="B">B</button>
+            <button type="button" class="letter-btn" data-letter="C">C</button>
+            <button type="button" class="letter-btn" data-letter="D">D</button>
+            <button type="button" class="letter-btn" data-letter="E">E</button>
+            <button type="button" class="letter-btn" data-letter="F">F</button>
+            <button type="button" class="letter-btn" data-letter="G">G</button>
+            <button type="button" class="letter-btn" data-letter="H">H</button>
+            <button type="button" class="letter-btn" data-letter="I">I</button>
+            <button type="button" class="letter-btn" data-letter="J">J</button>
+            <button type="button" class="letter-btn" data-letter="K">K</button>
+            <button type="button" class="letter-btn" data-letter="L">L</button>
+            <button type="button" class="letter-btn" data-letter="M">M</button>
+            <button type="button" class="letter-btn" data-letter="N">N</button>
+            <button type="button" class="letter-btn" data-letter="O">O</button>
+            <button type="button" class="letter-btn" data-letter="P">P</button>
+            <button type="button" class="letter-btn" data-letter="Q">Q</button>
+            <button type="button" class="letter-btn" data-letter="R">R</button>
+            <button type="button" class="letter-btn" data-letter="S">S</button>
+            <button type="button" class="letter-btn" data-letter="T">T</button>
+            <button type="button" class="letter-btn" data-letter="U">U</button>
+            <button type="button" class="letter-btn" data-letter="V">V</button>
+            <button type="button" class="letter-btn" data-letter="W">W</button>
+            <button type="button" class="letter-btn" data-letter="X">X</button>
+            <button type="button" class="letter-btn" data-letter="Y">Y</button>
+            <button type="button" class="letter-btn" data-letter="Z">Z</button>
+          </div>
+
+          <div class="group-controls">
+            <span class="current-label">目前 group:</span>
+            <span id="js-current-group-display" class="current-display">—</span>
+            <button type="button" class="btn-tiny" id="js-clear-current-group">清除</button>
+            <button type="button" class="btn-tiny" id="js-commit-group" disabled>+ 新增群組</button>
+          </div>
+
+          <div class="committed-groups" id="js-committed-groups">
+            <span class="empty-hint">尚未新增群組</span>
+          </div>
+
+          <!-- Hidden input bridges to applySettings (backward-compat with Phase 18 parser) -->
+          <input type="hidden" id="js-custom-levels-input" value="">
+
           <span class="sublabel" id="js-custom-levels-preview"
-            style="display:block;margin-top:6px;font-size:12px;color:var(--text-dim);">
+            style="display:block;margin-top:8px;font-size:12px;color:var(--text-dim);">
             留空即用預設 U1–U10
           </span>
         </div>

@@ -1,10 +1,10 @@
 # Letter Shooter — Handover & Field Testing Guide
 
 **Audience**: SEN teacher preparing iPad classroom testing
-**App**: Letter Shooter v1.7.2 (letter-shooting game for moderate-intellectual-disability primary students)
+**App**: Letter Shooter v1.7.3 (letter-shooting game for moderate-intellectual-disability primary students)
 **Live URL**: https://ihateusingai-beep.github.io/letter-shooter
 **Repo**: https://github.com/ihateusingai-beep/letter-shooter
-**Last refreshed**: 2026-09-22 (Phase 19.7)
+**Last refreshed**: 2026-09-22 (Phase 19.8)
 
 **Dev docs**: [ARCHITECTURE.md](./ARCHITECTURE.md) (file map, localStorage schema, game mode state machine, feedback pipeline, build pipeline) — start there if picking up the codebase.
 
@@ -106,7 +106,7 @@ Students see a giant letter (A-Z) and press the matching keyboard key or touch k
 
 | # | Feature | Where to test |
 |---|---|---|
-| 18 | **Custom Levels** — teacher types `ABC,DEF,GHI` into Settings → Custom Levels field. Each group becomes C1/C2/C3 in unit dropdown. Live preview. Max 6 letters per group, dedup, trim | Settings → 自訂關卡 |
+| 18 | **Custom Levels** — teacher taps letters on 26-button grid to compose groups (Phase 19.8 visual picker replaces Phase 18 textarea). Each group becomes C1/C2/C3 in unit dropdown. Max 6 letters per group, dedup, trim | Settings → 自訂關卡 |
 | 18.1 | kbMode default aligned to 'full' (26-key QWERTY) across all fallbacks | Boot defaults to full keyboard |
 | 18.2 | Levels section promoted to top of settings panel (teacher-adjustable is more important than keyboard cosmetics) | Settings panel ordering |
 
@@ -121,6 +121,7 @@ Students see a giant letter (A-Z) and press the matching keyboard key or touch k
 | 19.5 | **Mastery threshold teacher-override** — 5/6/7/8 correct per rolling 10-window. Lower for moderate-ID students. Re-evaluates all letter statuses on change | Settings → 掌握門檻 |
 | 19.6 | **Export/Import progress** — download JSON backup of all localStorage; import restores. Settings → ⚙️ Advanced | Settings → ⚙️ Advanced → 匯出/匯入 |
 | 19.7 | **U10 sub-pool** — mixed review now returns ≤12 letters (practice + mastered) instead of all 26 — avoids U10 overwhelm | U10 unit |
+| 19.8 | **Custom Levels visual picker** — 26-button grid replaces textarea (Phase 18). Tap to add/remove letters from current group, "新增群組" to commit, chip × to remove. Backward-compatible with existing "ABC,DEF" storage | Settings → 自訂關卡 |
 
 ---
 
@@ -133,7 +134,7 @@ Top-right ⚙️ icon opens settings. **4 collapsible sections** (Phase 19.3) + 
 
 **🎮 玩法 Gameplay** (6 rows, open by default)
 - 單元 Unit — U1-ABC / U2-EFS / ... / U10 混合 / C1, C2, ... (Phase 18)
-- 自訂關卡 Custom Levels — textarea "ABC,DEF,GHI" (live preview)
+- 自訂關卡 Custom Levels — 26-button visual picker (Phase 19.8 replaces Phase 18 textarea)
 - 難度 Level — L0 靜止 / L1 慢落
 - 遊戲模式 Game Mode — 經典 / 聽音 / 連擊 / 拼字
 - 字母大細階 Case — 大寫 / 小寫

@@ -50,6 +50,10 @@ const SEQUENCE_LENGTH = 3;
 let sequenceLetters = [];   // ['C', 'A', 'T']
 let sequenceIndex = 0;      // 0..2 — next expected position
 
+// Phase 19.8 (A2) — Custom Levels visual picker state
+let currentGroup = new Set();         // letters in current group (max 6)
+let committedGroups = [];             // array of letter arrays, each ≤6
+
 // Phase 16 patch — full reset of speed-round + bonus-catch state.
 // Called from startGame/stopGame so stale timers/listeners from a previous
 // game can't poison the new one (e.g. speedRoundActive leaking true means
@@ -1577,26 +1581,129 @@ export function openSettings() {
   panel.querySelector('#js-game-mode-select').value = settings.gameMode || 'classic';
   panel.querySelector('#js-case-mode-select').value = settings.caseMode || 'upper';
 
-  // Phase 18 — Custom levels: populate textarea + inject C# options into unit dropdown
+  // Phase 19.8 (A2) — Custom levels visual picker replaces textarea (Phase 18).
+  // Initial state: parse existing customLevels string into committed groups.
   const customLevels = settings.customLevels || '';
-  const customInput = panel.querySelector('#js-custom-levels-input');
-  if (customInput) customInput.value = customLevels;
-  rebuildUnitDropdown(panel.querySelector('#js-unit-select'), settings.currentUnit, customLevels);
-  updateCustomLevelsPreview(customLevels);
-
-  // Phase 18 — live preview as user types
-  if (customInput && !customInput._liveBound) {
-    customInput.addEventListener('input', () => {
-      const v = customInput.value;
-      updateCustomLevelsPreview(v);
-      rebuildUnitDropdown(panel.querySelector('#js-unit-select'),
-                          panel.querySelector('#js-unit-select')?.value,
-                          v);
-    });
-    customInput._liveBound = true;
-  }
+  initCustomLevelsPicker(panel, customLevels);
 
   panel.classList.add('visible');
+}
+
+// Phase 19.8 (A2) — Visual letter picker for Custom Levels.
+// State: currentGroup (Set<string>) + committedGroups (Array<Array<string>>)
+// Persists to hidden input #js-custom-levels-input as comma-separated string
+// so applySettings reads it the same way as the old textarea did.
+function initCustomLevelsPicker(panel, customLevelsRaw) {
+  const groups = parseCustomLevels(customLevelsRaw || '');
+  currentGroup = new Set();
+  committedGroups = groups.map(g => g.slice());
+
+  // Wire up letter button click handlers (once)
+  const letterBtns = panel.querySelectorAll('#js-letter-picker .letter-btn');
+  letterBtns.forEach(btn => {
+    if (btn._pickerBound) return;
+    btn._pickerBound = true;
+    btn.addEventListener('click', () => {
+      const letter = btn.dataset.letter;
+      if (committedGroups.some(g => g.includes(letter))) return; // already committed
+      if (currentGroup.has(letter)) {
+        currentGroup.delete(letter); // toggle off
+      } else if (currentGroup.size < 6) {
+        currentGroup.add(letter);
+      }
+      renderPicker(panel);
+    });
+  });
+
+  // Wire up clear-current-group button (once)
+  const clearBtn = panel.querySelector('#js-clear-current-group');
+  if (clearBtn && !clearBtn._pickerBound) {
+    clearBtn._pickerBound = true;
+    clearBtn.addEventListener('click', () => {
+      currentGroup.clear();
+      renderPicker(panel);
+    });
+  }
+
+  // Wire up commit-group button (once)
+  const commitBtn = panel.querySelector('#js-commit-group');
+  if (commitBtn && !commitBtn._pickerBound) {
+    commitBtn._pickerBound = true;
+    commitBtn.addEventListener('click', () => {
+      if (currentGroup.size === 0) return;
+      const letters = [...currentGroup].sort();
+      committedGroups.push(letters);
+      currentGroup.clear();
+      renderPicker(panel);
+    });
+  }
+
+  renderPicker(panel);
+}
+
+// Phase 19.8 (A2) — Render visual picker state to DOM.
+// Updates: letter button styles (in-current / in-committed / available),
+// current-group display text, committed-groups chips, hidden input value,
+// and unit dropdown options + preview text.
+function renderPicker(panel) {
+  const letterBtns = panel.querySelectorAll('#js-letter-picker .letter-btn');
+  const committedSet = new Set(committedGroups.flat());
+  letterBtns.forEach(btn => {
+    const L = btn.dataset.letter;
+    btn.classList.toggle('in-current', currentGroup.has(L));
+    btn.classList.toggle('in-committed', committedSet.has(L));
+    btn.disabled = committedSet.has(L);
+  });
+
+  // Current group display
+  const display = panel.querySelector('#js-current-group-display');
+  if (display) {
+    if (currentGroup.size === 0) {
+      display.textContent = '—';
+    } else {
+      display.textContent = [...currentGroup].sort().join(' ');
+    }
+  }
+
+  // Commit button enabled only when current group has 1+ letters
+  const commitBtn = panel.querySelector('#js-commit-group');
+  if (commitBtn) commitBtn.disabled = currentGroup.size === 0;
+
+  // Committed groups chips
+  const chipsContainer = panel.querySelector('#js-committed-groups');
+  if (chipsContainer) {
+    if (committedGroups.length === 0) {
+      chipsContainer.innerHTML = '<span class="empty-hint">尚未新增群組</span>';
+    } else {
+      chipsContainer.innerHTML = committedGroups.map((g, i) => {
+        const label = `C${i + 1}·${g.join('')}`;
+        return `<span class="chip" data-group-idx="${i}">${label}<button type="button" class="chip-remove" aria-label="刪除群組 ${i + 1}">×</button></span>`;
+      }).join('');
+      // Wire up chip remove buttons (event delegation)
+      chipsContainer.querySelectorAll('.chip').forEach(chip => {
+        chip.querySelector('.chip-remove')?.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const idx = parseInt(chip.dataset.groupIdx, 10);
+          if (Number.isFinite(idx)) {
+            committedGroups.splice(idx, 1);
+            renderPicker(panel);
+          }
+        });
+      });
+    }
+  }
+
+  // Sync hidden input + unit dropdown + preview
+  const allGroups = currentGroup.size > 0
+    ? [...committedGroups, [...currentGroup].sort()]
+    : committedGroups;
+  const customLevelsString = allGroups.map(g => g.join('')).join(',');
+  const hidden = panel.querySelector('#js-custom-levels-input');
+  if (hidden) hidden.value = customLevelsString;
+  rebuildUnitDropdown(panel.querySelector('#js-unit-select'),
+                      panel.querySelector('#js-unit-select')?.value,
+                      customLevelsString);
+  updateCustomLevelsPreview(customLevelsString);
 }
 
 // Phase 18 — Rebuild the unit dropdown options based on current customLevels string.
