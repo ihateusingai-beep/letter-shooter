@@ -316,11 +316,16 @@
         customLevels: "",
         // teacher-defined letter groups, comma-separated (Phase 18)
         // e.g. "ABC,DEF,GHI" → C1=ABC, C2=DEF, C3=GHI
-        confettiIntensity: "normal"
+        confettiIntensity: "normal",
         // 'gentle' | 'normal' | 'party' — Phase 19.2 overstimulation control
         // gentle = 12 particles, no emoji burst
         // normal = 32 particles + 3 letter emoji (default)
         // party  = 50 particles + 5 letter emoji, longer duration
+        masteryThreshold: 6
+        // 5 | 6 | 7 | 8 — Phase 19.5 teacher-overrideable mastery threshold
+        // Default 6 (= 60% in rolling 10-window) preserves current behavior.
+        // Lower for moderate-ID students who can't sustain 60% accuracy.
+        // Status re-evaluated on threshold change (see progress.js reevaluateAllStatuses).
       };
     }
   });
@@ -354,19 +359,15 @@
     }
     return all.slice(0, 6);
   }
-  // Phase 19.7 (B2) — read ls-progress with safe fallback
   function readProgressSafe() {
     if (typeof localStorage === "undefined") return null;
     try {
       const raw = localStorage.getItem("ls-progress");
-        return raw ? JSON.parse(raw) : null;
+      return raw ? JSON.parse(raw) : null;
     } catch {
       return null;
     }
   }
-  // Phase 19.7 (B2) — U10 sub-pool composition: ≤12 letters from
-  // practice (max 6) + mastered (max 6). If both buckets empty, fallback
-  // to first 12 alphabet letters. Never pads with unopened letters.
   function buildU10SubPool(prog) {
     const ALL = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
     if (!prog || typeof prog !== "object") {
@@ -437,9 +438,6 @@
     });
     return result;
   }
-  // Phase 19.5 — mastery threshold constants + reader
-  var ALLOWED_MASTERY_THRESHOLDS = [5, 6, 7, 8];
-  var DEFAULT_MASTERY_THRESHOLD = 6;
   function getMasteryThreshold() {
     let raw = 6;
     try {
@@ -447,10 +445,11 @@
         const parsed = JSON.parse(localStorage.getItem("ls-settings") || "{}");
         raw = Number(parsed.masteryThreshold);
       }
-    } catch {}
+    } catch {
+    }
     return ALLOWED_MASTERY_THRESHOLDS.includes(raw) ? raw : DEFAULT_MASTERY_THRESHOLD;
   }
-  var UNITS, ROBOT_MILESTONES, TOTAL_ROBOTS;
+  var UNITS, ROBOT_MILESTONES, TOTAL_ROBOTS, DEFAULT_MASTERY_THRESHOLD, ALLOWED_MASTERY_THRESHOLDS;
   var init_curriculum = __esm({
     "js/curriculum.js"() {
       UNITS = {
@@ -468,6 +467,8 @@
       };
       ROBOT_MILESTONES = [9, 18, 26];
       TOTAL_ROBOTS = ROBOT_MILESTONES.length + 1;
+      DEFAULT_MASTERY_THRESHOLD = 6;
+      ALLOWED_MASTERY_THRESHOLDS = [5, 6, 7, 8];
     }
   });
 
@@ -533,11 +534,6 @@
     saveProgress(prog);
     return prog;
   }
-  function masteredCount(prog) {
-    return Object.values(prog).filter((e) => e.status === "mastered").length;
-  }
-  // Phase 19.5 — re-evaluate every letter's mastered/practice status against
-  // the given threshold. Called when settings.masteryThreshold changes.
   function reevaluateAllStatuses(threshold) {
     if (!ALLOWED_MASTERY_THRESHOLDS.includes(threshold)) {
       threshold = DEFAULT_MASTERY_THRESHOLD;
@@ -547,15 +543,20 @@
       const entry = prog[letter];
       if (entry.recent.length >= 10) {
         const ok = entry.recent.reduce((a, b) => a + b, 0);
+        const prev = entry.status;
         entry.status = ok >= threshold ? "mastered" : "practice";
       }
     }
     saveProgress(prog);
     return prog;
   }
+  function masteredCount(prog) {
+    return Object.values(prog).filter((e) => e.status === "mastered").length;
+  }
   var STORAGE_KEY;
   var init_progress = __esm({
     "js/progress.js"() {
+      init_curriculum();
       STORAGE_KEY = "ls-progress";
     }
   });
@@ -661,12 +662,11 @@
     if (!container) return;
     const theme = opts.theme || "space";
     const letter = opts.letter;
-    // Phase 19.2 — honor confetti intensity setting (overstimulation control)
     const intensity = opts.intensity || "normal";
     const intensityMap = {
       gentle: { count: 12, emojiCount: 0, durationBase: 0.9, durationRange: 0.5 },
       normal: { count: 32, emojiCount: 3, durationBase: 0.9, durationRange: 0.5 },
-      party:  { count: 50, emojiCount: 5, durationBase: 1.2, durationRange: 0.6 }
+      party: { count: 50, emojiCount: 5, durationBase: 1.2, durationRange: 0.6 }
     };
     const intensityCfg = intensityMap[intensity] || intensityMap.normal;
     const count = opts.count ?? intensityCfg.count;
@@ -758,6 +758,61 @@
         sym.addEventListener("animationend", () => sym.remove(), { once: true });
       }
     }
+  }
+
+  // Phase 19.9 — Letter hit explosion (snappy impact effect)
+  var LETTER_EXPLOSION_COLORS = {
+    A: ["#FF6B9D", "#FFB3C6"], B: ["#FFA726", "#FFD54F"], C: ["#9C27B0", "#CE93D8"],
+    D: ["#00BCD4", "#4DD0E1"], E: ["#FFD54F", "#FFEB3B"], F: ["#26C6DA", "#80DEEA"],
+    G: ["#66BB6A", "#A5D6A7"], H: ["#EF5350", "#FFCDD2"], I: ["#FFCA28", "#FFE082"],
+    J: ["#AB47BC", "#CE93D8"], K: ["#7E57C2", "#B39DDB"], L: ["#EC407A", "#F48FB1"],
+    M: ["#42A5F5", "#90CAF9"], O: ["#FF7043", "#FFAB91"], P: ["#FF7043", "#FFB74D"],
+    Q: ["#AB47BC", "#E1BEE7"], R: ["#26A69A", "#80CBC4"], S: ["#FFA000", "#FFB300"],
+    T: ["#5C6BC0", "#9FA8DA"], U: ["#5C6BC0", "#7986CB"], V: ["#8D6E63", "#BCAAA4"],
+    W: ["#26C6DA", "#4DD0E1"], X: ["#FF5252", "#FF8A80"], Y: ["#FDD835", "#FFF59D"],
+    Z: ["#FFB300", "#FFCA28"], N: ["#7CB342", "#AED581"]
+  };
+  var DEFAULT_EXPLOSION_COLORS = ["#FFD54F", "#FF6B9D", "#4FC3F7", "#69F0AE"];
+  function letterExplosion(originX, originY, opts = {}) {
+    const container = document.getElementById("js-confetti-layer");
+    if (!container) return;
+    const letter = opts.letter || "";
+    const colors = LETTER_EXPLOSION_COLORS[letter] || DEFAULT_EXPLOSION_COLORS;
+    const count = opts.count || 12;
+    for (let i = 0; i < count; i++) {
+      const piece = document.createElement("div");
+      piece.className = "confetti-piece letter-explosion";
+      piece.style.left = originX + "px";
+      piece.style.top = originY + "px";
+      piece.style.background = colors[i % colors.length];
+      if (i % 2 === 0) {
+        piece.classList.add("confetti-star");
+        piece.style.width = "10px";
+        piece.style.height = "10px";
+      } else {
+        piece.style.width = 5 + Math.random() * 5 + "px";
+        piece.style.height = piece.style.width;
+        piece.style.borderRadius = "50%";
+      }
+      const angle = (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.4;
+      const dist = 60 + Math.random() * 80;
+      const dx = Math.cos(angle) * dist;
+      const dy = Math.sin(angle) * dist - 20;
+      const rot = (Math.random() - 0.5) * 540;
+      piece.style.setProperty("--dx", dx + "px");
+      piece.style.setProperty("--dy", dy + "px");
+      piece.style.setProperty("--rot", rot + "deg");
+      piece.style.animationDuration = 0.55 + Math.random() * 0.25 + "s";
+      container.appendChild(piece);
+      piece.addEventListener("animationend", () => piece.remove(), { once: true });
+    }
+    const flash = document.createElement("div");
+    flash.className = "explosion-flash";
+    flash.style.left = originX + "px";
+    flash.style.top = originY + "px";
+    flash.style.background = `radial-gradient(circle, ${colors[0]} 0%, transparent 70%)`;
+    container.appendChild(flash);
+    setTimeout(() => flash.remove(), 350);
   }
   function megaFireworks(opts = {}) {
     const layer = document.getElementById("js-confetti-layer");
@@ -1175,103 +1230,6 @@
     }
   });
 
-  // js/dataio.js — Phase 19.6 (C1) Export/Import data I/O
-  var EXPORT_KEYS = ["ls-settings", "ls-progress", "ls-leaderboard", "ls-daily", "ls-weekly"];
-  var EXPORT_VERSION = "1.0";
-  var APP_VERSION = "1.7.1";
-  function collectLocalStorage() {
-    const out = {};
-    for (const key of EXPORT_KEYS) {
-      const raw = localStorage.getItem(key);
-      if (raw !== null) {
-        try {
-          out[key] = JSON.parse(raw);
-        } catch {
-          out[key] = raw;
-        }
-      }
-    }
-    return out;
-  }
-  function buildExportPayload() {
-    return {
-      version: EXPORT_VERSION,
-      exportedAt: new Date().toISOString(),
-      appVersion: APP_VERSION,
-      data: collectLocalStorage()
-    };
-  }
-  function serializeExport() {
-    return JSON.stringify(buildExportPayload(), null, 2);
-  }
-  function downloadExport() {
-    const json = serializeExport();
-    const blob = new Blob([json], { type: "application/json" });
-    const url = URL.createObjectURL(blob);
-    const date = new Date().toISOString().slice(0, 10);
-    const filename = `letter-shooter-${date}.json`;
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(url), 0);
-    return filename;
-  }
-  function parseImport(jsonString) {
-    if (!jsonString || typeof jsonString !== "string") {
-      throw new Error("檔案內容空白");
-    }
-    let parsed;
-    try {
-      parsed = JSON.parse(jsonString);
-    } catch {
-      throw new Error("JSON 格式錯誤");
-    }
-    if (!parsed || typeof parsed !== "object") {
-      throw new Error("JSON 結構錯誤");
-    }
-    if (!parsed.data || typeof parsed.data !== "object") {
-      throw new Error("缺少 data 欄位");
-    }
-    const knownKeys = new Set(EXPORT_KEYS);
-    const incomingKeys = Object.keys(parsed.data);
-    const unknownKeys = incomingKeys.filter((k) => !knownKeys.has(k));
-    return { payload: parsed, unknownKeys };
-  }
-  function applyImport(payload) {
-    const appliedKeys = [];
-    const skippedKeys = [];
-    for (const key of EXPORT_KEYS) {
-      if (key in payload.data) {
-        try {
-          localStorage.setItem(key, JSON.stringify(payload.data[key]));
-          appliedKeys.push(key);
-        } catch {
-          skippedKeys.push(key);
-        }
-      }
-    }
-    return { appliedKeys, skippedKeys };
-  }
-  function importFromString(jsonString) {
-    const { payload, unknownKeys } = parseImport(jsonString);
-    const { appliedKeys, skippedKeys } = applyImport(payload);
-    return {
-      version: payload.version,
-      exportedAt: payload.exportedAt,
-      appVersion: payload.appVersion,
-      appliedKeys,
-      skippedKeys,
-      unknownKeys
-    };
-  }
-  var init_dataio = __esm({
-    "js/dataio.js"() {
-    }
-  });
-
   // js/leaderboard.js
   function readAll() {
     try {
@@ -1314,6 +1272,104 @@
       MAX_ENTRIES = 10;
       MAX_NAME_LEN = 12;
       MAX_NAME = MAX_NAME_LEN;
+    }
+  });
+
+  // js/dataio.js
+  function collectLocalStorage() {
+    const out = {};
+    for (const key of EXPORT_KEYS) {
+      const raw = localStorage.getItem(key);
+      if (raw !== null) {
+        try {
+          out[key] = JSON.parse(raw);
+        } catch {
+          out[key] = raw;
+        }
+      }
+    }
+    return out;
+  }
+  function buildExportPayload() {
+    return {
+      version: EXPORT_VERSION,
+      exportedAt: (/* @__PURE__ */ new Date()).toISOString(),
+      appVersion: APP_VERSION,
+      data: collectLocalStorage()
+    };
+  }
+  function serializeExport() {
+    return JSON.stringify(buildExportPayload(), null, 2);
+  }
+  function downloadExport() {
+    const json = serializeExport();
+    const blob = new Blob([json], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const date = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+    const filename = `letter-shooter-${date}.json`;
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 0);
+    return filename;
+  }
+  function parseImport(jsonString) {
+    if (!jsonString || typeof jsonString !== "string") {
+      throw new Error("\u6A94\u6848\u5167\u5BB9\u7A7A\u767D");
+    }
+    let parsed;
+    try {
+      parsed = JSON.parse(jsonString);
+    } catch {
+      throw new Error("JSON \u683C\u5F0F\u932F\u8AA4");
+    }
+    if (!parsed || typeof parsed !== "object") {
+      throw new Error("JSON \u7D50\u69CB\u932F\u8AA4");
+    }
+    if (!parsed.data || typeof parsed.data !== "object") {
+      throw new Error("\u7F3A\u5C11 data \u6B04\u4F4D");
+    }
+    const knownKeys = new Set(EXPORT_KEYS);
+    const incomingKeys = Object.keys(parsed.data);
+    const unknownKeys = incomingKeys.filter((k) => !knownKeys.has(k));
+    return { payload: parsed, unknownKeys };
+  }
+  function applyImport(payload) {
+    const appliedKeys = [];
+    const skippedKeys = [];
+    for (const key of EXPORT_KEYS) {
+      if (key in payload.data) {
+        try {
+          localStorage.setItem(key, JSON.stringify(payload.data[key]));
+          appliedKeys.push(key);
+        } catch (e) {
+          skippedKeys.push(key);
+        }
+      }
+    }
+    return { appliedKeys, skippedKeys };
+  }
+  function importFromString(jsonString) {
+    const { payload, unknownKeys } = parseImport(jsonString);
+    const { appliedKeys, skippedKeys } = applyImport(payload);
+    return {
+      version: payload.version,
+      exportedAt: payload.exportedAt,
+      appVersion: payload.appVersion,
+      appliedKeys,
+      skippedKeys,
+      unknownKeys
+    };
+  }
+  var EXPORT_KEYS, EXPORT_VERSION, APP_VERSION;
+  var init_dataio = __esm({
+    "js/dataio.js"() {
+      EXPORT_KEYS = ["ls-settings", "ls-progress", "ls-leaderboard", "ls-daily", "ls-weekly"];
+      EXPORT_VERSION = "1.0";
+      APP_VERSION = "1.7.1";
     }
   });
 
@@ -1962,13 +2018,17 @@
       }
       const letterBox = document.getElementById("js-letter")?.getBoundingClientRect();
       if (letterBox) {
+        const impactX = letterBox.left + letterBox.width / 2;
+        const impactY = letterBox.top + letterBox.height / 2;
+        letterExplosion(impactX, impactY, { letter: currentLetter });
         confettiBurst(
-          letterBox.left + letterBox.width / 2,
-          letterBox.top + letterBox.height / 2,
+          impactX,
+          impactY,
           {
             theme: settings.theme || "space",
             letter: currentLetter,
             intensity: settings.confettiIntensity || "normal"
+            // Phase 19.2
           }
         );
         const lang = settings.lang || "zh";
@@ -2427,12 +2487,11 @@
     initCustomLevelsPicker(panel, customLevels);
     panel.classList.add("visible");
   }
-  // Phase 19.8 (A2) — Custom Levels visual picker (replaces Phase 18 textarea)
-  function initCustomLevelsPicker(panel2, customLevelsRaw) {
+  function initCustomLevelsPicker(panel, customLevelsRaw) {
     const groups = parseCustomLevels(customLevelsRaw || "");
-    currentGroup = new Set();
+    currentGroup = /* @__PURE__ */ new Set();
     committedGroups = groups.map((g) => g.slice());
-    const letterBtns = panel2.querySelectorAll("#js-letter-picker .letter-btn");
+    const letterBtns = panel.querySelectorAll("#js-letter-picker .letter-btn");
     letterBtns.forEach((btn) => {
       if (btn._pickerBound) return;
       btn._pickerBound = true;
@@ -2444,18 +2503,18 @@
         } else if (currentGroup.size < 6) {
           currentGroup.add(letter);
         }
-        renderPicker(panel2);
+        renderPicker(panel);
       });
     });
-    const clearBtn = panel2.querySelector("#js-clear-current-group");
+    const clearBtn = panel.querySelector("#js-clear-current-group");
     if (clearBtn && !clearBtn._pickerBound) {
       clearBtn._pickerBound = true;
       clearBtn.addEventListener("click", () => {
         currentGroup.clear();
-        renderPicker(panel2);
+        renderPicker(panel);
       });
     }
-    const commitBtn = panel2.querySelector("#js-commit-group");
+    const commitBtn = panel.querySelector("#js-commit-group");
     if (commitBtn && !commitBtn._pickerBound) {
       commitBtn._pickerBound = true;
       commitBtn.addEventListener("click", () => {
@@ -2463,13 +2522,13 @@
         const letters = [...currentGroup].sort();
         committedGroups.push(letters);
         currentGroup.clear();
-        renderPicker(panel2);
+        renderPicker(panel);
       });
     }
-    renderPicker(panel2);
+    renderPicker(panel);
   }
-  function renderPicker(panel2) {
-    const letterBtns = panel2.querySelectorAll("#js-letter-picker .letter-btn");
+  function renderPicker(panel) {
+    const letterBtns = panel.querySelectorAll("#js-letter-picker .letter-btn");
     const committedSet = new Set(committedGroups.flat());
     letterBtns.forEach((btn) => {
       const L = btn.dataset.letter;
@@ -2477,24 +2536,24 @@
       btn.classList.toggle("in-committed", committedSet.has(L));
       btn.disabled = committedSet.has(L);
     });
-    const display = panel2.querySelector("#js-current-group-display");
+    const display = panel.querySelector("#js-current-group-display");
     if (display) {
       if (currentGroup.size === 0) {
-        display.textContent = "—";
+        display.textContent = "\u2014";
       } else {
         display.textContent = [...currentGroup].sort().join(" ");
       }
     }
-    const commitBtn = panel2.querySelector("#js-commit-group");
+    const commitBtn = panel.querySelector("#js-commit-group");
     if (commitBtn) commitBtn.disabled = currentGroup.size === 0;
-    const chipsContainer = panel2.querySelector("#js-committed-groups");
+    const chipsContainer = panel.querySelector("#js-committed-groups");
     if (chipsContainer) {
       if (committedGroups.length === 0) {
-        chipsContainer.innerHTML = '<span class="empty-hint">尚未新增群組</span>';
+        chipsContainer.innerHTML = '<span class="empty-hint">\u5C1A\u672A\u65B0\u589E\u7FA4\u7D44</span>';
       } else {
         chipsContainer.innerHTML = committedGroups.map((g, i) => {
-          const label = `C${i + 1}·${g.join("")}`;
-          return `<span class="chip" data-group-idx="${i}">${label}<button type="button" class="chip-remove" aria-label="刪除群組 ${i + 1}">×</button></span>`;
+          const label = `C${i + 1}\xB7${g.join("")}`;
+          return `<span class="chip" data-group-idx="${i}">${label}<button type="button" class="chip-remove" aria-label="\u522A\u9664\u7FA4\u7D44 ${i + 1}">\xD7</button></span>`;
         }).join("");
         chipsContainer.querySelectorAll(".chip").forEach((chip) => {
           chip.querySelector(".chip-remove")?.addEventListener("click", (e) => {
@@ -2502,21 +2561,19 @@
             const idx = parseInt(chip.dataset.groupIdx, 10);
             if (Number.isFinite(idx)) {
               committedGroups.splice(idx, 1);
-              renderPicker(panel2);
+              renderPicker(panel);
             }
           });
         });
       }
     }
-    const allGroups = currentGroup.size > 0
-      ? [...committedGroups, [...currentGroup].sort()]
-      : committedGroups;
+    const allGroups = currentGroup.size > 0 ? [...committedGroups, [...currentGroup].sort()] : committedGroups;
     const customLevelsString = allGroups.map((g) => g.join("")).join(",");
-    const hidden = panel2.querySelector("#js-custom-levels-input");
+    const hidden = panel.querySelector("#js-custom-levels-input");
     if (hidden) hidden.value = customLevelsString;
     rebuildUnitDropdown(
-      panel2.querySelector("#js-unit-select"),
-      panel2.querySelector("#js-unit-select")?.value,
+      panel.querySelector("#js-unit-select"),
+      panel.querySelector("#js-unit-select")?.value,
       customLevelsString
     );
     updateCustomLevelsPreview(customLevelsString);
@@ -2737,7 +2794,7 @@
       grid.appendChild(cell);
     });
   }
-  var score, streak, stars, currentLetter, touchKeys, gameRunning, animFrame, currentUnit, correctSinceSpeed, speedRoundActive, speedRoundTimer, speedRoundEnd, speedRoundHits, bonusCatchActive, bonusCatchTimer, toastTimerId, SEQUENCE_LENGTH, sequenceLetters, sequenceIndex, toastTimer, toastQueue, ROBOT_PALETTES, FLOOR_EMOJIS, BULLET_SHAPES, BULLET_PALETTES, lastLetterPos, fallPaused, letterArrived, LETTER_SAY, SPEED_ROUND_DURATION_MS, SPEED_ROUND_TRIGGER, bonusCatchKeyListener, BONUS_CATCH_DURATION_MS, BONUS_CATCH_STARS, QWERTY_ROWS, currentKbMode, compactKeys, MAX_GHOSTS, ACHIEVEMENT_MILESTONES, pendingCompletion, currentGroup, committedGroups;
+  var score, streak, stars, currentLetter, touchKeys, gameRunning, animFrame, currentUnit, correctSinceSpeed, speedRoundActive, speedRoundTimer, speedRoundEnd, speedRoundHits, bonusCatchActive, bonusCatchTimer, toastTimerId, SEQUENCE_LENGTH, sequenceLetters, sequenceIndex, currentGroup, committedGroups, toastTimer, toastQueue, ROBOT_PALETTES, FLOOR_EMOJIS, BULLET_SHAPES, BULLET_PALETTES, lastLetterPos, fallPaused, letterArrived, LETTER_SAY, SPEED_ROUND_DURATION_MS, SPEED_ROUND_TRIGGER, bonusCatchKeyListener, BONUS_CATCH_DURATION_MS, BONUS_CATCH_STARS, QWERTY_ROWS, currentKbMode, compactKeys, MAX_GHOSTS, ACHIEVEMENT_MILESTONES, pendingCompletion;
   var init_game = __esm({
     "js/game.js"() {
       init_settings();
@@ -2773,15 +2830,15 @@
         closeProgressPanel,
         openLeaderboardPanel,
         closeLeaderboardPanel,
-        // Phase 19.6 (C1) — Export/Import
-        exportProgress: () => downloadExport(),
-        importProgressFromString: (json) => importFromString(json),
         renderLeaderboard,
         openNameModal,
         closeNameModal,
         submitName,
         highlightKey,
         clearHighlight,
+        // Phase 19.6 (C1) — Export/Import data I/O
+        exportProgress: () => downloadExport(),
+        importProgressFromString: (json) => importFromString(json),
         // Phase 16.5 patch — expose for smoke testing of unit letter pools
         activeLetters
       };
@@ -2804,6 +2861,8 @@
       SEQUENCE_LENGTH = 3;
       sequenceLetters = [];
       sequenceIndex = 0;
+      currentGroup = /* @__PURE__ */ new Set();
+      committedGroups = [];
       toastTimer = null;
       toastQueue = [];
       ROBOT_PALETTES = {

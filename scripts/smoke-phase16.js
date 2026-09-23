@@ -539,6 +539,45 @@ const path = require('path');
   const keyCount = await page.locator('.kb-key').count();
   console.log(`[24] default kbMode renders 26 full keys: ${keyCount === 26 ? 'OK (' + keyCount + ')' : 'WRONG (' + keyCount + ')'}`);
 
+  // ── 25. Phase 18.3 — Start overlay renders custom C# levels ────────────
+  await page.evaluate(() => {
+    Object.keys(localStorage).forEach(k => { if (k.startsWith('ls-')) localStorage.removeItem(k); });
+    localStorage.setItem('ls-settings', JSON.stringify({
+      voice: true, soundFx: true, bgm: false, bgmTrack: 'space',
+      theme: 'space', speed: 'slow', highContrast: false, reduceMotion: false,
+      lang: 'zh', currentUnit: 'C2', level: 'L0', kbMode: 'full',
+      robotColor: 0, mascotTheme: 'auto', gameMode: 'classic', caseMode: 'upper',
+      customLevels: 'ABC,DEF,GHI'
+    }));
+  });
+  await page.reload();
+  await page.waitForSelector('#js-start-overlay');
+
+  // Should see 10 U-level cards + 3 C-level cards = 13 total
+  const totalCards = await page.locator('.level-card').count();
+  console.log(`[25] start overlay shows 13 cards (10 U + 3 C): ${totalCards === 13 ? 'OK (' + totalCards + ')' : 'WRONG (' + totalCards + ')'}`);
+
+  // C1, C2, C3 should be present with correct letters
+  const c1 = await page.locator('.level-card[data-unit="C1"]').count();
+  const c2 = await page.locator('.level-card[data-unit="C2"]').count();
+  const c3 = await page.locator('.level-card[data-unit="C3"]').count();
+  const c1LettersText = await page.locator('.level-card[data-unit="C1"] .level-letters').textContent().catch(() => '');
+  const c2LettersText = await page.locator('.level-card[data-unit="C2"] .level-letters').textContent().catch(() => '');
+  console.log(`[25] C1 (${c1LettersText}) present: ${c1 === 1 && c1LettersText.trim() === 'ABC' ? 'OK' : 'WRONG'}`);
+  console.log(`[25] C2 (${c2LettersText}) present: ${c2 === 1 && c2LettersText.trim() === 'DEF' ? 'OK' : 'WRONG'}`);
+  console.log(`[25] C3 present: ${c3 === 1 ? 'OK' : 'WRONG (' + c3 + ')'}`);
+
+  // Previously selected C2 should be highlighted by restoration logic
+  const c2Selected = await page.locator('.level-card[data-unit="C2"].selected').count();
+  console.log(`[25] saved C2 auto-highlighted on reload: ${c2Selected === 1 ? 'OK' : 'WRONG'}`);
+
+  // Click C3 → it should become selected, start button enabled
+  await page.click('.level-card[data-unit="C3"]');
+  await page.waitForTimeout(200);
+  const c3Selected = await page.locator('.level-card[data-unit="C3"].selected').count();
+  const startBtnDisabled = await page.locator('#js-start-btn').evaluate(el => el.disabled);
+  console.log(`[25] click C3 highlights + enables start: ${c3Selected === 1 && !startBtnDisabled ? 'OK' : 'WRONG (selected=' + c3Selected + ' disabled=' + startBtnDisabled + ')'}`);
+
   await browser.close();
   process.exit(errors.length > 0 ? 1 : 0);
 })();

@@ -1882,7 +1882,7 @@
   #js-start-overlay.hidden { display: none; }
 
   .start-title {
-    font-size: 40px; font-weight: 900;
+    font-size: 36px; font-weight: 900;
     color: white; text-align: center;
     text-shadow: 0 0 30px rgba(79,195,247,0.5);
   }
@@ -1899,15 +1899,121 @@
     font-family: 'Fredoka', sans-serif;
     cursor: pointer;
     box-shadow: 0 6px 24px rgba(79,195,247,0.5), 0 0 40px rgba(79,195,247,0.2);
-    transition: transform 0.1s, box-shadow 0.1s;
+    transition: transform 0.1s, box-shadow 0.1s, opacity 0.2s;
   }
-  .btn-start:hover {
+  .btn-start:hover:not(:disabled) {
     transform: translateY(-2px);
     box-shadow: 0 8px 32px rgba(79,195,247,0.6), 0 0 60px rgba(79,195,247,0.3);
   }
-  .btn-start:active {
+  .btn-start:active:not(:disabled) {
     transform: translateY(2px);
     box-shadow: 0 2px 12px rgba(79,195,247,0.4);
+  }
+  .btn-start:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background: rgba(255,255,255,0.1);
+    color: rgba(255,255,255,0.4);
+    box-shadow: none;
+  }
+
+  /* Phase 19.9 — Start overlay redesign: difficulty + level picker */
+  .start-header { text-align: center; }
+  .start-subtitle {
+    font-size: 14px; color: var(--text-dim);
+    margin-top: 4px;
+  }
+  .difficulty-selector {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    width: 100%;
+    max-width: 480px;
+  }
+  .difficulty-btn {
+    display: flex; flex-direction: column;
+    align-items: center; gap: 2px;
+    padding: 12px 8px;
+    background: rgba(255,255,255,0.06);
+    border: 2px solid rgba(255,255,255,0.15);
+    border-radius: 12px;
+    color: white;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: inherit;
+  }
+  .difficulty-btn:hover { background: rgba(255,255,255,0.12); }
+  .difficulty-btn.selected {
+    background: rgba(79,195,247,0.18);
+    border-color: var(--primary2, #4FC3F7);
+    box-shadow: 0 0 16px rgba(79,195,247,0.4);
+  }
+  .difficulty-emoji { font-size: 24px; }
+  .difficulty-label {
+    font-size: 14px; font-weight: 700;
+    color: white;
+  }
+  .difficulty-sublabel {
+    font-size: 11px; color: var(--text-dim);
+  }
+  .level-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 10px;
+    width: 100%;
+    max-width: 480px;
+  }
+  .level-card {
+    display: flex; flex-direction: column;
+    align-items: center; gap: 4px;
+    padding: 12px 6px;
+    background: rgba(255,255,255,0.06);
+    border: 2px solid rgba(255,255,255,0.15);
+    border-radius: 12px;
+    color: white;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: inherit;
+    aspect-ratio: 1;
+  }
+  .level-card:hover {
+    background: rgba(255,255,255,0.15);
+    transform: scale(1.05);
+  }
+  .level-card.selected {
+    background: rgba(105,240,174,0.18);
+    border-color: rgba(105,240,174,0.6);
+    box-shadow: 0 0 16px rgba(105,240,174,0.4);
+  }
+  .level-card-wide {
+    grid-column: span 2;
+    aspect-ratio: 2 / 1;
+    background: linear-gradient(135deg, rgba(79,195,247,0.12), rgba(105,240,174,0.12));
+  }
+  .level-code {
+    font-size: 12px; font-weight: 700;
+    color: rgba(255,255,255,0.6);
+    letter-spacing: 1px;
+  }
+  .level-letters {
+    font-size: 18px; font-weight: 800;
+    font-family: 'Fredoka', sans-serif;
+    color: white;
+    letter-spacing: 2px;
+  }
+  .level-card-wide .level-letters {
+    font-size: 14px;
+    letter-spacing: 1px;
+  }
+  .start-footer {
+    display: flex; flex-direction: column;
+    align-items: center; gap: 8px;
+    width: 100%;
+    max-width: 480px;
+  }
+  .start-status {
+    font-size: 13px; color: var(--text-dim);
+    height: 16px;
   }
 
   /* ── Reduce motion ────────────────────────────────────────── */
@@ -2025,11 +2131,82 @@
   <div id="js-touch-keys" role="group" aria-label="Letter keys"></div>
 </div>
 
-<!-- ── Start overlay ────────────────────────────────────────────────────── -->
+<!-- ── Start overlay (Phase 19.9 redesign) ─────────────────────────── -->
 <div id="js-start-overlay">
-  <div class="start-title">🔤 字母射擊</div>
-  <div class="start-desc">看到字母，按同一個鍵，機械人就會射擊！</div>
-  <button class="btn-start" id="js-start-btn">開始</button>
+  <div class="start-header">
+    <div class="start-title">🔤 字母射擊</div>
+    <div class="start-subtitle">選關卡 + 難度,然後開始射擊！</div>
+  </div>
+
+  <!-- Difficulty selector -->
+  <div class="difficulty-selector" role="radiogroup" aria-label="難度選擇">
+    <button type="button" class="difficulty-btn" data-difficulty="easy" role="radio">
+      <span class="difficulty-emoji">🐢</span>
+      <span class="difficulty-label">簡單</span>
+      <span class="difficulty-sublabel">慢速</span>
+    </button>
+    <button type="button" class="difficulty-btn selected" data-difficulty="normal" role="radio" aria-checked="true">
+      <span class="difficulty-emoji">⚡</span>
+      <span class="difficulty-label">一般</span>
+      <span class="difficulty-sublabel">中等速度</span>
+    </button>
+    <button type="button" class="difficulty-btn" data-difficulty="hard" role="radio">
+      <span class="difficulty-emoji">🚀</span>
+      <span class="difficulty-label">困難</span>
+      <span class="difficulty-sublabel">快速</span>
+    </button>
+  </div>
+
+  <!-- Level grid — U1-U10 always present; C# added dynamically by buildLevelGrid() -->
+  <div class="level-grid" role="listbox" aria-label="關卡選擇" id="js-level-grid">
+    <button type="button" class="level-card" data-unit="U1" data-letters="ABC" role="option">
+      <span class="level-code">U1</span>
+      <span class="level-letters">ABC</span>
+    </button>
+    <button type="button" class="level-card" data-unit="U2" data-letters="EFS" role="option">
+      <span class="level-code">U2</span>
+      <span class="level-letters">EFS</span>
+    </button>
+    <button type="button" class="level-card" data-unit="U3" data-letters="IOT" role="option">
+      <span class="level-code">U3</span>
+      <span class="level-letters">IOT</span>
+    </button>
+    <button type="button" class="level-card" data-unit="U4" data-letters="MPH" role="option">
+      <span class="level-code">U4</span>
+      <span class="level-letters">MPH</span>
+    </button>
+    <button type="button" class="level-card" data-unit="U5" data-letters="DGU" role="option">
+      <span class="level-code">U5</span>
+      <span class="level-letters">DGU</span>
+    </button>
+    <button type="button" class="level-card" data-unit="U6" data-letters="LRN" role="option">
+      <span class="level-code">U6</span>
+      <span class="level-letters">LRN</span>
+    </button>
+    <button type="button" class="level-card" data-unit="U7" data-letters="JKW" role="option">
+      <span class="level-code">U7</span>
+      <span class="level-letters">JKW</span>
+    </button>
+    <button type="button" class="level-card" data-unit="U8" data-letters="VXQ" role="option">
+      <span class="level-code">U8</span>
+      <span class="level-letters">VXQ</span>
+    </button>
+    <button type="button" class="level-card" data-unit="U9" data-letters="YZ" role="option">
+      <span class="level-code">U9</span>
+      <span class="level-letters">YZ</span>
+    </button>
+    <button type="button" class="level-card level-card-wide" data-unit="U10" data-letters="全 26" role="option">
+      <span class="level-code">U10</span>
+      <span class="level-letters">全 26 字母</span>
+    </button>
+    <!-- Phase 18.3 — C# custom levels injected by buildLevelGrid() -->
+  </div>
+
+  <!-- Start button + status -->
+  <div class="start-footer">
+    <div id="js-start-status" class="start-status">揀一個關卡開始</div>
+    <button class="btn-start" id="js-start-btn" disabled>請選擇關卡</button>
+  </div>
 </div>
 
 <!-- ── Settings panel ───────────────────────────────────────────────────── -->
@@ -2534,15 +2711,133 @@ document.getElementById('js-name-input')?.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') LS.submitName();
 });
 
-// ── Start button ──────────────────────────────────────────────────────────
-document.getElementById('js-start-btn')?.addEventListener('click', () => {
-  document.getElementById('js-start-overlay')?.classList.add('hidden');
-  // Unlock Web Audio contexts on first user gesture (iOS Safari)
-  if (LS.unlockAudio) LS.unlockAudio();
-  if (LS.unlockBgm) LS.unlockBgm();
-  const s = LS.loadSettings ? LS.loadSettings() : {};
-  LS.startGame(s.currentUnit || 'U1', s.level || 'L0');
-});
+// ── Start overlay: level + difficulty picker (Phase 19.9) ────────────────
+(function setupStartPicker() {
+  const overlay = document.getElementById('js-start-overlay');
+  const startBtn = document.getElementById('js-start-btn');
+  const status = document.getElementById('js-start-status');
+  if (!overlay || !startBtn) return;
+
+  let selectedUnit = null;
+  let selectedDifficulty = 'normal'; // 'easy' | 'normal' | 'hard'
+
+  // Restore from settings on load (so reopening preserves last choice).
+  // Default to U1 for new users (recommended starting point).
+  const savedSettings = LS.loadSettings ? LS.loadSettings() : {};
+  selectedUnit = savedSettings.currentUnit || 'U1';
+  if (savedSettings.speed === 'medium') selectedDifficulty = 'hard';
+  else if (savedSettings.level === 'L0') selectedDifficulty = 'easy';
+
+  function updateStartBtn() {
+    if (selectedUnit) {
+      startBtn.disabled = false;
+      startBtn.textContent = '開始遊戲';
+      if (status) status.textContent = `${selectedUnit} · ${getDifficultyLabel(selectedDifficulty)}`;
+    } else {
+      startBtn.disabled = true;
+      startBtn.textContent = '請選擇關卡';
+      if (status) status.textContent = '揀一個關卡開始';
+    }
+  }
+
+  function getDifficultyLabel(d) {
+    return d === 'easy' ? '🐢 簡單' : d === 'hard' ? '🚀 困難' : '⚡ 一般';
+  }
+
+  // Phase 18.3 — Inject custom C# levels into the level grid before wiring click handlers.
+  // Reads settings.customLevels and appends one .level-card per group.
+  function buildLevelGrid() {
+    const grid = overlay.querySelector('#js-level-grid');
+    if (!grid) return;
+    // Remove any previously-injected custom cards (idempotent on re-open)
+    grid.querySelectorAll('.level-card[data-custom]').forEach(c => c.remove());
+    const s = LS.loadSettings ? LS.loadSettings() : {};
+    const raw = s.customLevels || '';
+    if (!raw) return;
+    // Parse comma-separated letter groups. Keep in sync with parseCustomLevels() in curriculum.js.
+    const seen = new Set();
+    raw.split(',').forEach((group, i) => {
+      const letters = [];
+      const groupSeen = new Set();
+      group.toUpperCase().split('').forEach(ch => {
+        if (ch >= 'A' && ch <= 'Z' && !groupSeen.has(ch)) {
+          groupSeen.add(ch); letters.push(ch);
+        }
+      });
+      if (letters.length === 0 || letters.length > 6) return;
+      const key = letters.join('');
+      if (seen.has(key)) return;
+      seen.add(key);
+      const idx = i + 1;
+      // Find an unused C# index (skip if user typed e.g. "ABC,,DEF" leaving empty groups)
+      let cIdx = 1;
+      while (grid.querySelector(`.level-card[data-unit="C${cIdx}"]`)) cIdx++;
+      const card = document.createElement('button');
+      card.type = 'button';
+      card.className = 'level-card';
+      card.setAttribute('data-unit', `C${cIdx}`);
+      card.setAttribute('data-letters', key);
+      card.setAttribute('data-custom', '1');
+      card.setAttribute('role', 'option');
+      card.innerHTML = `<span class="level-code">C${cIdx}</span><span class="level-letters">${key}</span>`;
+      grid.appendChild(card);
+    });
+  }
+  buildLevelGrid();
+
+  // Wire up level cards (now includes both U# hardcoded + C# injected)
+  overlay.querySelectorAll('.level-card').forEach(card => {
+    card.addEventListener('click', () => {
+      selectedUnit = card.dataset.unit;
+      overlay.querySelectorAll('.level-card').forEach(c => c.classList.remove('selected'));
+      card.classList.add('selected');
+      updateStartBtn();
+    });
+  });
+
+  // Wire up difficulty buttons
+  overlay.querySelectorAll('.difficulty-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      selectedDifficulty = btn.dataset.difficulty;
+      overlay.querySelectorAll('.difficulty-btn').forEach(b => {
+        b.classList.remove('selected');
+        b.setAttribute('aria-checked', 'false');
+      });
+      btn.classList.add('selected');
+      btn.setAttribute('aria-checked', 'true');
+      updateStartBtn();
+    });
+  });
+
+  // Pre-select previously chosen unit + difficulty
+  const unitCard = overlay.querySelector(`.level-card[data-unit="${selectedUnit}"]`);
+  if (unitCard) unitCard.classList.add('selected');
+  const diffBtn = overlay.querySelector(`.difficulty-btn[data-difficulty="${selectedDifficulty}"]`);
+  if (diffBtn) {
+    diffBtn.classList.add('selected');
+    diffBtn.setAttribute('aria-checked', 'true');
+    overlay.querySelectorAll('.difficulty-btn').forEach(b => {
+      if (b !== diffBtn) b.setAttribute('aria-checked', 'false');
+    });
+  }
+  updateStartBtn();
+
+  // Start button click — map difficulty → (level, speed) and start game
+  startBtn.addEventListener('click', () => {
+    if (!selectedUnit) return;
+    // Map difficulty: easy=L0 static, normal=L1 slow, hard=L1 medium
+    const level = selectedDifficulty === 'easy' ? 'L0' : 'L1';
+    const speed = selectedDifficulty === 'hard' ? 'medium' : 'slow';
+    // Persist choices to settings
+    if (LS.saveSettings) {
+      LS.saveSettings({ currentUnit: selectedUnit, level, speed });
+    }
+    overlay.classList.add('hidden');
+    if (LS.unlockAudio) LS.unlockAudio();
+    if (LS.unlockBgm) LS.unlockBgm();
+    LS.startGame(selectedUnit, level);
+  });
+})();
 
 // ── Ocean bubbles: populate the bubble layer on boot (Phase 5) ─────────────
 (function populateBubbles() {
