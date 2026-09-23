@@ -1,10 +1,10 @@
 # Letter Shooter — Handover & Field Testing Guide
 
 **Audience**: SEN teacher preparing iPad classroom testing
-**App**: Letter Shooter v1.7.3 (letter-shooting game for moderate-intellectual-disability primary students)
+**App**: Letter Shooter v2.0 (letter-shooting game for moderate-intellectual-disability primary students)
 **Live URL**: https://ihateusingai-beep.github.io/letter-shooter
 **Repo**: https://github.com/ihateusingai-beep/letter-shooter
-**Last refreshed**: 2026-09-22 (Phase 19.8)
+**Last refreshed**: 2026-09-24 (Phase 19.9)
 
 **Dev docs**: [ARCHITECTURE.md](./ARCHITECTURE.md) (file map, localStorage schema, game mode state machine, feedback pipeline, build pipeline) — start there if picking up the codebase.
 
@@ -122,6 +122,8 @@ Students see a giant letter (A-Z) and press the matching keyboard key or touch k
 | 19.6 | **Export/Import progress** — download JSON backup of all localStorage; import restores. Settings → ⚙️ Advanced | Settings → ⚙️ Advanced → 匯出/匯入 |
 | 19.7 | **U10 sub-pool** — mixed review now returns ≤12 letters (practice + mastered) instead of all 26 — avoids U10 overwhelm | U10 unit |
 | 19.8 | **Custom Levels visual picker** — 26-button grid replaces textarea (Phase 18). Tap to add/remove letters from current group, "新增群組" to commit, chip × to remove. Backward-compatible with existing "ABC,DEF" storage | Settings → 自訂關卡 |
+| 18.3 | **Start overlay level picker** — custom C# levels injected into start screen U1-U10 grid (was previously only in Settings → Unit) | Start overlay |
+| 19.9 | **Homepage redesign** — level grid (U1-U10) + 3 difficulty buttons (簡單 L0 / 一般 L1-slow / 困難 L1-medium). U1 pre-selected by default. **L1 falling letters is the new default** (was L0). **Letter hit explosion** with per-letter color theming (snappy 600ms starburst + radial flash). **Big combo counter** at top-center showing ×N at streak ≥ 2 with tier styling (tier-3 / tier-5 / tier-10 gradient + glow) | Start overlay, in-game |
 
 ---
 

@@ -10,7 +10,7 @@ const DEFAULTS = {
   reduceMotion: false,
   lang: 'zh',         // UI language: 'zh' | 'en'
   currentUnit: 'U1',
-  level: 'L0',        // 'L0' | 'L1'
+  level: 'L1',        // 'L0' | 'L1' — Phase 19.9 changed default to falling letters (was 'L0')
   kbMode: 'full',     // 'full' | 'compact' — full shows 26 QWERTY, compact shows only target letter
   robotColor: 0,      // 0/1/2 — robot palette index (Phase 16f)
   mascotTheme: 'auto', // 'auto' | 'space' | 'candy' | 'ocean' | 'forest' (Phase 16f)

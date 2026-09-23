@@ -258,7 +258,9 @@ setTimeout(250ms) → openLeaderboardPanel()   auto-show
 | 19.5 | settings.js, curriculum.js, progress.js, game.js | Teacher-overrideable masteryThreshold (5/6/7/8) with re-evaluation | `e8c21a0` |
 | 19.6 | dataio.js (new), game.js, index.html | Export/Import localStorage progress as JSON (settings → ⚙️ Advanced) | (current) |
 | 19.7 | curriculum.js | U10 mixed review sub-pool: ≤12 letters from practice + mastered (no unopened padding) | `9508e3c` |
-| 19.8 | index.html, game.js | Custom Levels visual picker (replace Phase 18 textarea with 26-button grid) | (current) |
+| 19.8 | index.html, game.js | Custom Levels visual picker (replace Phase 18 textarea with 26-button grid) | `c1ea8a0` |
+| 18.3 | index.html | Start overlay level picker injects custom C# levels | `3c85585` |
+| 19.9 | index.html, fx.js, game.js | Homepage redesign: level grid + difficulty picker (easy/normal/hard) + default L1 + letter hit explosion + bigger combo counter | `93f5cf3` |
 
 ---
 
@@ -441,8 +443,10 @@ Backlog from prior audits (Phase 19 review):
 - **B1 already shipped** (Phase 19.5 masteryThreshold)
 - **B2 already shipped** (Phase 19.7 U10 sub-pool)
 - **A2 already shipped** (Phase 19.8 custom levels visual picker)
-- **B3** Sound-only mode phonetic hint for hard consonants
 - **C1 already shipped** (Phase 19.6 export/import)
+- **19.9 already shipped** (homepage redesign + explosion + combo counter)
+- **B3** Sound-only mode phonetic hint for hard consonants
+- Per-letter sound variations (currently all use same SFX)
 - Replace manual bundle.js with esbuild
 - Add WebKit smoke for iPad parity check
 - Per-student profile switcher (multi-student on same device)
