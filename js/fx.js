@@ -137,7 +137,77 @@ export function confettiBurst(originX, originY, opts = {}) {
     piece.addEventListener('animationend', () => piece.remove(), { once: true });
   }
 
-  // Phase 10d: per-letter symbol particles — count varies by intensity
+  // ── Phase 19.9: Letter hit explosion (snappy impact effect) ─────────────
+// Triggered when a letter is hit by a bullet. Different from confetti
+// (celebration) — this is the immediate impact moment, fast + tight.
+// Letter-specific colors per LETTER_EXPLOSION_COLORS so each letter
+// has a distinct visual signature.
+const LETTER_EXPLOSION_COLORS = {
+  A: ['#FF6B9D', '#FFB3C6'], B: ['#FFA726', '#FFD54F'], C: ['#9C27B0', '#CE93D8'],
+  D: ['#00BCD4', '#4DD0E1'], E: ['#FFD54F', '#FFEB3B'], F: ['#26C6DA', '#80DEEA'],
+  G: ['#66BB6A', '#A5D6A7'], H: ['#EF5350', '#FFCDD2'], I: ['#FFCA28', '#FFE082'],
+  J: ['#AB47BC', '#CE93D8'], K: ['#7E57C2', '#B39DDB'], L: ['#EC407A', '#F48FB1'],
+  M: ['#42A5F5', '#90CAF9'], O: ['#FF7043', '#FFAB91'], P: ['#FF7043', '#FFB74D'],
+  Q: ['#AB47BC', '#E1BEE7'], R: ['#26A69A', '#80CBC4'], S: ['#FFA000', '#FFB300'],
+  T: ['#5C6BC0', '#9FA8DA'], U: ['#5C6BC0', '#7986CB'], V: ['#8D6E63', '#BCAAA4'],
+  W: ['#26C6DA', '#4DD0E1'], X: ['#FF5252', '#FF8A80'], Y: ['#FDD835', '#FFF59D'],
+  Z: ['#FFB300', '#FFCA28'], N: ['#7CB342', '#AED581'],
+};
+const DEFAULT_EXPLOSION_COLORS = ['#FFD54F', '#FF6B9D', '#4FC3F7', '#69F0AE'];
+
+/**
+ * Render a snappy letter-hit explosion at (x, y).
+ * 10-14 particles in starburst layout, lifetime ~600ms.
+ * @param {string} letter - target letter for color theming
+ */
+export function letterExplosion(originX, originY, opts = {}) {
+  const container = document.getElementById('js-confetti-layer');
+  if (!container) return;
+  const letter = opts.letter || '';
+  const colors = LETTER_EXPLOSION_COLORS[letter] || DEFAULT_EXPLOSION_COLORS;
+  const count = opts.count || 12;
+
+  for (let i = 0; i < count; i++) {
+    const piece = document.createElement('div');
+    piece.className = 'confetti-piece letter-explosion';
+    piece.style.left = originX + 'px';
+    piece.style.top  = originY + 'px';
+    piece.style.background = colors[i % colors.length];
+    // Mix shapes for variety: half stars, half circles
+    if (i % 2 === 0) {
+      piece.classList.add('confetti-star');
+      piece.style.width = '10px';
+      piece.style.height = '10px';
+    } else {
+      piece.style.width = (5 + Math.random() * 5) + 'px';
+      piece.style.height = piece.style.width;
+      piece.style.borderRadius = '50%';
+    }
+    // Starburst pattern — 6 directions × slight randomness
+    const angle = (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.4;
+    const dist = 60 + Math.random() * 80;  // tighter than confetti burst
+    const dx = Math.cos(angle) * dist;
+    const dy = Math.sin(angle) * dist - 20;  // slight upward bias
+    const rot = (Math.random() - 0.5) * 540;
+    piece.style.setProperty('--dx', dx + 'px');
+    piece.style.setProperty('--dy', dy + 'px');
+    piece.style.setProperty('--rot', rot + 'deg');
+    piece.style.animationDuration = (0.55 + Math.random() * 0.25) + 's';
+    container.appendChild(piece);
+    piece.addEventListener('animationend', () => piece.remove(), { once: true });
+  }
+
+  // Brief radial flash at impact point
+  const flash = document.createElement('div');
+  flash.className = 'explosion-flash';
+  flash.style.left = originX + 'px';
+  flash.style.top  = originY + 'px';
+  flash.style.background = `radial-gradient(circle, ${colors[0]} 0%, transparent 70%)`;
+  container.appendChild(flash);
+  setTimeout(() => flash.remove(), 350);
+}
+
+// Phase 10d: per-letter symbol particles — count varies by intensity
   if (letter && LETTER_SYMBOLS[letter] && intensityCfg.emojiCount > 0) {
     for (let i = 0; i < intensityCfg.emojiCount; i++) {
       const sym = document.createElement('div');

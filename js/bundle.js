@@ -301,8 +301,8 @@
         lang: "zh",
         // UI language: 'zh' | 'en'
         currentUnit: "U1",
-        level: "L0",
-        // 'L0' | 'L1'
+        level: "L1",
+        // 'L0' | 'L1' — Phase 19.9 changed default to falling letters (was "L0")
         kbMode: "full",
         // 'full' | 'compact' — full shows 26 QWERTY, compact shows only target letter
         robotColor: 0,
@@ -1443,6 +1443,25 @@
       el.classList.add("pop");
     } else {
       el.classList.remove("pop");
+    }
+    // Phase 19.9 — Big top-center combo badge (shows at streak ≥ 2)
+    const combo = document.getElementById("js-combo-counter");
+    if (combo) {
+      const mult = document.getElementById("js-combo-mult");
+      if (n >= 2) {
+        combo.hidden = false;
+        void combo.offsetWidth;
+        combo.classList.add("visible");
+        combo.classList.toggle("tier-3", n >= 3 && n < 5);
+        combo.classList.toggle("tier-5", n >= 5 && n < 10);
+        combo.classList.toggle("tier-10", n >= 10);
+        if (mult) mult.textContent = "\xD7" + n;
+      } else {
+        combo.classList.remove("visible");
+        setTimeout(() => {
+          if (streak < 2) combo.hidden = true;
+        }, 250);
+      }
     }
   }
   function updateStars(total) {
@@ -2839,6 +2858,8 @@
         // Phase 19.6 (C1) — Export/Import data I/O
         exportProgress: () => downloadExport(),
         importProgressFromString: (json) => importFromString(json),
+        // Phase 19.9 — Start picker exposes saveSettings for unit/difficulty persistence
+        saveSettings,
         // Phase 16.5 patch — expose for smoke testing of unit letter pools
         activeLetters
       };

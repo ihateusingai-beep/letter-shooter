@@ -514,6 +514,57 @@
   }
   .streak-num.zero { opacity: 0.35; }
 
+  /* Phase 19.9 — Big combo counter (top-center floating badge) */
+  #js-combo-counter {
+    position: fixed;
+    top: 90px; left: 50%;
+    transform: translateX(-50%) scale(0.5);
+    opacity: 0;
+    background: linear-gradient(135deg, rgba(255,107,157,0.95), rgba(255,213,79,0.95));
+    color: #0a0a2a;
+    padding: 14px 28px;
+    border-radius: 20px;
+    box-shadow: 0 8px 32px rgba(255,107,157,0.5), 0 0 60px rgba(255,213,79,0.4);
+    z-index: 100;
+    display: flex; flex-direction: column;
+    align-items: center; gap: 2px;
+    transition: opacity 0.2s, transform 0.2s, top 0.2s;
+    pointer-events: none;
+  }
+  #js-combo-counter.visible {
+    opacity: 1;
+    transform: translateX(-50%) scale(1);
+  }
+  #js-combo-counter.tier-3 {
+    background: linear-gradient(135deg, rgba(79,195,247,0.95), rgba(105,240,174,0.95));
+    box-shadow: 0 8px 32px rgba(79,195,247,0.5), 0 0 60px rgba(105,240,174,0.4);
+  }
+  #js-combo-counter.tier-5 {
+    background: linear-gradient(135deg, rgba(255,107,157,0.95), rgba(156,39,176,0.95));
+    box-shadow: 0 8px 32px rgba(255,107,157,0.6), 0 0 80px rgba(156,39,176,0.5);
+  }
+  #js-combo-counter.tier-10 {
+    background: linear-gradient(135deg, rgba(255,213,79,0.95), rgba(255,107,157,0.95), rgba(156,39,176,0.95));
+    box-shadow: 0 8px 32px rgba(255,213,79,0.7), 0 0 100px rgba(255,107,157,0.6);
+    animation: comboGlow 0.8s ease-in-out infinite alternate;
+  }
+  @keyframes comboGlow {
+    from { transform: translateX(-50%) scale(1); }
+    to { transform: translateX(-50%) scale(1.08); }
+  }
+  #js-combo-mult {
+    font-size: 36px; font-weight: 900;
+    line-height: 1;
+    font-family: 'Fredoka', sans-serif;
+    text-shadow: 0 2px 0 rgba(255,255,255,0.3);
+  }
+  #js-combo-label {
+    font-size: 11px; font-weight: 700;
+    letter-spacing: 1.5px;
+    opacity: 0.85;
+  }
+  .no-motion #js-combo-counter.tier-10 { animation: none; }
+
   .unit-badge {
     background: linear-gradient(135deg, var(--primary), var(--primary2));
     color: #0a0a2a;
@@ -897,6 +948,27 @@
     background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.6) 0%, transparent 60%);
   }
   .no-motion .confetti-piece { animation-duration: 0.001ms !important; }
+
+  /* Phase 19.9 — Letter hit explosion (impact + radial flash) */
+  .letter-explosion {
+    z-index: 50;
+    box-shadow: 0 0 8px currentColor;
+  }
+  .explosion-flash {
+    position: absolute;
+    width: 80px; height: 80px;
+    margin-left: -40px; margin-top: -40px;
+    border-radius: 50%;
+    pointer-events: none;
+    animation: flashBurst 0.35s ease-out forwards;
+    z-index: 49;
+  }
+  @keyframes flashBurst {
+    0% { transform: scale(0.3); opacity: 1; }
+    100% { transform: scale(2.2); opacity: 0; }
+  }
+  .no-motion .explosion-flash { animation: none; opacity: 0; }
+  .no-motion .letter-explosion { animation-duration: 0.001ms !important; }
 
   /* ── Bullet trail + impact rings (Phase 15) ────────────────────────── */
   .bullet-trail {
@@ -2078,6 +2150,12 @@
 <!-- ── Game area ──────────────────────────────────────────────────────────── -->
 <div class="game-area" id="js-game-area">
   <div id="js-letter" aria-live="polite" role="status" aria-label="Current letter"></div>
+</div>
+
+<!-- ── Phase 19.9: Big combo counter (top-center during streak) ───────── -->
+<div id="js-combo-counter" aria-live="polite" aria-atomic="true" hidden>
+  <span id="js-combo-mult">×0</span>
+  <span id="js-combo-label">連對 COMBO</span>
 </div>
 
 <!-- ── Bullet ────────────────────────────────────────────────────────────── -->

@@ -4,7 +4,7 @@ import { loadProgress, recordAttempt, masteredCount, reevaluateAllStatuses } fro
 import { activeLetters, currentRobotIndex, isUnitComplete, parseCustomLevels, getCustomUnitKeys } from './curriculum.js';
 import { t, pickT, setLang, i18n } from './i18n.js';
 import { playCorrect, playWrong, playStreak, playUnlock, unlockAudio, haptic } from './sfx.js';
-import { confettiBurst, streakFlash, megaFireworks, startLetterTrail, stopLetterTrail, letterSparkle, floatCombo, LETTER_SYMBOLS } from './fx.js';
+import { confettiBurst, streakFlash, megaFireworks, startLetterTrail, stopLetterTrail, letterSparkle, floatCombo, letterExplosion, LETTER_SYMBOLS } from './fx.js';
 import { recordStar, getDailyProgress, dailyGoal, getWeeklyProgress, weeklyGoal } from './challenge.js';
 import { getLeaderboard, submitEntry, sanitizeName, clearLeaderboard, MAX_NAME } from './leaderboard.js';
 import { startBgm, stopBgm, pauseBgm, resumeBgm, unlockBgm } from './bgm.js';
@@ -19,6 +19,7 @@ window.LetterShooter = {
   openProgressPanel, closeProgressPanel,
   openLeaderboardPanel, closeLeaderboardPanel, renderLeaderboard,
   openNameModal, closeNameModal, submitName,
+  saveSettings, // Phase 19.9 — exposed for new start picker
   highlightKey, clearHighlight,
   // Phase 19.6 (C1) — Export/Import data I/O
   exportProgress: () => downloadExport(),
@@ -136,6 +137,27 @@ function updateStreak(n) {
     el.classList.add('pop');
   } else {
     el.classList.remove('pop');
+  }
+  // Big top-center combo badge (Phase 19.9) — shows at streak ≥ 2
+  const combo = document.getElementById('js-combo-counter');
+  if (combo) {
+    const mult = document.getElementById('js-combo-mult');
+    if (n >= 2) {
+      combo.hidden = false;
+      // Force reflow so transition fires
+      void combo.offsetWidth;
+      combo.classList.add('visible');
+      combo.classList.toggle('tier-3', n >= 3 && n < 5);
+      combo.classList.toggle('tier-5', n >= 5 && n < 10);
+      combo.classList.toggle('tier-10', n >= 10);
+      if (mult) mult.textContent = '×' + n;
+    } else {
+      combo.classList.remove('visible');
+      // hide after transition (200ms)
+      setTimeout(() => {
+        if (streak < 2) combo.hidden = true;
+      }, 250);
+    }
   }
 }
 
@@ -940,9 +962,14 @@ export function handleKey(pressed) {
     // ── Themed confetti burst at letter position (Phase 6a) ─────────────
     const letterBox = document.getElementById('js-letter')?.getBoundingClientRect();
     if (letterBox) {
+      const impactX = letterBox.left + letterBox.width / 2;
+      const impactY = letterBox.top + letterBox.height / 2;
+      // Phase 19.9 — snappy letter explosion at impact point (before the
+      // celebratory confetti, so the hit feels punchy).
+      letterExplosion(impactX, impactY, { letter: currentLetter });
       confettiBurst(
-        letterBox.left + letterBox.width / 2,
-        letterBox.top + letterBox.height / 2,
+        impactX,
+        impactY,
         {
           theme: settings.theme || 'space',
           letter: currentLetter,
