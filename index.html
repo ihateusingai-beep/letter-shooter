@@ -2216,6 +2216,123 @@
   .start-footer {
     position: relative; z-index: 2;
   }
+
+  /* ── Phase 21 — Race 30s HUD (top-right corner) ──────────────────── */
+  #js-race-hud {
+    position: fixed;
+    top: 60px; right: 16px;
+    background: linear-gradient(135deg, rgba(255,107,157,0.95), rgba(255,213,79,0.95));
+    color: #0a0a2a;
+    padding: 10px 16px;
+    border-radius: 12px;
+    box-shadow: 0 4px 18px rgba(255,107,157,0.5);
+    z-index: 100;
+    display: none;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 100px;
+    font-family: 'Fredoka', sans-serif;
+  }
+  #js-race-hud.visible { display: flex; }
+  #js-race-hud .race-hud-label {
+    font-size: 11px; opacity: 0.7; letter-spacing: 1px;
+  }
+  #js-race-hud .race-hud-value {
+    font-size: 22px; font-weight: 900; line-height: 1;
+  }
+  #js-race-hud #js-race-timer {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Race end screen overlay */
+  #js-race-end {
+    position: fixed; inset: 0;
+    background: rgba(10,14,40,0.92);
+    backdrop-filter: blur(8px);
+    z-index: 200;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    color: white;
+    font-family: 'Fredoka', sans-serif;
+  }
+  #js-race-end.visible { display: flex; }
+  #js-race-end h2 {
+    font-size: 36px;
+    margin: 0;
+    text-shadow: 0 0 24px rgba(255,213,79,0.6);
+  }
+  #js-race-end .race-end-stats {
+    display: flex; gap: 32px;
+    margin: 16px 0;
+  }
+  #js-race-end .race-end-stat {
+    text-align: center;
+  }
+  #js-race-end .race-end-stat-label {
+    font-size: 12px; opacity: 0.7; letter-spacing: 1px;
+  }
+  #js-race-end .race-end-stat-value {
+    font-size: 56px; font-weight: 900;
+    color: #FFD54F;
+    line-height: 1;
+    text-shadow: 0 0 18px rgba(255,213,79,0.5);
+  }
+  #js-race-end .race-end-msg {
+    font-size: 18px;
+    color: #69F0AE;
+    margin: 8px 0 24px;
+  }
+  #js-race-end button {
+    background: linear-gradient(135deg, #FF6B9D, #FFD54F);
+    color: #0a0a2a;
+    border: none;
+    padding: 14px 32px;
+    border-radius: 999px;
+    font-size: 18px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 4px 16px rgba(255,107,157,0.5);
+  }
+  #js-race-end button:hover { transform: scale(1.05); }
+
+  /* ── Phase 21 — Pattern Missing layout ─────────────────────────── */
+  .pattern-missing {
+    display: flex; gap: 8px;
+    align-items: center; justify-content: center;
+  }
+  .pattern-slot {
+    display: inline-block;
+    padding: 12px 18px;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.08);
+    border: 2px solid rgba(255,255,255,0.3);
+    font-size: 56px;
+    font-weight: 900;
+    min-width: 60px;
+    text-align: center;
+  }
+  .pattern-slot.pattern-known {
+    background: rgba(79,195,247,0.18);
+    border-color: rgba(79,195,247,0.5);
+    color: #4FC3F7;
+  }
+  .pattern-slot.pattern-missing {
+    background: rgba(255,213,79,0.15);
+    border-color: rgba(255,213,79,0.7);
+    color: #FFD54F;
+    animation: patternMissingPulse 1.2s ease-in-out infinite;
+  }
+  @keyframes patternMissingPulse {
+    0%, 100% { box-shadow: 0 0 12px rgba(255,213,79,0.4); }
+    50%      { box-shadow: 0 0 28px rgba(255,213,79,0.9); }
+  }
+  .pattern-arrow {
+    color: rgba(255,255,255,0.4);
+    font-size: 28px;
+  }
 </style>
 </head>
 <body>
@@ -2279,6 +2396,30 @@
 <div id="js-combo-counter" aria-live="polite" aria-atomic="true" hidden>
   <span id="js-combo-mult">×0</span>
   <span id="js-combo-label">連對 COMBO</span>
+</div>
+
+<!-- ── Phase 21: Race 30s HUD + end screen ───────────────────────────── -->
+<div id="js-race-hud" aria-live="polite" aria-atomic="true">
+  <div class="race-hud-label">⏱ TIME</div>
+  <div class="race-hud-value" id="js-race-timer">30.0s</div>
+  <div class="race-hud-label" style="margin-top:6px;">⭐ HITS</div>
+  <div class="race-hud-value" id="js-race-score">0</div>
+</div>
+
+<div id="js-race-end" role="dialog" aria-modal="true" aria-label="Race complete">
+  <h2 id="js-race-end-title">⏱ TIME UP!</h2>
+  <div class="race-end-stats">
+    <div class="race-end-stat">
+      <div class="race-end-stat-label">THIS RUN</div>
+      <div class="race-end-stat-value" id="js-race-end-score">0</div>
+    </div>
+    <div class="race-end-stat">
+      <div class="race-end-stat-label">BEST</div>
+      <div class="race-end-stat-value" id="js-race-end-best">0</div>
+    </div>
+  </div>
+  <div class="race-end-msg" id="js-race-end-msg">💪 Try again!</div>
+  <button id="js-race-restart">🔄 再嚟一次 / Play again</button>
 </div>
 
 <!-- ── Bullet ────────────────────────────────────────────────────────────── -->
@@ -2547,13 +2688,15 @@
         <div class="setting-row">
           <label>
             遊戲模式 Game Mode
-            <span class="sublabel">經典 / 聽音 / 連擊 / 拼字</span>
+            <span class="sublabel">經典 / 聽音 / 連擊 / 拼字 / 限時 / 找空</span>
           </label>
           <select id="js-game-mode-select">
             <option value="classic">🔤 經典 Classic</option>
             <option value="sound">👂 聽音 Sound</option>
             <option value="sequence">🔗 連擊 Sequence</option>
             <option value="word">🧩 拼字 Word</option>
+            <option value="race30">⏱ 限時 Race</option>
+            <option value="patternMissing">🔍 找空 Pattern</option>
           </select>
         </div>
 
@@ -3199,6 +3342,16 @@ document.getElementById('js-name-input')?.addEventListener('keydown', (e) => {
     if (LS.unlockBgm) LS.unlockBgm();
     LS.startGame(selectedUnit, level);
   });
+
+  // Phase 21 — Race restart button (re-launches game with same settings)
+  const raceRestart = document.getElementById('js-race-restart');
+  if (raceRestart) {
+    raceRestart.addEventListener('click', () => {
+      const end = document.getElementById('js-race-end');
+      if (end) end.classList.remove('visible');
+      LS.startGame(savedSettings.currentUnit || 'U1', savedSettings.level || 'L1');
+    });
+  }
 })();
 
 // ── Ocean bubbles: populate the bubble layer on boot (Phase 5) ─────────────

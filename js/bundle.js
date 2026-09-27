@@ -62,9 +62,17 @@
           gameModeSound: "Sound-only (listen & press)",
           gameModeSequence: "Sequence (3 in a row)",
           gameModeWord: "Word Mode (spell emoji)",
+          gameModeRace30: "Race 30s (rapid-fire)",
+          gameModePatternMissing: "Pattern (find missing)",
           soundModeHint: "\u{1F442} Listen & press the letter",
           sequenceModeHint: "Press letters in order",
           wordModeHint: "Spell the word",
+          raceModeHint: "\u23F1 Type as many as you can in 30s!",
+          patternModeHint: "\u{1F50D} Find the missing letter",
+          raceEndTitle: "\u23F1 TIME UP!",
+          raceEndBest: "Best",
+          raceEndThis: "This run",
+          patternMissingLabel: "? =",
           // Phase 17 W4 — case correspondence mode
           caseMode: "Letter Case",
           caseModeUpper: "Uppercase (A)",
@@ -205,9 +213,17 @@
           gameModeSound: "\u807D\u97F3 (\u807D\u5230\u6309)",
           gameModeSequence: "\u9023\u64CA (\u9806\u5E8F 3 \u500B)",
           gameModeWord: "\u62FC\u5B57 (emoji \u8B8A\u5B57)",
+          gameModeRace30: "\u9650\u6642 30 \u79D2 (\u5FEB\u6253)",
+          gameModePatternMissing: "\u627E\u5B57\u6BCD (\u88DC\u7A7A)",
           soundModeHint: "\u{1F442} \u807D\u5230\u500B\u97F3,\u6309\u5C0D\u61C9\u5B57\u6BCD",
           sequenceModeHint: "\u6309\u9806\u5E8F\u6253\u4E2D 3 \u500B\u5B57\u6BCD",
           wordModeHint: "\u62FC\u51FA\u5462\u500B\u5B57",
+          raceModeHint: "\u23F1 30 \u79D2\u5167\u6253\u4E2D\u6108\u591A\u6108\u597D!",
+          patternModeHint: "\u{1F50D} \u6435\u51FA\u908A\u500B\u5B57\u6BCD missing",
+          raceEndTitle: "\u23F1 \u6642\u9593\u5230!",
+          raceEndBest: "\u6700\u4F73",
+          raceEndThis: "\u4ECA\u6B21",
+          patternMissingLabel: "? =",
           // Phase 17 W4 — case correspondence mode
           caseMode: "\u5B57\u6BCD\u5927\u7D30\u968E",
           caseModeUpper: "\u5927\u968E (A)",
@@ -310,7 +326,7 @@
         mascotTheme: "auto",
         // 'auto' | 'space' | 'candy' | 'ocean' | 'forest' (Phase 16f)
         gameMode: "classic",
-        // 'classic' | 'sound' | 'sequence' | 'word' (Phase 17 — secondary SEN variants)
+        // 'classic' | 'sound' | 'sequence' | 'word' | 'race30' | 'patternMissing'
         caseMode: "upper",
         // 'upper' | 'lower' — display letter case (Phase 17 W4)
         customLevels: "",
@@ -1411,6 +1427,16 @@
     }
     sequenceLetters = [];
     sequenceIndex = 0;
+    if (raceTimer) {
+      clearInterval(raceTimer);
+      raceTimer = null;
+    }
+    raceActive = false;
+    raceScore = 0;
+    racePattern = [];
+    dismissRaceEnd();
+    patternMissingTarget = "";
+    patternMissingSlots = [];
     const banner = document.getElementById("js-speed-banner");
     if (banner) banner.classList.remove("visible");
     const star = document.getElementById("js-bonus-star");
@@ -1866,6 +1892,135 @@
       return `<span class="${cls}" data-pos="${i}">${mark}${display}</span>`;
     }).join('<span class="seq-arrow">\u2192</span>');
   }
+  function startRace() {
+    if (raceActive) return;
+    raceActive = true;
+    raceScore = 0;
+    raceEnd = Date.now() + RACE_DURATION_MS;
+    try {
+      raceBest = parseInt(localStorage.getItem("ls-race-best") || "0", 10) || 0;
+    } catch {
+      raceBest = 0;
+    }
+    showRaceHUD(true);
+    updateRaceHUD();
+    if (raceTimer) clearInterval(raceTimer);
+    raceTimer = setInterval(() => {
+      const remaining = Math.max(0, raceEnd - Date.now());
+      updateRaceHUD(remaining);
+      if (Date.now() >= raceEnd) {
+        endRace();
+      }
+    }, 250);
+  }
+  function endRace() {
+    if (raceTimer) {
+      clearInterval(raceTimer);
+      raceTimer = null;
+    }
+    raceActive = false;
+    let best = raceBest;
+    if (raceScore > best) {
+      best = raceScore;
+      try {
+        localStorage.setItem("ls-race-best", String(best));
+      } catch {
+      }
+    }
+    showRaceEndScreen(raceScore, best);
+    showRaceHUD(false);
+    try {
+      const stats = JSON.parse(localStorage.getItem("ls-stats") || "{}");
+      stats.bestRace = best;
+      stats.lastRace = raceScore;
+      localStorage.setItem("ls-stats", JSON.stringify(stats));
+    } catch {
+    }
+  }
+  function updateRaceHUD(remainingMs) {
+    const hud = document.getElementById("js-race-hud");
+    if (!hud) return;
+    if (typeof remainingMs === "number") {
+      const sec = remainingMs / 1e3;
+      const tEl = document.getElementById("js-race-timer");
+      if (tEl) tEl.textContent = sec.toFixed(1) + "s";
+    }
+    const sEl = document.getElementById("js-race-score");
+    if (sEl) sEl.textContent = String(raceScore);
+  }
+  function showRaceHUD(show) {
+    const hud = document.getElementById("js-race-hud");
+    if (!hud) return;
+    if (show) hud.classList.add("visible");
+    else hud.classList.remove("visible");
+  }
+  function showRaceEndScreen(score2, best) {
+    const end = document.getElementById("js-race-end");
+    if (!end) return;
+    end.classList.add("visible");
+    const sEl = document.getElementById("js-race-end-score");
+    const bEl = document.getElementById("js-race-end-best");
+    const msg = document.getElementById("js-race-end-msg");
+    if (sEl) sEl.textContent = String(score2);
+    if (bEl) bEl.textContent = String(best);
+    if (msg) {
+      const lang = loadSettings().lang || "zh";
+      if (score2 > best - 1 && best > 0 && score2 === best) {
+        msg.textContent = lang === "zh" ? "\u{1F389} \u65B0\u7D00\u9304!" : "\u{1F389} New record!";
+      } else {
+        msg.textContent = lang === "zh" ? "\u{1F4AA} \u518D\u569F\u4E00\u6B21!" : "\u{1F4AA} Try again!";
+      }
+    }
+  }
+  function dismissRaceEnd() {
+    const end = document.getElementById("js-race-end");
+    if (end) end.classList.remove("visible");
+  }
+  function buildPatternMissing() {
+    const missingIdx = Math.floor(Math.random() * 4);
+    const pool = typeof touchKeys !== "undefined" && touchKeys.length ? touchKeys : "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+    const seen = /* @__PURE__ */ new Set();
+    const filled = [];
+    while (filled.length < 3) {
+      const cand = pool[Math.floor(Math.random() * pool.length)];
+      if (!seen.has(cand)) {
+        seen.add(cand);
+        filled.push(cand);
+      }
+    }
+    let target;
+    do {
+      target = pool[Math.floor(Math.random() * pool.length)];
+    } while (seen.has(target));
+    const slots = [];
+    let filledIdx = 0;
+    for (let i = 0; i < 4; i++) {
+      if (i === missingIdx) {
+        slots.push("?");
+      } else {
+        slots.push(filled[filledIdx++]);
+      }
+    }
+    patternMissingSlots = slots;
+    patternMissingTarget = target;
+  }
+  function showPatternMissing() {
+    const el = document.getElementById("js-letter");
+    if (!el) return;
+    const display = (slots) => getCaseMode() === "lower" ? slots.map((s) => s === "?" ? s : s.toLowerCase()).join(" ") : slots.join(" ");
+    const html = `<div class="pattern-missing">` + patternMissingSlots.map(
+      (s, i) => `<span class="pattern-slot ${s === "?" ? "pattern-missing" : "pattern-known"}">${display([s])}</span>`
+    ).join('<span class="pattern-arrow">\xB7</span>') + `</div>`;
+    el.innerHTML = html;
+    el.style.opacity = "0";
+    el.style.transform = "scale(0.85)";
+    requestAnimationFrame(() => {
+      el.style.transition = "opacity 0.25s, transform 0.25s";
+      el.style.opacity = "1";
+      el.style.transform = "scale(1)";
+    });
+    currentLetter = patternMissingTarget;
+  }
   function highlightSequenceProgress() {
     const el = document.getElementById("js-letter");
     if (!el) return;
@@ -1951,7 +2106,19 @@
     drawMascot();
     populateFloor(loadSettings().theme || "space");
     renderTouchKeys();
-    nextTurn(level, touchKeys);
+    const mode = getGameMode();
+    if (mode === "race30") {
+      dismissRaceEnd();
+      startRace();
+      const first = pickLetter(touchKeys);
+      showLetter(first);
+      speakLetter(first);
+    } else if (mode === "patternMissing") {
+      buildPatternMissing();
+      showPatternMissing();
+    } else {
+      nextTurn(level, touchKeys);
+    }
     const settings = loadSettings();
     if (settings.bgm) startBgm(settings.bgmTrack || "space");
   }
@@ -1973,6 +2140,53 @@
     if (bonusCatchActive) return;
     const settings = loadSettings();
     const mode = getGameMode();
+    if (mode === "race30") {
+      if (!raceActive) return;
+      const expected2 = currentLetter.toUpperCase();
+      if (pressed.toUpperCase() === expected2) {
+        raceScore++;
+        updateRaceHUD();
+        shoot();
+        flashSuccess();
+        haptic("light");
+        if (settings.soundFx) playCorrect();
+        const next = pickLetter(touchKeys);
+        showLetter(next);
+        speakLetter(next);
+        if (settings.level === "L1") {
+          startFall(() => robotReach());
+        }
+      } else {
+        shakeLetter();
+        if (settings.soundFx) playWrong();
+      }
+      return;
+    }
+    if (mode === "patternMissing") {
+      if (pressed.toUpperCase() === patternMissingTarget) {
+        haptic("light");
+        if (settings.soundFx) playCorrect();
+        if (settings.voice) speakLetter(patternMissingTarget);
+        const prev = currentLetter;
+        sequenceLetters = [];
+        currentLetter = patternMissingTarget;
+        flashSuccess();
+        shoot();
+        score++;
+        stars++;
+        updateScore();
+        updateStars(stars);
+        setTimeout(() => {
+          if (!gameRunning) return;
+          buildPatternMissing();
+          showPatternMissing();
+        }, 400);
+      } else {
+        shakeLetter();
+        if (settings.soundFx) playWrong();
+      }
+      return;
+    }
     if (mode === "sequence" || mode === "word") {
       const expected2 = sequenceLetters[sequenceIndex];
       if (!expected2) return;
@@ -2827,7 +3041,7 @@
       grid.appendChild(cell);
     });
   }
-  var score, streak, stars, currentLetter, touchKeys, gameRunning, animFrame, currentUnit, correctSinceSpeed, speedRoundActive, speedRoundTimer, speedRoundEnd, speedRoundHits, bonusCatchActive, bonusCatchTimer, toastTimerId, SEQUENCE_LENGTH, sequenceLetters, sequenceIndex, currentGroup, committedGroups, toastTimer, toastQueue, ROBOT_PALETTES, FLOOR_EMOJIS, BULLET_SHAPES, BULLET_PALETTES, lastLetterPos, fallPaused, letterArrived, LETTER_SAY, SPEED_ROUND_DURATION_MS, SPEED_ROUND_TRIGGER, bonusCatchKeyListener, BONUS_CATCH_DURATION_MS, BONUS_CATCH_STARS, QWERTY_ROWS, currentKbMode, compactKeys, MAX_GHOSTS, ACHIEVEMENT_MILESTONES, pendingCompletion;
+  var score, streak, stars, currentLetter, touchKeys, gameRunning, animFrame, currentUnit, correctSinceSpeed, speedRoundActive, speedRoundTimer, speedRoundEnd, speedRoundHits, bonusCatchActive, bonusCatchTimer, raceActive, raceTimer, raceEnd, raceScore, raceBest, racePattern, patternMissingTarget, patternMissingSlots, toastTimerId, SEQUENCE_LENGTH, sequenceLetters, sequenceIndex, currentGroup, committedGroups, toastTimer, toastQueue, ROBOT_PALETTES, FLOOR_EMOJIS, BULLET_SHAPES, BULLET_PALETTES, lastLetterPos, RACE_DURATION_MS, fallPaused, letterArrived, LETTER_SAY, SPEED_ROUND_DURATION_MS, SPEED_ROUND_TRIGGER, bonusCatchKeyListener, BONUS_CATCH_DURATION_MS, BONUS_CATCH_STARS, QWERTY_ROWS, currentKbMode, compactKeys, MAX_GHOSTS, ACHIEVEMENT_MILESTONES, pendingCompletion;
   var init_game = __esm({
     "js/game.js"() {
       init_settings();
@@ -2875,7 +3089,9 @@
         exportProgress: () => downloadExport(),
         importProgressFromString: (json) => importFromString(json),
         // Phase 16.5 patch — expose for smoke testing of unit letter pools
-        activeLetters
+        activeLetters,
+        // Phase 21 — expose pattern missing target for smoke testing
+        getPatternMissingTarget: () => patternMissingTarget
       };
       score = 0;
       streak = 0;
@@ -2892,6 +3108,14 @@
       speedRoundHits = 0;
       bonusCatchActive = false;
       bonusCatchTimer = null;
+      raceActive = false;
+      raceTimer = null;
+      raceEnd = 0;
+      raceScore = 0;
+      raceBest = 0;
+      racePattern = [];
+      patternMissingTarget = "";
+      patternMissingSlots = [];
       toastTimerId = null;
       SEQUENCE_LENGTH = 3;
       sequenceLetters = [];
@@ -2936,6 +3160,7 @@
         forest: ["#43A047", "#66BB6A", "#FFCA28", "#AB47BC", "#A5D6A7", "#FFB74D"]
       };
       lastLetterPos = null;
+      RACE_DURATION_MS = 3e4;
       fallPaused = false;
       letterArrived = false;
       LETTER_SAY = {

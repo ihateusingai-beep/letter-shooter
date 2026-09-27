@@ -26,6 +26,8 @@ window.LetterShooter = {
   importProgressFromString: (json) => importFromString(json),
   // Phase 16.5 patch — expose for smoke testing of unit letter pools
   activeLetters,
+  // Phase 21 — expose pattern missing target for smoke testing
+  getPatternMissingTarget: () => patternMissingTarget,
 };
 
 // ── State ──────────────────────────────────────────────────────────────────
@@ -44,6 +46,18 @@ let speedRoundEnd = 0;     // timestamp
 let speedRoundHits = 0;
 let bonusCatchActive = false; // bonus catch mode (Phase 16e)
 let bonusCatchTimer = null;
+
+// Phase 21 — Race 30s mode (rapid-fire single-letter hits)
+let raceActive = false;
+let raceTimer = null;
+let raceEnd = 0;            // timestamp
+let raceScore = 0;          // correct hits this run
+let raceBest = 0;           // personal best (localStorage)
+let racePattern = [];       // upcoming letter queue
+
+// Phase 21 — Pattern Missing mode (find missing letter in 4-slot pattern)
+let patternMissingTarget = '';
+let patternMissingSlots = []; // 4 letters, 1 replaced with '?'
 let toastTimerId = null;   // shared toast hide-timer (Phase 16 patch — prevents collision)
 
 // Phase 17 W3 — Sequence mode state machine
@@ -75,6 +89,15 @@ function resetPhase16State() {
   // Phase 17 W3 — sequence state reset
   sequenceLetters = [];
   sequenceIndex = 0;
+
+  // Phase 21 — race + pattern missing state reset
+  if (raceTimer) { clearInterval(raceTimer); raceTimer = null; }
+  raceActive = false;
+  raceScore = 0;
+  racePattern = [];
+  dismissRaceEnd();
+  patternMissingTarget = '';
+  patternMissingSlots = [];
 
   const banner = document.getElementById('js-speed-banner');
   if (banner) banner.classList.remove('visible');
@@ -680,6 +703,151 @@ function renderSequenceHTML() {
   }).join('<span class="seq-arrow">→</span>');
 }
 
+// ── Phase 21 — Race 30s mode ──────────────────────────────────────────────
+const RACE_DURATION_MS = 30000;
+
+function startRace() {
+  if (raceActive) return;
+  raceActive = true;
+  raceScore = 0;
+  raceEnd = Date.now() + RACE_DURATION_MS;
+  // Load best score from storage
+  try {
+    raceBest = parseInt(localStorage.getItem('ls-race-best') || '0', 10) || 0;
+  } catch { raceBest = 0; }
+  // Show HUD
+  showRaceHUD(true);
+  updateRaceHUD();
+  // Start countdown
+  if (raceTimer) clearInterval(raceTimer);
+  raceTimer = setInterval(() => {
+    const remaining = Math.max(0, raceEnd - Date.now());
+    updateRaceHUD(remaining);
+    if (Date.now() >= raceEnd) {
+      endRace();
+    }
+  }, 250);
+}
+
+function endRace() {
+  if (raceTimer) { clearInterval(raceTimer); raceTimer = null; }
+  raceActive = false;
+  // Persist best
+  let best = raceBest;
+  if (raceScore > best) {
+    best = raceScore;
+    try { localStorage.setItem('ls-race-best', String(best)); } catch {}
+  }
+  showRaceEndScreen(raceScore, best);
+  showRaceHUD(false);
+  // Update stats for last-session display
+  try {
+    const stats = JSON.parse(localStorage.getItem('ls-stats') || '{}');
+    stats.bestRace = best;
+    stats.lastRace = raceScore;
+    localStorage.setItem('ls-stats', JSON.stringify(stats));
+  } catch {}
+}
+
+function updateRaceHUD(remainingMs) {
+  const hud = document.getElementById('js-race-hud');
+  if (!hud) return;
+  if (typeof remainingMs === 'number') {
+    const sec = remainingMs / 1000;
+    const tEl = document.getElementById('js-race-timer');
+    if (tEl) tEl.textContent = sec.toFixed(1) + 's';
+  }
+  const sEl = document.getElementById('js-race-score');
+  if (sEl) sEl.textContent = String(raceScore);
+}
+
+function showRaceHUD(show) {
+  const hud = document.getElementById('js-race-hud');
+  if (!hud) return;
+  if (show) hud.classList.add('visible');
+  else hud.classList.remove('visible');
+}
+
+function showRaceEndScreen(score, best) {
+  const end = document.getElementById('js-race-end');
+  if (!end) return;
+  end.classList.add('visible');
+  const sEl = document.getElementById('js-race-end-score');
+  const bEl = document.getElementById('js-race-end-best');
+  const msg = document.getElementById('js-race-end-msg');
+  if (sEl) sEl.textContent = String(score);
+  if (bEl) bEl.textContent = String(best);
+  if (msg) {
+    const lang = loadSettings().lang || 'zh';
+    if (score > best - 1 && best > 0 && score === best) {
+      msg.textContent = lang === 'zh' ? '🎉 新紀錄!' : '🎉 New record!';
+    } else {
+      msg.textContent = lang === 'zh' ? '💪 再嚟一次!' : '💪 Try again!';
+    }
+  }
+}
+
+function dismissRaceEnd() {
+  const end = document.getElementById('js-race-end');
+  if (end) end.classList.remove('visible');
+}
+
+// ── Phase 21 — Pattern Missing mode ────────────────────────────────────────
+function buildPatternMissing() {
+  // 4 slots, 1 missing — pick a random missing position, fill others from pool
+  const missingIdx = Math.floor(Math.random() * 4);
+  const pool = (typeof touchKeys !== 'undefined' && touchKeys.length)
+    ? touchKeys
+    : 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+  // Pick 3 distinct letters from pool for non-missing slots
+  const seen = new Set();
+  const filled = [];
+  while (filled.length < 3) {
+    const cand = pool[Math.floor(Math.random() * pool.length)];
+    if (!seen.has(cand)) { seen.add(cand); filled.push(cand); }
+  }
+  // The missing letter must be distinct from filled
+  let target;
+  do {
+    target = pool[Math.floor(Math.random() * pool.length)];
+  } while (seen.has(target));
+  // Assemble
+  const slots = [];
+  let filledIdx = 0;
+  for (let i = 0; i < 4; i++) {
+    if (i === missingIdx) {
+      slots.push('?');
+    } else {
+      slots.push(filled[filledIdx++]);
+    }
+  }
+  patternMissingSlots = slots;
+  patternMissingTarget = target;
+}
+
+function showPatternMissing() {
+  const el = document.getElementById('js-letter');
+  if (!el) return;
+  const display = slots => getCaseMode() === 'lower'
+    ? slots.map(s => s === '?' ? s : s.toLowerCase()).join(' ')
+    : slots.join(' ');
+  const html = `<div class="pattern-missing">` +
+    patternMissingSlots.map((s, i) =>
+      `<span class="pattern-slot ${s === '?' ? 'pattern-missing' : 'pattern-known'}">${display([s])}</span>`
+    ).join('<span class="pattern-arrow">·</span>') +
+    `</div>`;
+  el.innerHTML = html;
+  el.style.opacity = '0';
+  el.style.transform = 'scale(0.85)';
+  requestAnimationFrame(() => {
+    el.style.transition = 'opacity 0.25s, transform 0.25s';
+    el.style.opacity = '1';
+    el.style.transform = 'scale(1)';
+  });
+  // Track currentLetter for keyboard hint + handleKey fallback
+  currentLetter = patternMissingTarget;
+}
+
 function highlightSequenceProgress() {
   const el = document.getElementById('js-letter');
   if (!el) return;
@@ -796,7 +964,22 @@ export function startGame(unitKey = 'U1', level = 'L0') {
   drawMascot();
   populateFloor(loadSettings().theme || 'space');
   renderTouchKeys(); // full QWERTY keyboard, no args
-  nextTurn(level, touchKeys);
+
+  // Phase 21 — Race 30s: launch race countdown + show first letter
+  const mode = getGameMode();
+  if (mode === 'race30') {
+    dismissRaceEnd();
+    startRace();
+    const first = pickLetter(touchKeys);
+    showLetter(first);
+    speakLetter(first);
+  } else if (mode === 'patternMissing') {
+    // Phase 21 — Pattern Missing: build + show first pattern
+    buildPatternMissing();
+    showPatternMissing();
+  } else {
+    nextTurn(level, touchKeys);
+  }
 
   // Start BGM if enabled
   const settings = loadSettings();
@@ -858,6 +1041,67 @@ export function handleKey(pressed) {
 
   const settings = loadSettings();
   const mode = getGameMode();
+
+  // Phase 21 — Race 30s mode intercept (rapid-fire single letters)
+  // No streak, no streak break on wrong. Score = correct hits in 30s.
+  // Best score persisted to localStorage.
+  if (mode === 'race30') {
+    if (!raceActive) return;
+    const expected = currentLetter.toUpperCase();
+    if (pressed.toUpperCase() === expected) {
+      raceScore++;
+      updateRaceHUD();
+      // Quick shoot + flash, no streak effect
+      shoot();
+      flashSuccess();
+      haptic('light');
+      if (settings.soundFx) playCorrect();
+      // Next letter immediately (no 600ms delay)
+      const next = pickLetter(touchKeys);
+      showLetter(next);
+      speakLetter(next);
+      // Restart trail if L1
+      if (settings.level === 'L1') {
+        startFall(() => robotReach());
+      }
+    } else {
+      // Wrong — gentle nudge, no streak break, no shoot anim
+      shakeLetter();
+      if (settings.soundFx) playWrong();
+    }
+    return; // never fall through to standard path
+  }
+
+  // Phase 21 — Pattern Missing mode intercept (find missing letter in 4-slot pattern)
+  if (mode === 'patternMissing') {
+    if (pressed.toUpperCase() === patternMissingTarget) {
+      // Correct — advance to next pattern
+      haptic('light');
+      if (settings.soundFx) playCorrect();
+      if (settings.voice) speakLetter(patternMissingTarget);
+      // Build next pattern + show via standard success path
+      const prev = currentLetter;
+      sequenceLetters = []; // not used here
+      currentLetter = patternMissingTarget;
+      // Trigger full success (shoot, confetti, stars++ etc.)
+      // but we'll use a simplified version since this isn't classic correct
+      flashSuccess();
+      shoot();
+      score++; stars++;
+      updateScore(); updateStars(stars);
+      // Small delay then next pattern
+      setTimeout(() => {
+        if (!gameRunning) return;
+        buildPatternMissing();
+        showPatternMissing();
+      }, 400);
+    } else {
+      // Wrong — gentle retry, no streak break
+      shakeLetter();
+      if (settings.soundFx) playWrong();
+    }
+    return;
+  }
 
   // Phase 17 W3/W1 — Sequence + Word mode intercept (shared logic).
   // Correct in-order: highlight next slot, shoot anim on completion only.

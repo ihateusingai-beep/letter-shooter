@@ -622,6 +622,70 @@ const path = require('path');
   const newUserCount = await page.locator('#js-start-progress-count').textContent();
   console.log(`[26] new user friendly state: ${newUserCount === '0' && newUserMsg.includes('第一場') ? 'OK' : 'WRONG'}`);
 
+  // ── 27. Phase 21 — Race 30s mode (M1) ───────────────────────────────
+  await page.evaluate(() => {
+    Object.keys(localStorage).forEach(k => { if (k.startsWith('ls-')) localStorage.removeItem(k); });
+    localStorage.setItem('ls-settings', JSON.stringify({
+      voice: true, soundFx: true, bgm: false, bgmTrack: 'space',
+      theme: 'space', speed: 'slow', highContrast: false, reduceMotion: false,
+      lang: 'zh', currentUnit: 'U1', level: 'L0', kbMode: 'full',
+      robotColor: 0, mascotTheme: 'auto', gameMode: 'race30', caseMode: 'upper',
+      customLevels: ''
+    }));
+  });
+  await page.reload();
+  await page.waitForSelector('#js-start-btn');
+  await page.click('#js-start-btn');
+  await page.waitForTimeout(800);
+
+  const raceHudVisible = await page.locator('#js-race-hud.visible').count();
+  console.log(`[27] race HUD shows on game start: ${raceHudVisible === 1 ? 'OK' : 'WRONG'}`);
+
+  // Press 5 correct → score should reach 5
+  for (let i = 0; i < 5; i++) {
+    const t = await page.locator('#js-letter').textContent();
+    if (t && t.length === 1 && /[A-Z]/.test(t)) {
+      await page.keyboard.press(t.toLowerCase());
+      await page.waitForTimeout(100);
+    } else {
+      await page.waitForTimeout(100);
+    }
+  }
+  const raceScore = await page.locator('#js-race-score').textContent();
+  console.log(`[27] race score increments on hits: ${parseInt(raceScore, 10) >= 1 ? 'OK (' + raceScore + ')' : 'WRONG'}`);
+
+  // ── 28. Phase 21 — Pattern Missing mode (M2) ─────────────────────────
+  await page.evaluate(() => {
+    Object.keys(localStorage).forEach(k => { if (k.startsWith('ls-')) localStorage.removeItem(k); });
+    localStorage.setItem('ls-settings', JSON.stringify({
+      voice: true, soundFx: true, bgm: false, bgmTrack: 'space',
+      theme: 'space', speed: 'slow', highContrast: false, reduceMotion: false,
+      lang: 'zh', currentUnit: 'U1', level: 'L0', kbMode: 'full',
+      robotColor: 0, mascotTheme: 'auto', gameMode: 'patternMissing', caseMode: 'upper',
+      customLevels: ''
+    }));
+  });
+  await page.reload();
+  await page.waitForSelector('#js-start-btn');
+  // Click the start button via JS (avoid scroll/timeout issues)
+  await page.evaluate(() => {
+    document.getElementById('js-start-btn').click();
+  });
+  await page.waitForTimeout(800);
+
+  const patternSlots = await page.locator('.pattern-slot').count();
+  const missingSlot = await page.locator('.pattern-slot.pattern-missing').count();
+  console.log(`[28] pattern shows 4 slots with 1 missing: ${patternSlots === 4 && missingSlot === 1 ? 'OK' : 'WRONG'}`);
+
+  // Use exposed getPatternMissingTarget() — direct press, no brute-force loop
+  const target = await page.evaluate(() => window.LetterShooter.getPatternMissingTarget());
+  const beforeSlots = await page.locator('.pattern-slot').allTextContents();
+  await page.keyboard.press(target.toLowerCase());
+  await page.waitForTimeout(200);
+  const afterSlots = await page.locator('.pattern-slot').allTextContents();
+  const foundCorrect = JSON.stringify(afterSlots) !== JSON.stringify(beforeSlots);
+  console.log(`[28] pattern accepts correct letter (${target}) + advances: ${foundCorrect ? 'OK' : 'WRONG'}`);
+
   await browser.close();
   process.exit(errors.length > 0 ? 1 : 0);
 })();

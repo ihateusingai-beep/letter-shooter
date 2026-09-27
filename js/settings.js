@@ -14,7 +14,7 @@ const DEFAULTS = {
   kbMode: 'full',     // 'full' | 'compact' — full shows 26 QWERTY, compact shows only target letter
   robotColor: 0,      // 0/1/2 — robot palette index (Phase 16f)
   mascotTheme: 'auto', // 'auto' | 'space' | 'candy' | 'ocean' | 'forest' (Phase 16f)
-  gameMode: 'classic', // 'classic' | 'sound' | 'sequence' | 'word' (Phase 17 — secondary SEN variants)
+  gameMode: 'classic', // 'classic' | 'sound' | 'sequence' | 'word' | 'race30' | 'patternMissing'
   caseMode: 'upper',  // 'upper' | 'lower' — display letter case (Phase 17 W4)
   customLevels: '',   // teacher-defined letter groups, comma-separated (Phase 18)
                      // e.g. "ABC,DEF,GHI" → C1=ABC, C2=DEF, C3=GHI
