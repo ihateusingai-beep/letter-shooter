@@ -302,7 +302,7 @@
         // UI language: 'zh' | 'en'
         currentUnit: "U1",
         level: "L1",
-        // 'L0' | 'L1' — Phase 19.9 changed default to falling letters (was "L0")
+        // 'L0' | 'L1' — Phase 19.9 changed default to falling letters (was 'L0')
         kbMode: "full",
         // 'full' | 'compact' — full shows 26 QWERTY, compact shows only target letter
         robotColor: 0,
@@ -657,6 +657,47 @@
   });
 
   // js/fx.js
+  function letterExplosion(originX, originY, opts = {}) {
+    const container = document.getElementById("js-confetti-layer");
+    if (!container) return;
+    const letter = opts.letter || "";
+    const colors = LETTER_EXPLOSION_COLORS[letter] || DEFAULT_EXPLOSION_COLORS;
+    const count = opts.count || 12;
+    for (let i = 0; i < count; i++) {
+      const piece = document.createElement("div");
+      piece.className = "confetti-piece letter-explosion";
+      piece.style.left = originX + "px";
+      piece.style.top = originY + "px";
+      piece.style.background = colors[i % colors.length];
+      if (i % 2 === 0) {
+        piece.classList.add("confetti-star");
+        piece.style.width = "10px";
+        piece.style.height = "10px";
+      } else {
+        piece.style.width = 5 + Math.random() * 5 + "px";
+        piece.style.height = piece.style.width;
+        piece.style.borderRadius = "50%";
+      }
+      const angle = Math.PI * 2 * i / count + (Math.random() - 0.5) * 0.4;
+      const dist = 60 + Math.random() * 80;
+      const dx = Math.cos(angle) * dist;
+      const dy = Math.sin(angle) * dist - 20;
+      const rot = (Math.random() - 0.5) * 540;
+      piece.style.setProperty("--dx", dx + "px");
+      piece.style.setProperty("--dy", dy + "px");
+      piece.style.setProperty("--rot", rot + "deg");
+      piece.style.animationDuration = 0.55 + Math.random() * 0.25 + "s";
+      container.appendChild(piece);
+      piece.addEventListener("animationend", () => piece.remove(), { once: true });
+    }
+    const flash = document.createElement("div");
+    flash.className = "explosion-flash";
+    flash.style.left = originX + "px";
+    flash.style.top = originY + "px";
+    flash.style.background = `radial-gradient(circle, ${colors[0]} 0%, transparent 70%)`;
+    container.appendChild(flash);
+    setTimeout(() => flash.remove(), 350);
+  }
   function confettiBurst(originX, originY, opts = {}) {
     const container = document.getElementById("js-confetti-layer");
     if (!container) return;
@@ -758,61 +799,6 @@
         sym.addEventListener("animationend", () => sym.remove(), { once: true });
       }
     }
-  }
-
-  // Phase 19.9 — Letter hit explosion (snappy impact effect)
-  var LETTER_EXPLOSION_COLORS = {
-    A: ["#FF6B9D", "#FFB3C6"], B: ["#FFA726", "#FFD54F"], C: ["#9C27B0", "#CE93D8"],
-    D: ["#00BCD4", "#4DD0E1"], E: ["#FFD54F", "#FFEB3B"], F: ["#26C6DA", "#80DEEA"],
-    G: ["#66BB6A", "#A5D6A7"], H: ["#EF5350", "#FFCDD2"], I: ["#FFCA28", "#FFE082"],
-    J: ["#AB47BC", "#CE93D8"], K: ["#7E57C2", "#B39DDB"], L: ["#EC407A", "#F48FB1"],
-    M: ["#42A5F5", "#90CAF9"], O: ["#FF7043", "#FFAB91"], P: ["#FF7043", "#FFB74D"],
-    Q: ["#AB47BC", "#E1BEE7"], R: ["#26A69A", "#80CBC4"], S: ["#FFA000", "#FFB300"],
-    T: ["#5C6BC0", "#9FA8DA"], U: ["#5C6BC0", "#7986CB"], V: ["#8D6E63", "#BCAAA4"],
-    W: ["#26C6DA", "#4DD0E1"], X: ["#FF5252", "#FF8A80"], Y: ["#FDD835", "#FFF59D"],
-    Z: ["#FFB300", "#FFCA28"], N: ["#7CB342", "#AED581"]
-  };
-  var DEFAULT_EXPLOSION_COLORS = ["#FFD54F", "#FF6B9D", "#4FC3F7", "#69F0AE"];
-  function letterExplosion(originX, originY, opts = {}) {
-    const container = document.getElementById("js-confetti-layer");
-    if (!container) return;
-    const letter = opts.letter || "";
-    const colors = LETTER_EXPLOSION_COLORS[letter] || DEFAULT_EXPLOSION_COLORS;
-    const count = opts.count || 12;
-    for (let i = 0; i < count; i++) {
-      const piece = document.createElement("div");
-      piece.className = "confetti-piece letter-explosion";
-      piece.style.left = originX + "px";
-      piece.style.top = originY + "px";
-      piece.style.background = colors[i % colors.length];
-      if (i % 2 === 0) {
-        piece.classList.add("confetti-star");
-        piece.style.width = "10px";
-        piece.style.height = "10px";
-      } else {
-        piece.style.width = 5 + Math.random() * 5 + "px";
-        piece.style.height = piece.style.width;
-        piece.style.borderRadius = "50%";
-      }
-      const angle = (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.4;
-      const dist = 60 + Math.random() * 80;
-      const dx = Math.cos(angle) * dist;
-      const dy = Math.sin(angle) * dist - 20;
-      const rot = (Math.random() - 0.5) * 540;
-      piece.style.setProperty("--dx", dx + "px");
-      piece.style.setProperty("--dy", dy + "px");
-      piece.style.setProperty("--rot", rot + "deg");
-      piece.style.animationDuration = 0.55 + Math.random() * 0.25 + "s";
-      container.appendChild(piece);
-      piece.addEventListener("animationend", () => piece.remove(), { once: true });
-    }
-    const flash = document.createElement("div");
-    flash.className = "explosion-flash";
-    flash.style.left = originX + "px";
-    flash.style.top = originY + "px";
-    flash.style.background = `radial-gradient(circle, ${colors[0]} 0%, transparent 70%)`;
-    container.appendChild(flash);
-    setTimeout(() => flash.remove(), 350);
   }
   function megaFireworks(opts = {}) {
     const layer = document.getElementById("js-confetti-layer");
@@ -936,9 +922,38 @@
       trailTimer = null;
     }
   }
-  var flashTimer, trailTimer, LETTER_SYMBOLS;
+  var LETTER_EXPLOSION_COLORS, DEFAULT_EXPLOSION_COLORS, flashTimer, trailTimer, LETTER_SYMBOLS;
   var init_fx = __esm({
     "js/fx.js"() {
+      LETTER_EXPLOSION_COLORS = {
+        A: ["#FF6B9D", "#FFB3C6"],
+        B: ["#FFA726", "#FFD54F"],
+        C: ["#9C27B0", "#CE93D8"],
+        D: ["#00BCD4", "#4DD0E1"],
+        E: ["#FFD54F", "#FFEB3B"],
+        F: ["#26C6DA", "#80DEEA"],
+        G: ["#66BB6A", "#A5D6A7"],
+        H: ["#EF5350", "#FFCDD2"],
+        I: ["#FFCA28", "#FFE082"],
+        J: ["#AB47BC", "#CE93D8"],
+        K: ["#7E57C2", "#B39DDB"],
+        L: ["#EC407A", "#F48FB1"],
+        M: ["#42A5F5", "#90CAF9"],
+        O: ["#FF7043", "#FFAB91"],
+        P: ["#FF7043", "#FFB74D"],
+        Q: ["#AB47BC", "#E1BEE7"],
+        R: ["#26A69A", "#80CBC4"],
+        S: ["#FFA000", "#FFB300"],
+        T: ["#5C6BC0", "#9FA8DA"],
+        U: ["#5C6BC0", "#7986CB"],
+        V: ["#8D6E63", "#BCAAA4"],
+        W: ["#26C6DA", "#4DD0E1"],
+        X: ["#FF5252", "#FF8A80"],
+        Y: ["#FDD835", "#FFF59D"],
+        Z: ["#FFB300", "#FFCA28"],
+        N: ["#7CB342", "#AED581"]
+      };
+      DEFAULT_EXPLOSION_COLORS = ["#FFD54F", "#FF6B9D", "#4FC3F7", "#69F0AE"];
       flashTimer = null;
       trailTimer = null;
       LETTER_SYMBOLS = {
@@ -1444,7 +1459,6 @@
     } else {
       el.classList.remove("pop");
     }
-    // Phase 19.9 — Big top-center combo badge (shows at streak ≥ 2)
     const combo = document.getElementById("js-combo-counter");
     if (combo) {
       const mult = document.getElementById("js-combo-mult");
@@ -2853,13 +2867,13 @@
         openNameModal,
         closeNameModal,
         submitName,
+        saveSettings,
+        // Phase 19.9 — exposed for new start picker
         highlightKey,
         clearHighlight,
         // Phase 19.6 (C1) — Export/Import data I/O
         exportProgress: () => downloadExport(),
         importProgressFromString: (json) => importFromString(json),
-        // Phase 19.9 — Start picker exposes saveSettings for unit/difficulty persistence
-        saveSettings,
         // Phase 16.5 patch — expose for smoke testing of unit letter pools
         activeLetters
       };

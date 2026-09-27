@@ -578,6 +578,50 @@ const path = require('path');
   const startBtnDisabled = await page.locator('#js-start-btn').evaluate(el => el.disabled);
   console.log(`[25] click C3 highlights + enables start: ${c3Selected === 1 && !startBtnDisabled ? 'OK' : 'WRONG (selected=' + c3Selected + ' disabled=' + startBtnDisabled + ')'}`);
 
+  // ── 26. Phase 20 — Start overlay 4 attraction points ───────────────────
+  await page.evaluate(() => {
+    Object.keys(localStorage).forEach(k => { if (k.startsWith('ls-')) localStorage.removeItem(k); });
+    localStorage.setItem('ls-progress', JSON.stringify({
+      A: { status: 'mastered' }, B: { status: 'mastered' }, C: { status: 'mastered' },
+      D: { status: 'mastered' }, E: { status: 'mastered' },
+    }));
+    localStorage.setItem('ls-stats', JSON.stringify({
+      totalStars: 23, currentStreak: 3, unitClears: 2,
+    }));
+  });
+  await page.reload();
+  await page.waitForSelector('#js-start-overlay');
+
+  // #5: Floating letters background
+  const floatCount = await page.locator('#js-floating-letters .floating-letter').count();
+  console.log(`[26] #5 floating letters rendered: ${floatCount >= 10 ? 'OK (' + floatCount + ')' : 'WRONG (' + floatCount + ')'}`);
+
+  // #1: Robot + Mascot preview
+  const robotPreviewSvg = await page.locator('#js-start-robot-preview svg').count();
+  const mascotPreviewSvg = await page.locator('#js-start-mascot-preview svg').count();
+  console.log(`[26] #1 robot + mascot preview SVGs: ${robotPreviewSvg === 1 && mascotPreviewSvg === 1 ? 'OK' : 'WRONG'}`);
+
+  // #2: Progress arc shows 5 / 26
+  const progressCount = await page.locator('#js-start-progress-count').textContent();
+  const progressArcOffset = await page.locator('#js-start-progress-arc').evaluate(el => el.style.strokeDashoffset);
+  console.log(`[26] #2 progress arc shows ${progressCount}/26: ${progressCount === '5' ? 'OK' : 'WRONG'}`);
+  // Arc offset should be < 251.2 (some progress filled) since 5/26 ≈ 19%
+  console.log(`[26] #2 arc offset reflects 5/26: ${parseFloat(progressArcOffset) < 251.2 ? 'OK (' + progressArcOffset + ')' : 'WRONG'}`);
+
+  // #3: Last session stats shows 23 stars + 3 streak + 2 units
+  const lastSession = await page.locator('#js-start-last-session').textContent();
+  console.log(`[26] #3 last session stats: ${lastSession.includes('23') && lastSession.includes('3') && lastSession.includes('2') ? 'OK' : 'WRONG (' + lastSession + ')'}`);
+
+  // Bonus: empty progress (new user) → still shows friendly message
+  await page.evaluate(() => {
+    Object.keys(localStorage).forEach(k => { if (k.startsWith('ls-')) localStorage.removeItem(k); });
+  });
+  await page.reload();
+  await page.waitForSelector('#js-start-overlay');
+  const newUserMsg = await page.locator('#js-start-last-session').textContent();
+  const newUserCount = await page.locator('#js-start-progress-count').textContent();
+  console.log(`[26] new user friendly state: ${newUserCount === '0' && newUserMsg.includes('第一場') ? 'OK' : 'WRONG'}`);
+
   await browser.close();
   process.exit(errors.length > 0 ? 1 : 0);
 })();

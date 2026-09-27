@@ -1948,8 +1948,11 @@
     backdrop-filter: blur(8px);
     z-index: 150;
     display: flex; flex-direction: column;
-    align-items: center; justify-content: center;
-    gap: 20px;
+    align-items: center; justify-content: flex-start;
+    gap: 16px;
+    padding: 24px 16px 32px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
   }
   #js-start-overlay.hidden { display: none; }
 
@@ -2093,6 +2096,126 @@
     animation-duration: 0.001ms !important;
     transition-duration: 0.001ms !important;
   }
+
+  /* ── Phase 20 — Start overlay attraction points ─────────────── */
+
+  /* #5: Floating letters background — ambient feel */
+  .floating-letters {
+    position: absolute; inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+    z-index: 0;
+  }
+  .floating-letter {
+    position: absolute;
+    font-family: 'Fredoka', sans-serif;
+    font-weight: 900;
+    font-size: 38px;
+    color: rgba(79, 195, 247, 0.12);
+    animation: floatLetter 18s linear infinite;
+    will-change: transform, opacity;
+    user-select: none;
+  }
+  @keyframes floatLetter {
+    0%   { transform: translateY(110vh) rotate(0deg);   opacity: 0; }
+    8%   { opacity: 1; }
+    92%  { opacity: 1; }
+    100% { transform: translateY(-15vh) rotate(360deg); opacity: 0; }
+  }
+  .no-motion .floating-letter { animation: none !important; }
+
+  /* #1: Robot + Mascot preview (left/right of title) */
+  .start-header {
+    display: flex; flex-direction: column; align-items: center; gap: 12px;
+    position: relative; z-index: 2;
+  }
+  .start-mascot-row {
+    display: flex; gap: 16px; align-items: flex-end;
+    justify-content: center;
+    margin-bottom: 4px;
+  }
+  .start-robot-preview, .start-mascot-preview {
+    width: 72px; height: 72px;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(79, 195, 247, 0.08);
+    border: 2px solid rgba(79, 195, 247, 0.25);
+    border-radius: 16px;
+    animation: previewBob 3s ease-in-out infinite;
+  }
+  .start-robot-preview { animation-delay: 0s; }
+  .start-mascot-preview { animation-delay: 1.5s; }
+  @keyframes previewBob {
+    0%, 100% { transform: translateY(0) scale(1); }
+    50%      { transform: translateY(-6px) scale(1.05); }
+  }
+  .no-motion .start-robot-preview,
+  .no-motion .start-mascot-preview { animation: none !important; }
+
+  /* #2: Progress arc (mastery / 26) */
+  .start-progress {
+    position: relative;
+    width: 200px; height: 110px;
+    margin: 4px auto 8px;
+    display: flex; align-items: center; justify-content: center;
+    z-index: 2;
+  }
+  .start-progress svg {
+    position: absolute; inset: 0;
+  }
+  .progress-track {
+    stroke: rgba(255, 255, 255, 0.12);
+    stroke-width: 12;
+    stroke-linecap: round;
+  }
+  .progress-fill {
+    stroke: url(#progressGradient);
+    stroke-width: 12;
+    stroke-linecap: round;
+    stroke-dasharray: 251.2;  /* half-circle circumference */
+    stroke-dashoffset: 251.2;
+    transition: stroke-dashoffset 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+    filter: drop-shadow(0 0 6px rgba(105, 240, 174, 0.6));
+  }
+  .progress-center {
+    position: relative;
+    margin-top: 50px;
+    display: flex; flex-direction: column; align-items: center;
+    line-height: 1;
+  }
+  .progress-count {
+    font-size: 28px; font-weight: 900; color: #69F0AE;
+    font-family: 'Fredoka', sans-serif;
+    text-shadow: 0 0 12px rgba(105, 240, 174, 0.5);
+  }
+  .progress-label {
+    font-size: 11px; color: var(--text-dim, rgba(255,255,255,0.6));
+    margin-top: 2px; letter-spacing: 1px;
+  }
+
+  /* #3: Last session stats */
+  .start-last-session {
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.75);
+    background: rgba(79, 195, 247, 0.10);
+    border: 1px solid rgba(79, 195, 247, 0.25);
+    padding: 6px 14px;
+    border-radius: 999px;
+    margin-top: 4px;
+    min-height: 26px;
+    z-index: 2;
+    position: relative;
+  }
+  .start-last-session:empty { display: none; }
+  .start-last-session b {
+    color: #FFD54F; font-weight: 700; margin: 0 2px;
+  }
+
+  /* z-index for level grid + start button above floating letters */
+  .difficulty-selector,
+  .level-grid,
+  .start-footer {
+    position: relative; z-index: 2;
+  }
 </style>
 </head>
 <body>
@@ -2209,11 +2332,33 @@
   <div id="js-touch-keys" role="group" aria-label="Letter keys"></div>
 </div>
 
-<!-- ── Start overlay (Phase 19.9 redesign) ─────────────────────────── -->
+<!-- ── Start overlay (Phase 19.9 redesign + Phase 20 attraction) ────── -->
 <div id="js-start-overlay">
+  <!-- Phase 20 #5: Floating letters background (ambient feel) -->
+  <div class="floating-letters" aria-hidden="true" id="js-floating-letters"></div>
+
   <div class="start-header">
+    <!-- Phase 20 #1: Robot + Mascot preview (left of title) -->
+    <div class="start-mascot-row">
+      <div class="start-robot-preview" id="js-start-robot-preview" aria-hidden="true"></div>
+      <div class="start-mascot-preview" id="js-start-mascot-preview" aria-hidden="true"></div>
+    </div>
     <div class="start-title">🔤 字母射擊</div>
     <div class="start-subtitle">選關卡 + 難度,然後開始射擊！</div>
+    <!-- Phase 20 #3: Last session stats (above progress arc) -->
+    <div class="start-last-session" id="js-start-last-session" aria-live="polite"></div>
+  </div>
+
+  <!-- Phase 20 #2: Progress arc (mastered letters / 26) -->
+  <div class="start-progress" id="js-start-progress" aria-label="Mastery progress">
+    <svg viewBox="0 0 200 110" width="200" height="110" aria-hidden="true">
+      <path class="progress-track" d="M 20 100 A 80 80 0 0 1 180 100" fill="none"/>
+      <path class="progress-fill" id="js-start-progress-arc" d="M 20 100 A 80 80 0 0 1 180 100" fill="none"/>
+    </svg>
+    <div class="progress-center">
+      <span class="progress-count" id="js-start-progress-count">0</span>
+      <span class="progress-label" id="js-start-progress-label">/ 26 mastered</span>
+    </div>
   </div>
 
   <!-- Difficulty selector -->
@@ -2805,6 +2950,145 @@ document.getElementById('js-name-input')?.addEventListener('keydown', (e) => {
   selectedUnit = savedSettings.currentUnit || 'U1';
   if (savedSettings.speed === 'medium') selectedDifficulty = 'hard';
   else if (savedSettings.level === 'L0') selectedDifficulty = 'easy';
+
+  // ── Phase 20 — Attraction points ──────────────────────────────────────
+
+  // #5 Floating letters background (ambient feel — letters A-Z drift up)
+  function buildFloatingLetters() {
+    const layer = document.getElementById('js-floating-letters');
+    if (!layer) return;
+    layer.innerHTML = '';
+    const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+    const count = 14;  // not too many for SEN overstimulation
+    for (let i = 0; i < count; i++) {
+      const ch = letters[(i * 7) % 26]; // deterministic spread across alphabet
+      const span = document.createElement('span');
+      span.className = 'floating-letter';
+      span.textContent = ch;
+      span.style.left = (Math.random() * 95) + '%';
+      // Stagger animation delay so letters don't all start at once
+      span.style.animationDelay = (Math.random() * 18) + 's';
+      span.style.animationDuration = (14 + Math.random() * 10) + 's';
+      span.style.fontSize = (28 + Math.random() * 18) + 'px';
+      // Alternate color tints for visual variety
+      const tints = [
+        'rgba(79, 195, 247, 0.14)',   // primary blue
+        'rgba(105, 240, 174, 0.12)',  // green
+        'rgba(255, 213, 79, 0.12)',   // yellow
+        'rgba(255, 107, 157, 0.12)',  // pink
+      ];
+      span.style.color = tints[i % tints.length];
+      layer.appendChild(span);
+    }
+  }
+  buildFloatingLetters();
+
+  // #1 Robot + Mascot preview (mini versions in header)
+  function buildStartPreviews() {
+    const robotEl = document.getElementById('js-start-robot-preview');
+    const mascotEl = document.getElementById('js-start-mascot-preview');
+    if (!robotEl || !mascotEl) return;
+    // Compact robot SVG (simplified, scaled down)
+    robotEl.innerHTML = `
+      <svg viewBox="0 0 80 90" width="56" height="64" aria-hidden="true">
+        <ellipse cx="40" cy="82" rx="26" ry="5" fill="rgba(79,195,247,0.4)"/>
+        <line x1="40" y1="14" x2="40" y2="26" stroke="#4FC3F7" stroke-width="3" stroke-linecap="round"/>
+        <circle cx="40" cy="10" r="5" fill="#4FC3F7"/>
+        <rect x="20" y="26" width="40" height="36" rx="8" fill="rgba(79,195,247,0.2)" stroke="#4FC3F7" stroke-width="1.5"/>
+        <circle cx="30" cy="40" r="5" fill="white"/>
+        <circle cx="50" cy="40" r="5" fill="white"/>
+        <circle cx="30" cy="42" r="3" fill="#1a1a3e"/>
+        <circle cx="50" cy="42" r="3" fill="#1a1a3e"/>
+        <path d="M 30 50 Q 40 56 50 50" stroke="#1a1a3e" stroke-width="2" fill="none" stroke-linecap="round"/>
+        <rect x="26" y="62" width="28" height="14" rx="4" fill="rgba(79,195,247,0.2)" stroke="#4FC3F7" stroke-width="1.5"/>
+        <circle cx="40" cy="69" r="2" fill="#4FC3F7"/>
+      </svg>`;
+    // Compact mascot cat SVG
+    mascotEl.innerHTML = `
+      <svg viewBox="0 0 80 80" width="56" height="56" aria-hidden="true">
+        <path d="M 18 22 L 14 6 L 30 16 Z" fill="#FFE4B5" stroke="#FF6B9D" stroke-width="2" stroke-linejoin="round"/>
+        <path d="M 62 22 L 66 6 L 50 16 Z" fill="#FFE4B5" stroke="#FF6B9D" stroke-width="2" stroke-linejoin="round"/>
+        <circle cx="40" cy="38" r="22" fill="#FFE4B5" stroke="#FF6B9D" stroke-width="2"/>
+        <ellipse cx="32" cy="36" rx="3" ry="4" fill="#1a1a3e"/>
+        <ellipse cx="48" cy="36" rx="3" ry="4" fill="#1a1a3e"/>
+        <path d="M 38 42 L 42 42 L 40 45 Z" fill="#FF6B9D"/>
+        <path d="M 40 45 Q 36 49 33 46" stroke="#FF6B9D" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+        <path d="M 40 45 Q 44 49 47 46" stroke="#FF6B9D" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+        <circle cx="26" cy="46" r="3" fill="#FFB3C6" opacity="0.7"/>
+        <circle cx="54" cy="46" r="3" fill="#FFB3C6" opacity="0.7"/>
+        <ellipse cx="40" cy="68" rx="14" ry="9" fill="#FFE4B5" stroke="#FF6B9D" stroke-width="2" opacity="0.85"/>
+      </svg>`;
+  }
+  buildStartPreviews();
+
+  // #2 Progress arc (mastered count / 26)
+  function buildProgressArc() {
+    const countEl = document.getElementById('js-start-progress-count');
+    const labelEl = document.getElementById('js-start-progress-label');
+    const arcEl = document.getElementById('js-start-progress-arc');
+    const wrap = document.getElementById('js-start-progress');
+    if (!countEl || !arcEl) return;
+    let mastered = 0;
+    try {
+      const prog = JSON.parse(localStorage.getItem('ls-progress') || '{}');
+      mastered = Object.values(prog).filter(p => p.status === 'mastered').length;
+    } catch { /* ignore */ }
+    countEl.textContent = String(mastered);
+    if (labelEl) {
+      labelEl.textContent = mastered === 0 ? '/ 26 已掌握'
+                          : mastered >= 26 ? '✨ 全部完成!'
+                          : '/ 26 已掌握';
+    }
+    // Animate arc fill (circumference of half-circle radius 80 = 251.2)
+    const circumference = 251.2;
+    const pct = Math.min(mastered / 26, 1);
+    const offset = circumference * (1 - pct);
+    // Force reflow before applying transition
+    void arcEl.getBoundingClientRect();
+    arcEl.style.strokeDashoffset = String(offset);
+    if (wrap) {
+      wrap.setAttribute('aria-label',
+        `Mastered ${mastered} of 26 letters (${Math.round(pct * 100)}%)`);
+    }
+    // Add SVG gradient definition (one-time)
+    const svg = arcEl.ownerSVGElement;
+    if (svg && !svg.querySelector('linearGradient#progressGradient')) {
+      const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+      defs.innerHTML = `
+        <linearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+          <stop offset="0%" stop-color="#69F0AE"/>
+          <stop offset="50%" stop-color="#4FC3F7"/>
+          <stop offset="100%" stop-color="#B388FF"/>
+        </linearGradient>`;
+      svg.insertBefore(defs, svg.firstChild);
+    }
+  }
+  buildProgressArc();
+
+  // #3 Last session stats (recent stars + streak)
+  function buildLastSession() {
+    const el = document.getElementById('js-start-last-session');
+    if (!el) return;
+    let totalStars = 0;
+    let streak = 0;
+    let unitCount = 0;
+    try {
+      const stats = JSON.parse(localStorage.getItem('ls-stats') || '{}');
+      totalStars = stats.totalStars || 0;
+      streak = stats.currentStreak || 0;
+      unitCount = stats.unitClears || 0;
+    } catch { /* ignore */ }
+    const parts = [];
+    if (totalStars > 0) parts.push(`⭐ <b>${totalStars}</b> stars`);
+    if (streak > 0) parts.push(`🔥 <b>${streak}</b> day streak`);
+    if (unitCount > 0) parts.push(`🏆 <b>${unitCount}</b> units cleared`);
+    if (parts.length === 0) {
+      el.textContent = '🎮 開始你的第一場遊戲!';
+    } else {
+      el.innerHTML = parts.join(' · ');
+    }
+  }
+  buildLastSession();
 
   function updateStartBtn() {
     if (selectedUnit) {
