@@ -4,7 +4,7 @@ import { loadProgress, recordAttempt, masteredCount, reevaluateAllStatuses } fro
 import { activeLetters, currentRobotIndex, isUnitComplete, parseCustomLevels, getCustomUnitKeys } from './curriculum.js';
 import { t, pickT, setLang, i18n } from './i18n.js';
 import { playCorrect, playWrong, playStreak, playUnlock, unlockAudio, haptic } from './sfx.js';
-import { confettiBurst, streakFlash, megaFireworks, startLetterTrail, stopLetterTrail, letterSparkle, floatCombo, letterExplosion, LETTER_SYMBOLS } from './fx.js';
+import { confettiBurst, streakFlash, megaFireworks, startLetterTrail, stopLetterTrail, letterSparkle, floatCombo, letterExplosion, LETTER_SYMBOLS, letterArrival } from './fx.js';
 import { recordStar, getDailyProgress, dailyGoal, getWeeklyProgress, weeklyGoal } from './challenge.js';
 import { getLeaderboard, submitEntry, sanitizeName, clearLeaderboard, MAX_NAME } from './leaderboard.js';
 import { startBgm, stopBgm, pauseBgm, resumeBgm, unlockBgm } from './bgm.js';
@@ -646,6 +646,12 @@ export function showLetter(letter) {
     el.style.transform = 'scale(1)';
   });
   currentLetter = letter;
+
+  // Phase 23 — Letter personality arrival (ability-gated).
+  // Reads abilityTrack from settings — defaults to 'beginner' if not yet migrated.
+  // Sequence/Word/Runner modes are excluded (return early above).
+  const _phase23Track = loadSettings().abilityTrack || 'beginner';
+  letterArrival(el, letter, { track: _phase23Track });
 
   // Phase 13d — Letter trace: draw the letter outline first via SVG stroke,
   // then fade out as the main letter becomes fully visible.

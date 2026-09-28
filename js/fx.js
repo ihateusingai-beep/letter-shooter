@@ -105,6 +105,73 @@ export const LETTER_SYMBOLS = {
   Z: '⚡',   // Lightning (zap)
 };
 
+// ── Phase 23: Letter personality motion mapping ──────────────────────────────
+// Each letter that has a personality motion. All others fall back to 'drop-bounce'.
+// Motion ↔ symbol semantic mapping (see SPEC-phase23 §3).
+export const LETTER_ARRIVAL_MOTION = {
+  A: 'fly-across',   // ✈️ airplane flies across screen
+  C: 'rise-glow',    // 🌙 moon rises
+  K: 'spiral',       // 🔑 key spins (insert motion)
+  M: 'rise-glow',    // 🌊 wave rises (matches ocean theme)
+  N: 'rise-glow',    // 🌙 night rises
+  R: 'rise-glow',    // 🌈 rainbow arcs up
+  S: 'rise-glow',    // ☀️ sun rises
+  Y: 'pendulum',     // 🪀 yo-yo swings
+  Z: 'zig-zag',      // ⚡ lightning bolts zig-zag down
+};
+
+// Phase 23: Ability-track motion gate (Phase 24 will surface UI).
+// Restricts which motions are available per ability track.
+// Phase 23 ships with abilityTrack defaulting to 'beginner' in settings.js —
+// meaning all students see drop-bounce only at launch. Phase 24 unlocks higher tracks.
+export const MOTION_GATE = {
+  beginner:  new Set(['drop-bounce']),                                                            // safest default
+  standard:  new Set(['drop-bounce', 'fly-across', 'rise-glow']),                                 // exclude intense
+  advanced:  new Set(['drop-bounce', 'fly-across', 'rise-glow', 'zig-zag', 'spiral', 'pendulum']), // all 6
+};
+
+// Phase 23: Per-track animation duration scaling (gentler for beginner, snappier for advanced).
+export const DURATION_SCALE = {
+  beginner:  1.3,
+  standard:  1.0,
+  advanced:  0.85,
+};
+
+// Phase 23: Resolve motion for a letter, gated by ability track.
+// track is optional — defaults to 'beginner' if settings not migrated yet.
+export function getMotionForLetter(letter, track = 'beginner') {
+  if (!letter) return 'drop-bounce';
+  const L = letter.toUpperCase();
+  const motion = LETTER_ARRIVAL_MOTION[L] || 'drop-bounce';
+  const allowed = MOTION_GATE[track] || MOTION_GATE.beginner;
+  return allowed.has(motion) ? motion : 'drop-bounce';
+}
+
+// Phase 23: Trigger letter arrival animation on an element.
+// opts.track — 'beginner' | 'standard' | 'advanced' (default 'beginner').
+// Removes any prior arrival class, adds the motion class, auto-cleans after animationend.
+// Idempotent — multiple calls safe (race-free).
+export function letterArrival(el, letter, opts = {}) {
+  if (!el) return;
+  const track = opts.track || 'beginner';
+  const motion = getMotionForLetter(letter, track);
+  // Remove all prior arrival classes
+  el.classList.remove(
+    'arrival-fly-across', 'arrival-rise-glow', 'arrival-drop-bounce',
+    'arrival-zig-zag', 'arrival-spiral', 'arrival-pendulum'
+  );
+  // Force reflow so the same class re-add restarts the animation
+  void el.offsetWidth;
+  el.classList.add(`arrival-${motion}`);
+  // Track-scaled cleanup duration (longer for beginner, shorter for advanced)
+  const cleanupMs = Math.round(1400 * (DURATION_SCALE[track] || 1.0));
+  const cleanup = setTimeout(() => {
+    el.classList.remove(`arrival-${motion}`);
+  }, cleanupMs);
+  // If animationend fires earlier, clear the cleanup timer
+  el.addEventListener('animationend', () => clearTimeout(cleanup), { once: true });
+}
+
 // ── Confetti burst on correct answer ────────────────────────────────────────
 // opts.theme: 'space' | 'candy' | 'ocean' — picks shape family
 // opts.letter: optional uppercase letter — adds themed symbol confetti

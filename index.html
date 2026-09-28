@@ -642,6 +642,77 @@
   .no-motion #js-letter { animation: none; filter: none; }
   .no-motion #js-letter.shake { animation: none; }
 
+  /* ── Phase 23: Letter personality arrival ───────────────────── */
+  #js-letter.arrival-fly-across {
+    animation: arrival-fly-across 0.9s cubic-bezier(.4, 0, .2, 1) both;
+  }
+  #js-letter.arrival-rise-glow {
+    animation: arrival-rise-glow 1.1s ease-out both;
+  }
+  #js-letter.arrival-drop-bounce {
+    animation: arrival-drop-bounce 0.9s cubic-bezier(.5, -0.4, .3, 1.4) both;
+  }
+  #js-letter.arrival-zig-zag {
+    animation: arrival-zig-zag 0.8s ease-in-out both;
+  }
+  #js-letter.arrival-spiral {
+    animation: arrival-spiral 1.0s cubic-bezier(.3, 1.4, .5, 1) both;
+  }
+  #js-letter.arrival-pendulum {
+    animation: arrival-pendulum 1.2s ease-in-out both;
+    transform-origin: top center;
+  }
+
+  @keyframes arrival-fly-across {
+    0%   { transform: translateX(80vw) rotate(-8deg); opacity: 0; }
+    60%  { opacity: 1; }
+    100% { transform: translateX(0) rotate(0); opacity: 1; }
+  }
+  @keyframes arrival-rise-glow {
+    0%   { transform: translateY(60vh); opacity: 0; filter: brightness(0.3); }
+    50%  { filter: brightness(1.15); }
+    100% { transform: translateY(0); opacity: 1; filter: brightness(1); }
+  }
+  @keyframes arrival-drop-bounce {
+    0%   { transform: translateY(-90vh); opacity: 0; }
+    60%  { transform: translateY(12px); opacity: 1; }
+    80%  { transform: translateY(-6px); }
+    100% { transform: translateY(0); opacity: 1; }
+  }
+  @keyframes arrival-zig-zag {
+    0%   { transform: translate(-30vw, -90vh); opacity: 0; }
+    25%  { transform: translate(40px, -45vh); opacity: 1; }
+    50%  { transform: translate(-40px, -20vh); }
+    75%  { transform: translate(20px, -5vh); }
+    100% { transform: translate(0, 0); opacity: 1; }
+  }
+  @keyframes arrival-spiral {
+    0%   { transform: scale(0) rotate(0); opacity: 0; }
+    60%  { transform: scale(1.15) rotate(540deg); opacity: 1; }
+    100% { transform: scale(1) rotate(720deg); opacity: 1; }
+  }
+  @keyframes arrival-pendulum {
+    0%   { transform: translateY(-30vh) rotate(-25deg); opacity: 0; }
+    20%  { opacity: 1; }
+    40%  { transform: translateY(0) rotate(20deg); }
+    60%  { transform: translateY(0) rotate(-15deg); }
+    80%  { transform: translateY(0) rotate(8deg); }
+    100% { transform: translateY(0) rotate(0); opacity: 1; }
+  }
+
+  /* Phase 23: Reduce-motion override (Phase 19.1 compat) */
+  .no-motion #js-letter.arrival-fly-across,
+  .no-motion #js-letter.arrival-rise-glow,
+  .no-motion #js-letter.arrival-drop-bounce,
+  .no-motion #js-letter.arrival-zig-zag,
+  .no-motion #js-letter.arrival-spiral,
+  .no-motion #js-letter.arrival-pendulum {
+    animation: none !important;
+    transform: none !important;
+    opacity: 1 !important;
+    filter: none !important;
+  }
+
   /* ── Bullet (star projectile) ──────────────────────────────── */
   #js-bullet {
     position: fixed;

@@ -26,6 +26,9 @@ const DEFAULTS = {
                                 // Default 6 (= 60% in rolling 10-window) preserves current behavior.
                                 // Lower for moderate-ID students who can't sustain 60% accuracy.
                                 // Status re-evaluated on threshold change (see progress.js reevaluateAllStatuses).
+  abilityTrack: 'beginner',    // Phase 23: 'beginner' | 'standard' | 'advanced' — gates letter arrival motion.
+                                // Phase 23 ships with 'beginner' locked; Phase 24 will surface teacher-facing UI toggle.
+                                // All students see drop-bounce only at launch — guaranteed SEN-safe baseline.
 };
 
 export function loadSettings() {

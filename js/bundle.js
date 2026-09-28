@@ -337,11 +337,15 @@
         // gentle = 12 particles, no emoji burst
         // normal = 32 particles + 3 letter emoji (default)
         // party  = 50 particles + 5 letter emoji, longer duration
-        masteryThreshold: 6
+        masteryThreshold: 6,
         // 5 | 6 | 7 | 8 — Phase 19.5 teacher-overrideable mastery threshold
         // Default 6 (= 60% in rolling 10-window) preserves current behavior.
         // Lower for moderate-ID students who can't sustain 60% accuracy.
         // Status re-evaluated on threshold change (see progress.js reevaluateAllStatuses).
+        abilityTrack: "beginner"
+        // Phase 23: 'beginner' | 'standard' | 'advanced' — gates letter arrival motion.
+        // Phase 23 ships with 'beginner' locked; Phase 24 will surface teacher-facing UI toggle.
+        // All students see drop-bounce only at launch — guaranteed SEN-safe baseline.
       };
     }
   });
@@ -1026,6 +1030,68 @@
         Z: "\u26A1"
         // Lightning (zap)
       };
+      // ── Phase 23: Letter personality motion mapping ──
+      LETTER_ARRIVAL_MOTION = {
+        A: "fly-across",
+        // ✈️ airplane flies across screen
+        C: "rise-glow",
+        // 🌙 moon rises
+        K: "spiral",
+        // 🔑 key spins (insert motion)
+        M: "rise-glow",
+        // 🌊 wave rises (matches ocean theme)
+        N: "rise-glow",
+        // 🌙 night rises
+        R: "rise-glow",
+        // 🌈 rainbow arcs up
+        S: "rise-glow",
+        // ☀️ sun rises
+        Y: "pendulum",
+        // 🪀 yo-yo swings
+        Z: "zig-zag"
+        // ⚡ lightning bolts zig-zag down
+      };
+      // Phase 23: Ability-track motion gate (Phase 24 will surface UI).
+      MOTION_GATE = {
+        beginner: new Set(["drop-bounce"]),
+        standard: new Set(["drop-bounce", "fly-across", "rise-glow"]),
+        advanced: new Set(["drop-bounce", "fly-across", "rise-glow", "zig-zag", "spiral", "pendulum"])
+      };
+      // Phase 23: Per-track animation duration scaling.
+      DURATION_SCALE = {
+        beginner: 1.3,
+        standard: 1,
+        advanced: 0.85
+      };
+      // Phase 23: Resolve motion for a letter, gated by ability track.
+      function getMotionForLetter(letter2, track = "beginner") {
+        if (!letter2) return "drop-bounce";
+        const L = letter2.toUpperCase();
+        const motion = LETTER_ARRIVAL_MOTION[L] || "drop-bounce";
+        const allowed = MOTION_GATE[track] || MOTION_GATE.beginner;
+        return allowed.has(motion) ? motion : "drop-bounce";
+      }
+      // Phase 23: Trigger letter arrival animation on an element.
+      function letterArrival(el, letter2, opts = {}) {
+        if (!el) return;
+        const track = opts.track || "beginner";
+        const motion = getMotionForLetter(letter2, track);
+        el.classList.remove(
+          "arrival-fly-across",
+          "arrival-rise-glow",
+          "arrival-drop-bounce",
+          "arrival-zig-zag",
+          "arrival-spiral",
+          "arrival-pendulum"
+        );
+        void el.offsetWidth;
+        el.classList.add(`arrival-${motion}`);
+        const cleanupMs = Math.round(1400 * (DURATION_SCALE[track] || 1));
+        const cleanup = setTimeout(() => {
+          el.classList.remove(`arrival-${motion}`);
+        }, cleanupMs);
+        el.addEventListener("animationend", () => clearTimeout(cleanup), { once: true });
+      }
     }
   });
 
@@ -1851,6 +1917,10 @@
       el.style.transform = "scale(1)";
     });
     currentLetter = letter;
+    // Phase 23 — Letter personality arrival (ability-gated).
+    // Sequence/Word/Runner modes are excluded (return early above).
+    const _phase23Track = loadSettings().abilityTrack || "beginner";
+    letterArrival(el, letter, { track: _phase23Track });
     const gameArea = document.getElementById("js-game-area");
     if (gameArea) {
       const prev = document.getElementById("js-letter-trace");
