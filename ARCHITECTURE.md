@@ -404,6 +404,31 @@ Each phase's smoke covers:
 
 ---
 
+## 10a. Design Invariants (added Phase 23)
+
+Hard invariants that must be honored by every new game mode / level design. Each invariant has a runtime check + a corresponding note in `letter-shooter-sen-plan.md §1`.
+
+### I1. Minimum Questions per Level
+
+- **Rule**: Every meaningful "level" (U-unit, Runner level, Speed Round, custom level group) must contain **≥ 10 questions** of practice.
+- **Rationale**: Ensures session density — a student should reach mastery (or at least meaningful practice) in one level, not need 5 short rounds.
+- **Exceptions**: Timed modes (`Race 30s`) and endless modes (`Pattern Missing`) — question count is a byproduct, not a target.
+- **Runtime enforcement**:
+  - `RUNNER_LETTERS_PER_LEVEL = 10` constant in `game.js` (Phase 22+)
+  - U-units: `sameLetterConsecutive` × `pool size` ≥ 10 (audit each unit in `curriculum.js`)
+  - Custom levels: ≥ 10 letters per group (warning if violated)
+- **Audit gate**: any new SPEC touching level design must reference I1 in its design rationale.
+
+### I2. Ability-Track Architecture (Phase 23 ships foundation)
+
+- **Rule**: Game-y elements (countdown, fail screen, score multiplier, intense motion) must be **opt-in via `settings.abilityTrack`**, never default-on.
+- **Default**: `'beginner'` — SEN-safe baseline, equivalent to current behavior.
+- **Tracks**: `beginner` (locked-safe) / `standard` (mild game-y) / `advanced` (full game-y).
+- **Phase 23 ships architecture only** — `MOTION_GATE`, `DURATION_SCALE`, `abilityTrack` default. Phase 24 surfaces teacher UI toggle.
+- **Source**: `SPEC-phase23-letter-personality.md §1, §5`.
+
+---
+
 ## 11. How to Add a New Phase
 
 Recipe (after planning with teacher + user confirmation):

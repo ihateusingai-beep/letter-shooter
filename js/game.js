@@ -60,6 +60,25 @@ let patternMissingTarget = '';
 let patternMissingSlots = []; // 4 letters, 1 replaced with '?'
 let toastTimerId = null;   // shared toast hide-timer (Phase 16 patch — prevents collision)
 
+// Phase 22 — Letter Runner (3-Key Sprint side-scroller)
+// Design Invariant I1 (ARCHITECTURE.md §10a): every level must have ≥10 questions.
+// RUNNER_LETTERS_PER_LEVEL is the canonical constant — do NOT lower.
+const RUNNER_LETTERS_PER_LEVEL = 10;
+let runnerActive = false;
+let runnerLevel = 1;
+let runnerBest = 0;
+let runnerSlots = [];     // RUNNER_LETTERS_PER_LEVEL letters drawn from active pool
+let runnerCurrentIdx = 0; // 0..RUNNER_LETTERS_PER_LEVEL-1 — next expected letter position
+let runnerObstacleX = 0;  // pixel position from right edge (negative off-screen)
+let runnerGroundOffset = 0; // scrolling tile offset
+let runnerGroundSpeed = 2; // pixels per frame
+let runnerAnimFrame = null;
+let runnerJumping = false;
+let runnerStumbling = false;
+let runnerObstacleActive = false;
+let runnerFrozen = false;  // pause loop on collision
+let runnerFrozenUntil = 0;
+
 // Phase 17 W3 — Sequence mode state machine
 const SEQUENCE_LENGTH = 3;
 let sequenceLetters = [];   // ['C', 'A', 'T']
@@ -98,6 +117,24 @@ function resetPhase16State() {
   dismissRaceEnd();
   patternMissingTarget = '';
   patternMissingSlots = [];
+
+  // Phase 22 — Runner state reset
+  if (runnerAnimFrame) { cancelAnimationFrame(runnerAnimFrame); runnerAnimFrame = null; }
+  runnerActive = false;
+  runnerLevel = 1;
+  runnerSlots = [];
+  runnerCurrentIdx = 0;
+  runnerObstacleX = 0;
+  runnerGroundOffset = 0;
+  runnerGroundSpeed = 2;
+  runnerJumping = false;
+  runnerStumbling = false;
+  runnerObstacleActive = false;
+  runnerFrozen = false;
+  dismissRunnerEnd();
+  dismissRunnerClear();
+  const stage = document.getElementById('js-runner-stage');
+  if (stage) stage.style.display = '';
 
   const banner = document.getElementById('js-speed-banner');
   if (banner) banner.classList.remove('visible');
@@ -793,6 +830,10 @@ function showRaceEndScreen(score, best) {
   }
 }
 
+// Phase 22 — Runner WIP stubs (no-op until overlay UI is implemented).
+// resetPhase16State calls these — leaving them undefined would crash on game start.
+function dismissRunnerEnd() { /* TODO Phase 22 — Runner end overlay */ }
+function dismissRunnerClear() { /* TODO Phase 22 — Runner level-clear overlay */ }
 function dismissRaceEnd() {
   const end = document.getElementById('js-race-end');
   if (end) end.classList.remove('visible');

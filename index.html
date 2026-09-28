@@ -2369,6 +2369,281 @@
   }
   #js-race-end button:hover { transform: scale(1.05); }
 
+  /* ── Phase 22 — Letter Runner (3-Key Sprint side-scroller) ──────────────── */
+  #js-runner-stage {
+    position: fixed; inset: 0;
+    background: linear-gradient(180deg, #87CEEB 0%, #B0E0E6 50%, #98D8C8 100%);
+    z-index: 50;
+    display: none;
+    overflow: hidden;
+    font-family: 'Fredoka', sans-serif;
+  }
+  body[data-game-mode="runner"] #js-runner-stage { display: block; }
+  body[data-game-mode="runner"] #js-game-area { display: none; }
+  body[data-game-mode="runner"] .bottom-bar { display: none; }
+
+  #js-runner-stage .runner-hud {
+    position: absolute; top: 12px; left: 0; right: 0;
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 0 16px;
+    z-index: 5;
+    color: #0a0a2a;
+    font-weight: 800;
+  }
+  .runner-hud-stat {
+    background: rgba(255,255,255,0.85);
+    border-radius: 12px;
+    padding: 6px 14px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    font-size: 14px;
+    letter-spacing: 0.5px;
+  }
+  .runner-hud-stat b {
+    font-size: 22px;
+    color: #FF6B9D;
+    margin-left: 6px;
+  }
+
+  .runner-slots {
+    position: absolute;
+    top: 70px;
+    left: 50%; transform: translateX(-50%);
+    display: flex; gap: 16px;
+    z-index: 4;
+  }
+  .runner-slot {
+    width: 64px; height: 64px;
+    background: rgba(255,255,255,0.92);
+    border: 4px solid #FFD54F;
+    border-radius: 16px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 38px; font-weight: 900;
+    color: #0a0a2a;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    transition: all 0.2s ease;
+  }
+  .runner-slot.current {
+    transform: scale(1.15);
+    border-color: #FF6B9D;
+    box-shadow: 0 0 28px rgba(255,107,157,0.7);
+    background: linear-gradient(135deg, #FFE082 0%, #FFAB91 100%);
+  }
+  .runner-slot.done {
+    background: #69F0AE;
+    border-color: #00C853;
+    color: white;
+    opacity: 0.7;
+  }
+  .runner-slot.done::after {
+    content: '✓';
+    position: absolute;
+    font-size: 32px;
+    color: #00C853;
+  }
+
+  .runner-progress {
+    position: absolute;
+    top: 148px; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 10px;
+    z-index: 4;
+  }
+  .runner-progress-dot {
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.6);
+    border: 2px solid rgba(0,0,0,0.2);
+  }
+  .runner-progress-dot.done {
+    background: #FF6B9D;
+    border-color: #C2185B;
+  }
+
+  .runner-sky {
+    position: absolute; inset: 0;
+    background: linear-gradient(180deg, var(--runner-sky-1, #87CEEB) 0%, var(--runner-sky-2, #FFE082) 100%);
+    opacity: 0.7;
+  }
+  .runner-clouds {
+    position: absolute;
+    top: 80px; left: 0; right: 0; height: 80px;
+    z-index: 1;
+  }
+  .runner-cloud {
+    position: absolute;
+    font-size: 36px;
+    opacity: 0.8;
+  }
+
+  .runner-ground {
+    position: absolute;
+    bottom: 0; left: 0; right: 0; height: 100px;
+    background: linear-gradient(180deg, var(--runner-ground-1, #8B4513) 0%, var(--runner-ground-2, #654321) 100%);
+    z-index: 2;
+  }
+  .runner-ground::before {
+    content: '';
+    position: absolute;
+    top: -8px; left: 0; right: 0; height: 16px;
+    background: var(--runner-grass, #69F0AE);
+    border-top: 2px solid #2E7D32;
+  }
+  .runner-ground-tiles {
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(90deg, rgba(0,0,0,0.1) 1px, transparent 1px),
+      linear-gradient(0deg, rgba(0,0,0,0.05) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+
+  .runner-character {
+    position: absolute;
+    bottom: 110px;
+    left: 80px;
+    width: 56px; height: 64px;
+    z-index: 5;
+    font-size: 56px;
+    line-height: 1;
+    transition: transform 0.1s ease;
+    will-change: transform;
+    text-align: center;
+  }
+  .runner-character.jumping {
+    animation: runner-jump 800ms cubic-bezier(0.3, 0.7, 0.5, 1);
+  }
+  .runner-character.stumbling {
+    animation: runner-stumble 400ms ease-in-out;
+  }
+  .runner-character.celebrating {
+    animation: runner-celebrate 600ms ease;
+  }
+  @keyframes runner-jump {
+    0%   { transform: translateY(0); }
+    30%  { transform: translateY(-110px); }
+    50%  { transform: translateY(-130px); }
+    100% { transform: translateY(0); }
+  }
+  @keyframes runner-stumble {
+    0%, 100% { transform: translateX(0); }
+    25%      { transform: translateX(-6px); }
+    75%      { transform: translateX(6px); }
+  }
+  @keyframes runner-celebrate {
+    0%, 100% { transform: translateY(0) rotate(0); }
+    50%      { transform: translateY(-40px) rotate(360deg); }
+  }
+
+  .runner-obstacle {
+    position: absolute;
+    bottom: 110px;
+    right: -60px;
+    width: 48px; height: 56px;
+    z-index: 4;
+    font-size: 48px;
+    line-height: 1;
+    text-align: center;
+    will-change: transform;
+  }
+
+  .runner-flash {
+    position: absolute;
+    inset: 0;
+    background: rgba(255, 64, 64, 0.4);
+    z-index: 6;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+  }
+  .runner-flash.active { opacity: 1; }
+
+  #js-runner-clear {
+    position: absolute;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 213, 79, 0.4);
+    backdrop-filter: blur(4px);
+    z-index: 8;
+    font-size: 48px;
+    font-weight: 900;
+    color: #0a0a2a;
+    text-shadow: 0 0 24px rgba(255, 213, 79, 0.8);
+    animation: runner-clear-pop 1.5s ease;
+  }
+  #js-runner-clear.visible { display: flex; }
+  @keyframes runner-clear-pop {
+    0%   { transform: scale(0.5); opacity: 0; }
+    30%  { transform: scale(1.2); opacity: 1; }
+    70%  { transform: scale(1); opacity: 1; }
+    100% { transform: scale(1); opacity: 0; }
+  }
+
+  #js-runner-end {
+    position: absolute;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 14px;
+    background: rgba(10,14,40,0.85);
+    backdrop-filter: blur(8px);
+    z-index: 10;
+    color: white;
+    font-family: 'Fredoka', sans-serif;
+  }
+  #js-runner-end.visible { display: flex; }
+  #js-runner-end h2 {
+    font-size: 36px;
+    margin: 0;
+    text-shadow: 0 0 24px rgba(255,107,157,0.6);
+  }
+  #js-runner-end .runner-end-level {
+    font-size: 64px;
+    font-weight: 900;
+    color: #FFD54F;
+    text-shadow: 0 0 24px rgba(255,213,79,0.6);
+    line-height: 1;
+  }
+  #js-runner-end .runner-end-best {
+    font-size: 18px;
+    color: #69F0AE;
+    margin-bottom: 16px;
+  }
+  #js-runner-end button {
+    background: linear-gradient(135deg, #FF6B9D, #FFD54F);
+    color: #0a0a2a;
+    border: none;
+    padding: 14px 32px;
+    border-radius: 999px;
+    font-size: 18px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 4px 16px rgba(255,107,157,0.5);
+  }
+  #js-runner-end button:hover { transform: scale(1.05); }
+
+  /* Theme variants */
+  body[data-theme="space"][data-game-mode="runner"] .runner-ground { background: linear-gradient(180deg, #1a237e 0%, #0d1242 100%); }
+  body[data-theme="space"][data-game-mode="runner"] .runner-ground::before { background: #4a148c; border-top-color: #6a1b9a; }
+  body[data-theme="candy"][data-game-mode="runner"] .runner-ground { background: linear-gradient(180deg, #f8bbd0 0%, #f48fb1 100%); }
+  body[data-theme="candy"][data-game-mode="runner"] .runner-ground::before { background: #fce4ec; border-top-color: #f06292; }
+  body[data-theme="ocean"][data-game-mode="runner"] .runner-ground { background: linear-gradient(180deg, #0277bd 0%, #01579b 100%); }
+  body[data-theme="ocean"][data-game-mode="runner"] .runner-ground::before { background: #4fc3f7; border-top-color: #0288d1; }
+  body[data-theme="forest"][data-game-mode="runner"] .runner-ground { background: linear-gradient(180deg, #5d4037 0%, #3e2723 100%); }
+  body[data-theme="forest"][data-game-mode="runner"] .runner-ground::before { background: #66bb6a; border-top-color: #2e7d32; }
+
+  /* High contrast */
+  body.high-contrast[data-game-mode="runner"] .runner-slot {
+    border-color: #000;
+    background: #FFF;
+  }
+  body.high-contrast[data-game-mode="runner"] .runner-slot.current {
+    background: #FFEB3B;
+    border-color: #000;
+  }
+
   /* ── Phase 21 — Pattern Missing layout ─────────────────────────── */
   .pattern-missing {
     display: flex; gap: 8px;
@@ -2491,6 +2766,36 @@
   </div>
   <div class="race-end-msg" id="js-race-end-msg">💪 Try again!</div>
   <button id="js-race-restart">🔄 再嚟一次 / Play again</button>
+</div>
+
+<!-- ── Phase 22: Letter Runner stage ───────────────────────────────────── -->
+<div id="js-runner-stage" aria-label="Letter Runner game">
+  <div class="runner-sky"></div>
+  <div class="runner-clouds" id="js-runner-clouds"></div>
+  <div class="runner-ground">
+    <div class="runner-ground-tiles" id="js-runner-ground-tiles"></div>
+  </div>
+
+  <div class="runner-hud">
+    <div class="runner-hud-stat">⭐ Level <b id="js-runner-level">1</b></div>
+    <div class="runner-hud-stat">🏆 Best <b id="js-runner-best-display">0</b></div>
+  </div>
+
+  <div class="runner-slots" id="js-runner-slots"></div>
+  <div class="runner-progress" id="js-runner-progress"></div>
+
+  <div class="runner-character" id="js-runner-character">🏃</div>
+  <div class="runner-obstacle" id="js-runner-obstacle" style="display:none;">🪨</div>
+
+  <div class="runner-flash" id="js-runner-flash"></div>
+  <div id="js-runner-clear">✨ LEVEL CLEAR! ✨</div>
+
+  <div id="js-runner-end" role="dialog" aria-modal="true" aria-label="Runner complete">
+    <h2>🏁 跑酷完成！</h2>
+    <div class="runner-end-level" id="js-runner-end-level">1</div>
+    <div class="runner-end-best" id="js-runner-end-best">🏆 Best: 1</div>
+    <button id="js-runner-restart">🔄 再嚟一次 / Play again</button>
+  </div>
 </div>
 
 <!-- ── Bullet ────────────────────────────────────────────────────────────── -->
@@ -2768,6 +3073,7 @@
             <option value="word">🧩 拼字 Word</option>
             <option value="race30">⏱ 限時 Race</option>
             <option value="patternMissing">🔍 找空 Pattern</option>
+            <option value="runner">🏃 跑酷 Runner</option>
           </select>
         </div>
 

@@ -2046,6 +2046,9 @@
     const end = document.getElementById("js-race-end");
     if (end) end.classList.remove("visible");
   }
+  // Phase 22 — Runner WIP stubs (no-op until overlay UI is implemented).
+  function dismissRunnerEnd() { /* TODO Phase 22 */ }
+  function dismissRunnerClear() { /* TODO Phase 22 */ }
   function buildPatternMissing() {
     const missingIdx = Math.floor(Math.random() * 4);
     const pool = typeof touchKeys !== "undefined" && touchKeys.length ? touchKeys : "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
@@ -3111,7 +3114,7 @@
       grid.appendChild(cell);
     });
   }
-  var score, streak, stars, currentLetter, touchKeys, gameRunning, animFrame, currentUnit, correctSinceSpeed, speedRoundActive, speedRoundTimer, speedRoundEnd, speedRoundHits, bonusCatchActive, bonusCatchTimer, raceActive, raceTimer, raceEnd, raceScore, raceBest, racePattern, patternMissingTarget, patternMissingSlots, toastTimerId, SEQUENCE_LENGTH, sequenceLetters, sequenceIndex, currentGroup, committedGroups, toastTimer, toastQueue, ROBOT_PALETTES, FLOOR_EMOJIS, BULLET_SHAPES, BULLET_PALETTES, lastLetterPos, RACE_DURATION_MS, fallPaused, letterArrived, LETTER_SAY, SPEED_ROUND_DURATION_MS, SPEED_ROUND_TRIGGER, bonusCatchKeyListener, BONUS_CATCH_DURATION_MS, BONUS_CATCH_STARS, QWERTY_ROWS, currentKbMode, compactKeys, MAX_GHOSTS, ACHIEVEMENT_MILESTONES, pendingCompletion;
+  var score, streak, stars, currentLetter, touchKeys, gameRunning, animFrame, currentUnit, correctSinceSpeed, speedRoundActive, speedRoundTimer, speedRoundEnd, speedRoundHits, bonusCatchActive, bonusCatchTimer, raceActive, raceTimer, raceEnd, raceScore, raceBest, racePattern, patternMissingTarget, patternMissingSlots, toastTimerId, SEQUENCE_LENGTH, RUNNER_LETTERS_PER_LEVEL, sequenceLetters, sequenceIndex, currentGroup, committedGroups, toastTimer, toastQueue, ROBOT_PALETTES, FLOOR_EMOJIS, BULLET_SHAPES, BULLET_PALETTES, lastLetterPos, RACE_DURATION_MS, fallPaused, letterArrived, LETTER_SAY, SPEED_ROUND_DURATION_MS, SPEED_ROUND_TRIGGER, bonusCatchKeyListener, BONUS_CATCH_DURATION_MS, BONUS_CATCH_STARS, QWERTY_ROWS, currentKbMode, compactKeys, MAX_GHOSTS, ACHIEVEMENT_MILESTONES, pendingCompletion, runnerActive, runnerLevel, runnerBest, runnerSlots, runnerCurrentIdx, runnerObstacleX, runnerGroundOffset, runnerGroundSpeed, runnerAnimFrame, runnerJumping, runnerStumbling, runnerObstacleActive, runnerFrozen, runnerFrozenUntil;
   var init_game = __esm({
     "js/game.js"() {
       init_settings();
@@ -3187,6 +3190,23 @@
       patternMissingTarget = "";
       patternMissingSlots = [];
       toastTimerId = null;
+      // Phase 22 — Letter Runner (side-scroller).
+      // Design Invariant I1 (ARCHITECTURE.md §10a): every level ≥ 10 questions.
+      RUNNER_LETTERS_PER_LEVEL = 10;
+      runnerActive = false;
+      runnerLevel = 1;
+      runnerBest = 0;
+      runnerSlots = [];
+      runnerCurrentIdx = 0;
+      runnerObstacleX = 0;
+      runnerGroundOffset = 0;
+      runnerGroundSpeed = 2;
+      runnerAnimFrame = null;
+      runnerJumping = false;
+      runnerStumbling = false;
+      runnerObstacleActive = false;
+      runnerFrozen = false;
+      runnerFrozenUntil = 0;
       SEQUENCE_LENGTH = 3;
       sequenceLetters = [];
       sequenceIndex = 0;

@@ -30,6 +30,14 @@
 - 觸控列一次不放滿 26 鍵（避免搜尋負荷）
 - 速度永遠可調；到底會停
 
+### 全程要遵守的（Phase 22+ 起新增 invariant）
+- **每個有意義嘅「關」(U-unit / Runner level / Speed Round) 必須 ≥ 10 題**，
+  確保學生有足夠練習密度同 session 滿足感。
+- 例外：Race 30s / Pattern Missing — timed 或 endless modes，題數係結果而非目標。
+- 此約束喺 SPEC 一開個就 audit，所有新增 mode / level 都必過呢個 check。
+- 違反此約束嘅 mode (例如 Phase 22 Runner 早期 spec 用 3 letters/level)
+  必須改 spec + 重新 commit 過 principle。
+
 ---
 
 ## 2. 使用對象與限制
