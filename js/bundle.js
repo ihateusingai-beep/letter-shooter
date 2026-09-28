@@ -2046,9 +2046,237 @@
     const end = document.getElementById("js-race-end");
     if (end) end.classList.remove("visible");
   }
-  // Phase 22 — Runner WIP stubs (no-op until overlay UI is implemented).
-  function dismissRunnerEnd() { /* TODO Phase 22 */ }
-  function dismissRunnerClear() { /* TODO Phase 22 */ }
+  // Phase 22 — Runner WIP stubs (no-op; full overlay control inline in runnerLevelClear/runnerQuit).
+  function dismissRunnerEnd() {
+    const el = document.getElementById("js-runner-end");
+    if (el) el.classList.remove("visible");
+  }
+  function dismissRunnerClear() {
+    const el = document.getElementById("js-runner-clear");
+    if (el) el.classList.remove("visible");
+  }
+
+  // ── Phase 22: Letter Runner game loop ──
+  // 10 letters per level (Design Invariant I1 — RUNNER_LETTERS_PER_LEVEL).
+  function startRunner() {
+    if (runnerActive) return;
+    runnerActive = true;
+    runnerLevel = 1;
+    runnerCurrentIdx = 0;
+    runnerObstacleX = 0;
+    runnerGroundOffset = 0;
+    runnerGroundSpeed = 2;
+    runnerJumping = false;
+    runnerStumbling = false;
+    runnerObstacleActive = false;
+    runnerObstacleTimer = 0;
+    runnerFrozen = false;
+    runnerFrozenUntil = 0;
+    try { runnerBest = parseInt(localStorage.getItem("ls-runner-best") || "0", 10) || 0; }
+    catch { runnerBest = 0; }
+    const stage = document.getElementById("js-runner-stage");
+    if (stage) stage.style.display = "block";
+    dismissRunnerEnd();
+    dismissRunnerClear();
+    const restartBtn = document.getElementById("js-runner-restart");
+    if (restartBtn && !restartBtn.dataset.wired) {
+      restartBtn.addEventListener("click", () => {
+        const endEl = document.getElementById("js-runner-end");
+        if (endEl) endEl.classList.remove("visible");
+        startRunner();
+      });
+      restartBtn.dataset.wired = "1";
+    }
+    const quitBtn = document.getElementById("js-runner-quit");
+    if (quitBtn && !quitBtn.dataset.wired) {
+      quitBtn.addEventListener("click", () => runnerQuit());
+      quitBtn.dataset.wired = "1";
+    }
+    updateRunnerHUD();
+    runnerStartLevel();
+  }
+  function runnerStartLevel() {
+    const pool = touchKeys && touchKeys.length ? touchKeys : ["A", "B", "C"];
+    runnerSlots = [];
+    for (let i = 0; i < RUNNER_LETTERS_PER_LEVEL; i++) {
+      runnerSlots.push(pool[Math.floor(Math.random() * pool.length)]);
+    }
+    runnerCurrentIdx = 0;
+    runnerObstacleActive = false;
+    runnerObstacleTimer = 0;
+    runnerObstacleX = 0;
+    runnerGroundSpeed = Math.min(2 + (runnerLevel - 1) * 0.3, 5);
+    const obEl = document.getElementById("js-runner-obstacle");
+    if (obEl) { obEl.style.display = "none"; obEl.style.transform = ""; }
+    const charEl = document.getElementById("js-runner-character");
+    if (charEl) charEl.classList.remove("jumping", "stumbling", "celebrating");
+    drawRunnerSlots();
+    updateRunnerHUD();
+    if (runnerAnimFrame) cancelAnimationFrame(runnerAnimFrame);
+    runnerAnimFrame = requestAnimationFrame(runnerLoop);
+  }
+  function runnerLoop() {
+    if (!runnerActive) return;
+    const now = Date.now();
+    if (runnerFrozen) {
+      if (now >= runnerFrozenUntil) runnerFrozen = false;
+      else { runnerAnimFrame = requestAnimationFrame(runnerLoop); return; }
+    }
+    runnerGroundOffset = (runnerGroundOffset + runnerGroundSpeed) % 40;
+    const tilesEl = document.getElementById("js-runner-ground-tiles");
+    if (tilesEl) tilesEl.style.transform = `translateX(${-runnerGroundOffset}px)`;
+    if (!runnerObstacleActive) {
+      runnerObstacleTimer += runnerGroundSpeed;
+      const spawnInterval = Math.max(150, 300 - runnerLevel * 10);
+      if (runnerObstacleTimer >= spawnInterval) {
+        runnerSpawnObstacle();
+        runnerObstacleTimer = 0;
+      }
+    }
+    if (runnerObstacleActive) {
+      runnerObstacleX -= runnerGroundSpeed;
+      const obEl = document.getElementById("js-runner-obstacle");
+      if (obEl) {
+        obEl.style.transform = `translateX(${runnerObstacleX}px)`;
+        if (runnerObstacleX < -120) {
+          runnerObstacleActive = false;
+          obEl.style.display = "none";
+          runnerObstacleX = 0;
+        }
+      }
+    }
+    const cloudsEl = document.getElementById("js-runner-clouds");
+    if (cloudsEl) {
+      const phase = (now / 50) % window.innerWidth;
+      cloudsEl.style.transform = `translateX(${-phase}px)`;
+    }
+    runnerAnimFrame = requestAnimationFrame(runnerLoop);
+  }
+  function runnerSpawnObstacle() {
+    runnerObstacleActive = true;
+    runnerObstacleX = window.innerWidth + 20;
+    const obEl = document.getElementById("js-runner-obstacle");
+    if (obEl) {
+      obEl.style.display = "block";
+      const types = ["\u{1FAA8}", "\u{1F333}"];
+      obEl.textContent = types[Math.floor(Math.random() * types.length)];
+    }
+  }
+  function runnerHandleKey(pressed) {
+    if (!runnerActive) return;
+    const expected = runnerSlots[runnerCurrentIdx];
+    if (!expected) return;
+    if (pressed.toUpperCase() === expected.toUpperCase()) {
+      runnerJump();
+      runnerCurrentIdx++;
+      haptic("light");
+      const settings = loadSettings();
+      if (settings.soundFx) playCorrect();
+      if (runnerCurrentIdx >= RUNNER_LETTERS_PER_LEVEL) {
+        runnerLevelClear();
+      } else {
+        drawRunnerSlots();
+      }
+    } else {
+      runnerStumble();
+      const settings = loadSettings();
+      if (settings.soundFx) playWrong();
+      runnerFrozen = true;
+      runnerFrozenUntil = Date.now() + 500;
+      runnerFlashRed();
+    }
+  }
+  function runnerJump() {
+    const char = document.getElementById("js-runner-character");
+    if (!char) return;
+    char.classList.remove("jumping");
+    void char.offsetWidth;
+    char.classList.add("jumping");
+    runnerJumping = true;
+    setTimeout(() => {
+      char.classList.remove("jumping");
+      runnerJumping = false;
+    }, 600);
+  }
+  function runnerStumble() {
+    const char = document.getElementById("js-runner-character");
+    if (!char) return;
+    char.classList.remove("stumbling");
+    void char.offsetWidth;
+    char.classList.add("stumbling");
+    runnerStumbling = true;
+    setTimeout(() => {
+      char.classList.remove("stumbling");
+      runnerStumbling = false;
+    }, 400);
+  }
+  function runnerFlashRed() {
+    const flash = document.getElementById("js-runner-flash");
+    if (!flash) return;
+    flash.classList.add("active");
+    setTimeout(() => flash.classList.remove("active"), 200);
+  }
+  function drawRunnerSlots() {
+    const slotsEl = document.getElementById("js-runner-slots");
+    if (!slotsEl) return;
+    slotsEl.innerHTML = "";
+    for (let i = 0; i < RUNNER_LETTERS_PER_LEVEL; i++) {
+      const slot = document.createElement("div");
+      slot.className = "runner-slot";
+      if (i < runnerCurrentIdx) slot.classList.add("done");
+      else if (i === runnerCurrentIdx) slot.classList.add("current");
+      slot.textContent = runnerSlots[i] || "";
+      slotsEl.appendChild(slot);
+    }
+  }
+  function updateRunnerHUD() {
+    const lvlEl = document.getElementById("js-runner-level");
+    if (lvlEl) lvlEl.textContent = String(runnerLevel);
+    const bestEl = document.getElementById("js-runner-best-display");
+    if (bestEl) bestEl.textContent = String(runnerBest);
+  }
+  function runnerLevelClear() {
+    const char = document.getElementById("js-runner-character");
+    if (char) {
+      const rect = char.getBoundingClientRect();
+      confettiBurst(rect.left + rect.width / 2, rect.top, { letter: runnerSlots[runnerCurrentIdx - 1] || "A" });
+    }
+    stars = (stars || 0) + 10;
+    if (typeof updateStars === "function") updateStars(stars);
+    if (runnerLevel > runnerBest) {
+      runnerBest = runnerLevel;
+      try { localStorage.setItem("ls-runner-best", String(runnerBest)); } catch {}
+    }
+    const clear = document.getElementById("js-runner-clear");
+    if (clear) {
+      clear.classList.add("visible");
+      setTimeout(() => clear.classList.remove("visible"), 1500);
+    }
+    runnerObstacleActive = false;
+    const obEl = document.getElementById("js-runner-obstacle");
+    if (obEl) obEl.style.display = "none";
+    runnerObstacleX = 0;
+    runnerLevel++;
+    setTimeout(() => {
+      if (!runnerActive) return;
+      runnerStartLevel();
+    }, 1800);
+  }
+  function runnerQuit() {
+    if (!runnerActive) return;
+    runnerActive = false;
+    if (runnerAnimFrame) { cancelAnimationFrame(runnerAnimFrame); runnerAnimFrame = null; }
+    try { localStorage.setItem("ls-runner-best", String(runnerBest)); } catch {}
+    const endEl = document.getElementById("js-runner-end");
+    if (endEl) {
+      endEl.classList.add("visible");
+      const lvlEl = document.getElementById("js-runner-end-level");
+      if (lvlEl) lvlEl.textContent = String(runnerLevel - 1);
+      const bestEl = document.getElementById("js-runner-end-best");
+      if (bestEl) bestEl.textContent = `\u{1F3C6} Best: ${runnerBest}`;
+    }
+  }
+  function stopRunner() { runnerQuit(); }
   function buildPatternMissing() {
     const missingIdx = Math.floor(Math.random() * 4);
     const pool = typeof touchKeys !== "undefined" && touchKeys.length ? touchKeys : "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
@@ -2189,6 +2417,9 @@
     } else if (mode === "patternMissing") {
       buildPatternMissing();
       showPatternMissing();
+    } else if (mode === "runner") {
+      // Phase 22 — Letter Runner: launch side-scroller with 10 letters per level
+      startRunner();
     } else {
       nextTurn(level, touchKeys);
     }
@@ -2213,6 +2444,12 @@
     if (bonusCatchActive) return;
     const settings = loadSettings();
     const mode = getGameMode();
+    // Phase 22 — Runner mode intercept (side-scroller, 10 letters per level).
+    // Correct key → jump + advance slot. Wrong → stumble + 500ms freeze.
+    if (mode === "runner") {
+      runnerHandleKey(pressed);
+      return;
+    }
     if (mode === "race30") {
       if (!raceActive) return;
       const expected2 = currentLetter.toUpperCase();
@@ -3164,7 +3401,17 @@
         // Phase 16.5 patch — expose for smoke testing of unit letter pools
         activeLetters,
         // Phase 21 — expose pattern missing target for smoke testing
-        getPatternMissingTarget: () => patternMissingTarget
+        getPatternMissingTarget: () => patternMissingTarget,
+        // Phase 22 — expose Runner for smoke testing + future stop hook
+        startRunner,
+        stopRunner,
+        getRunnerState: () => ({
+          active: runnerActive,
+          level: runnerLevel,
+          best: runnerBest,
+          slots: runnerSlots.slice(),
+          currentIdx: runnerCurrentIdx
+        })
       };
       score = 0;
       streak = 0;
