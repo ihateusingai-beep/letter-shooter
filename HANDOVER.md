@@ -1,12 +1,18 @@
 # Letter Shooter — Handover & Field Testing Guide
 
 **Audience**: SEN teacher preparing iPad classroom testing
-**App**: Letter Shooter v2.0 (letter-shooting game for moderate-intellectual-disability primary students)
+**App**: Letter Shooter v2.1 (letter-shooting game for moderate-intellectual-disability primary students)
 **Live URL**: https://ihateusingai-beep.github.io/letter-shooter
 **Repo**: https://github.com/ihateusingai-beep/letter-shooter
-**Last refreshed**: 2026-09-24 (Phase 19.9)
+**Last refreshed**: 2026-09-28 (Phase 22 + 23 + Design Invariants I1/I2)
 
-**Dev docs**: [ARCHITECTURE.md](./ARCHITECTURE.md) (file map, localStorage schema, game mode state machine, feedback pipeline, build pipeline) — start there if picking up the codebase.
+**Dev docs**: [ARCHITECTURE.md](./ARCHITECTURE.md) (file map, localStorage schema, game mode state machine, feedback pipeline, build pipeline, **Design Invariants I1+I2**) — start there if picking up the codebase.
+
+**New since last refresh**:
+- **Phase 23** — Letter personality arrival (5 motion types mapped to LETTER_SYMBOLS) + ability-gate architecture (`settings.abilityTrack`)
+- **Phase 22 (WIP)** — Letter Runner mode (state + UI scaffold + 10-letter level spec; game loop not yet implemented)
+- **Design Invariant I1** — ≥10 questions per meaningful level (Runner, U-unit, Speed Round)
+- **Design Invariant I2** — Ability-track architecture: game-y elements (countdown, fail, multiplier) opt-in via `settings.abilityTrack`, default 'beginner' (SEN-safe locked)
 
 ---
 
@@ -54,7 +60,7 @@ Students see a giant letter (A-Z) and press the matching keyboard key or touch k
 
 ---
 
-## Features Shipped (25 phases)
+## Features Shipped (28 phases: 1-19.9 + 20 + 21 + 22 WIP + 23)
 
 ### Core game (Phase 1-7)
 
@@ -125,6 +131,37 @@ Students see a giant letter (A-Z) and press the matching keyboard key or touch k
 | 18.3 | **Start overlay level picker** — custom C# levels injected into start screen U1-U10 grid (was previously only in Settings → Unit) | Start overlay |
 | 19.9 | **Homepage redesign** — level grid (U1-U10) + 3 difficulty buttons (簡單 L0 / 一般 L1-slow / 困難 L1-medium). U1 pre-selected by default. **L1 falling letters is the new default** (was L0). **Letter hit explosion** with per-letter color theming (snappy 600ms starburst + radial flash). **Big combo counter** at top-center showing ×N at streak ≥ 2 with tier styling (tier-3 / tier-5 / tier-10 gradient + glow) | Start overlay, in-game |
 
+### Phase 20 — Start overlay attraction + bundle plumbing
+
+| # | Feature | Where to test |
+|---|---|---|
+| 20 | **Start overlay 4 attraction points** — large center begin button + 3 surrounding feature highlights (theme picker preview, daily goal preview, mascot preview). Bundle.js brace fix (esbuild indentation bug). Scrollable overlay for landscape phones | Start overlay |
+
+### Phase 21 — Race 30s + Pattern Missing (new game modes)
+
+| # | Feature | Where to test |
+|---|---|---|
+| 21 | **Race 30s mode** — 30-second timed round. Score = correct hits in 30s. No streak (avoid score multiplier confusion). Personal best saved to `ls-race-best`. Race-end overlay shows score + best | Settings → 玩法模式 → 競速 30s |
+| 21 | **Pattern Missing mode** — 4-letter slot display, 1 slot is `?`. Find the missing letter. Different loop than Race (no time, gentle nudges) | Settings → 玩法模式 → 補字 |
+| 21 | **Race-end screen** — modal overlay with score + "再試一次" CTA. Same i18n pattern as leaderboard name-entry | End of Race round |
+
+### Phase 22 — Letter Runner (WIP — state + spec shipped, game loop pending)
+
+| # | Feature | Where to test |
+|---|---|---|
+| 22 (WIP) | **Letter Runner mode** — side-scrolling runner. Each level = 10 letters (per Design Invariant I1 — bumped from 3). Character auto-runs, jump over obstacles by pressing correct letter. 10 jumps = level clear, speed increases. UI scaffold + state vars + i18n labels committed | Settings → 玩法模式 → 跑步 (UI visible, gameplay TBD) |
+| 22 (WIP) | **Runner state + 2 no-op overlay stubs** — `runnerSlots`, `runnerLevel`, `runnerCurrentIdx`, etc. `dismissRunnerEnd` and `dismissRunnerClear` are no-op stubs (TODO Phase 22 final — overlay UI). Without stubs, app would crash on game start | (internal — see `js/game.js` lines 64-77 + `dismissRunnerEnd/Clear`) |
+| 22 | **10-letter level spec** — `RUNNER_LETTERS_PER_LEVEL = 10` constant (canonical, do NOT lower). Justification: SEN muscle memory needs session density | SPEC-runner.md §3, ARCHITECTURE.md §10a I1 |
+
+### Phase 23 — Letter personality arrival (ability-gated)
+
+| # | Feature | Where to test |
+|---|---|---|
+| 23 | **5 motion personalities per letter** — A flies across, C/M/N/R/S rise with glow, K spirals, Y swings on pendulum, Z zig-zags, all others drop-bounce. Mapped to `LETTER_SYMBOLS` semantics (e.g. A↔✈️ airplane) | All 26 letters in Classic / Sound modes |
+| 23 | **Reduce-motion gate** — existing `.no-motion` toggle disables all 6 arrival animations; falls back to 0.3s opacity fade-in. Overstimulation-safe | Settings → 減動畫 ON |
+| 23 | **Ability-track gate (architecture only)** — `MOTION_GATE` restricts motions per `settings.abilityTrack`. Phase 23 ships default `'beginner'` = drop-bounce only (locked SEN-safe). UI toggle planned Phase 24 | `loadSettings().abilityTrack` (Phase 24 surfaces UI) |
+| 23 | **Per-track duration scaling** — beginner 1.3x slower (gentler), standard 1.0x, advanced 0.85x (snappier) | All modes when not gated to drop-bounce |
+
 ---
 
 ## Settings Panel Reference
@@ -138,9 +175,10 @@ Top-right ⚙️ icon opens settings. **4 collapsible sections** (Phase 19.3) + 
 - 單元 Unit — U1-ABC / U2-EFS / ... / U10 混合 / C1, C2, ... (Phase 18)
 - 自訂關卡 Custom Levels — 26-button visual picker (Phase 19.8 replaces Phase 18 textarea)
 - 難度 Level — L0 靜止 / L1 慢落
-- 遊戲模式 Game Mode — 經典 / 聽音 / 連擊 / 拼字
+- 遊戲模式 Game Mode — 經典 / 聽音 / 連擊 / 拼字 / 競速 30s / 補字 / 跑步 (Runner UI scaffold shipped Phase 22 WIP, gameplay pending)
 - 字母大細階 Case — 大寫 / 小寫
 - 掌握門檻 Mastery — 5/10 (寬鬆) / 6/10 (一般, default) / 7/10 (嚴格) / 8/10 (高要求) — Phase 19.5
+- **(Phase 24 planned) 能力軌 Ability Track** — 初階 (Beginner, locked SEN-safe) / 標準 / 進階 — unlocks countdown / fail / multiplier / full personality motion
 
 **🔊 聲音 Audio** (3 rows, open by default)
 - 語音朗讀 Voice — On/Off
@@ -182,14 +220,15 @@ For each student session, please record (a simple spreadsheet works):
 
 ## Known Limitations / Trade-offs
 
-1. **No fail state**: intentional — wrong answers shake + nudge but never penalize. If teacher wants failure feedback for assessment, current version doesn't support it.
+1. **No fail state (Beginner / SEN-safe default)**: intentional — wrong answers shake + nudge but never penalize. **Phase 24** will surface ability-track opt-in for higher-ability students (Standard/Advanced can enable fail screen via `settings.abilityTrack`)
 2. **No per-student profiles**: single device = single progress record. If multiple students share an iPad, data is shared/overwritten.
 3. **No analytics / telemetry**: no way to track which letters each student struggles with across sessions in a remote dashboard.
 4. **No 2-player mode**: single-player only.
 5. **U10 mixed review = up to 12 letters (Phase 19.7)**: composition = up to 6 unmastered (status: practice/new) + remainder mastered, capped at 12. Empty progress falls back to first 12 alphabet letters. Avoids 26-letter overwhelm for early students.
 6. **BGM iOS quirks**: if BGM is enabled, on iOS Safari the audio context must be unlocked via a user gesture first. The start button does this, but if user navigates away and back, audio may need to be re-unlocked.
-7. **No export/import**: localStorage-only. If Safari clears cache, progress is lost.
+7. **Export/import available (Phase 19.6)**: Settings → ⚙️ Advanced → 匯出/匯入. If Safari clears cache without backup, progress is lost.
 8. **Sound-only mode has no phonetic hint** for students who can't distinguish similar-sounding letters (B/P, M/N, D/T).
+9. **Phase 22 Runner is WIP**: UI scaffold + state + i18n shipped; game loop (slot drawing, obstacle rendering, jump animation, level clear flow) NOT yet implemented. Selecting Runner mode currently renders the stage but no game runs. **Next sprint** will complete the loop.
 
 ---
 
@@ -245,6 +284,21 @@ letter-shooter/
 ## Git / Commit History (newest first)
 
 ```
+50a378e Phase 22 (WIP) + Design Invariant I1: ≥10 questions per level
+f58bdc3 Phase 23: Letter personality arrival (ability-gated)
+ae307bc Phase 21: Two new game modes — Race 30s + Pattern Missing
+bdec1c7 Phase 20: Start overlay 4 attraction points + fix fx.js brace + scrollable overlay
+869bf82 Phase 19.9 final: Default level L1 + doc updates (v2.0)
+93f5cf3 Phase 19.9: Letter hit explosion + combo counter (top-center)
+3c85585 Phase 18.3: Start overlay level picker injects custom C# levels
+5dab8ce Phase 19.8: Custom Levels visual picker (replaces textarea)
+e1c39a8 Phase 19.7: U10 sub-pool (≤12 letters, practice + mastered)
+db22f10 Phase 19.6: Export/Import progress
+aa7e5e5 Phase 19.5: Mastery threshold teacher-override
+f44b8a1 Phase 19.4: ARCHITECTURE.md (replaces v0.2 plan)
+3a91f78 Phase 19.3: Settings panel sections (collapsible groups)
+f3e58f6 Phase 19.2: Confetti intensity (gentle/normal/party)
+c9d6b87 Phase 19.1: Reduce-motion toggle (no-motion class actually works)
 a391236 Phase 18.2: Promote 關卡 Levels section to top of settings panel
 3967790 Phase 18.1: Align kbMode default to 'full' across all fallbacks
 8e4b051 Phase 18: Teacher-defined Custom Levels (ABC, DEF, ...)
@@ -295,4 +349,4 @@ If you find bugs or want features, note them down with:
 
 Then ping the dev team.
 
-— End of handover (refreshed 2026-09-21) —
+— End of handover (refreshed 2026-09-28) —
